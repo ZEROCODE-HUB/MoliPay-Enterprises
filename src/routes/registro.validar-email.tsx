@@ -1,12 +1,12 @@
 ﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { AuthShell, PrimaryButton, SecondaryButton } from "@/components/onboarding";
+import { AuthShell, PrimaryButton } from "@/components/onboarding";
 import { useOnboarding } from "@/lib/onboarding-store";
 import { MollyLogo } from "@/components/molly-logo";
 
 export const Route = createFileRoute("/registro/validar-email")({
   head: () => ({
     meta: [
-      { title: "Validar correo — Molipay" },
+      { title: "Validar correo — MoliPay" },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -24,48 +24,41 @@ function ValidarEmail() {
   };
 
   return (
-    <AuthShell leftEyebrow="Simulacion · Correo" leftTitle="Este es el email que recibirias en tu bandeja." step="Email de validacion">
-      <div
-        className="bg-white overflow-hidden"
-        style={{ border: "1px solid rgba(10,22,40,0.1)", borderRadius: 2 }}
-      >
-        <div className="px-6 py-4 flex items-center justify-between" style={{ background: "#0A1628" }}>
-          <MollyLogo variant="light" size={26} />
-          <span
-            className="text-white/60"
-            style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: "0.65rem", letterSpacing: "0.15em", textTransform: "uppercase" }}
-          >
+    <AuthShell leftEyebrow="Simulación · Correo" leftTitle="Este es el email que recibirías en tu bandeja." step="Email de validación">
+      <div className="bg-white overflow-hidden rounded-sm border border-black-100">
+        <div className="px-6 py-4 flex items-center justify-between bg-black">
+          <MollyLogo />
+          <span className="text-white/60 font-primary text-[0.65rem] tracking-[0.15em] uppercase">
             altas@molipay.com.ar
           </span>
         </div>
         <div className="p-6 sm:p-8">
-          <p className="text-xs text-[#0A1628]/55">Asunto</p>
-          <p className="mt-1 mb-6 text-sm font-semibold text-[#0A1628]">Valida tu cuenta Molipay</p>
+          <p className="text-xs text-black-400">Asunto</p>
+          <p className="mt-1 mb-6 text-sm font-semibold text-black-800">Validá tu cuenta MoliPay</p>
 
-          <div className="text-sm text-[#0A1628]/85 space-y-4 leading-relaxed">
+          <div className="text-sm text-black-600 space-y-4 leading-relaxed">
             <p>Hola {nombre || "usuario"},</p>
-            <p>Muchas gracias por registrarte en Molipay. Para poder ingresar a la plataforma primero debes validar el email. Para realizarlo hace clic en aqui.</p>
+            <p>Muchas gracias por registrarte en MoliPay. Para poder ingresar a la plataforma primero debés validar el email. Para realizarlo hacé clic acá.</p>
           </div>
 
           <div className="mt-8">
-            <PrimaryButton onClick={validar}>Validar desde aqui</PrimaryButton>
+            <PrimaryButton onClick={validar}>Validar desde acá</PrimaryButton>
           </div>
 
-          <p className="mt-6 text-xs text-[#0A1628]/60 leading-relaxed">
-            Si tenes una duda o inconveniente podes contactarnos en{" "}
-            <a href="mailto:soporte@molipay.com.ar" className="underline underline-offset-2 hover:text-[#C41E3A]">
+          <p className="mt-6 text-xs text-black-400 leading-relaxed">
+            Si tenés una duda o inconveniente podés contactarnos en{" "}
+            <a href="mailto:soporte@molipay.com.ar" className="underline underline-offset-2 hover:text-red-500">
               soporte@molipay.com.ar
-            </a>
-            .
+            </a>.
           </p>
 
-          <p className="mt-4 text-sm font-semibold text-[#0A1628]/80">¡Muchas gracias!</p>
+          <p className="mt-4 text-sm font-semibold text-black-800">¡Muchas gracias!</p>
 
-          <div className="mt-8 pt-4 border-t text-[10px] text-[#0A1628]/45 leading-relaxed space-y-1" style={{ borderColor: "rgba(10,22,40,0.1)" }}>
-            <p>Enviado por Money Life S.R.L. — Argentina</p>
+          <div className="mt-8 pt-4 border-t border-black-100 text-[10px] text-black-300 leading-relaxed space-y-1">
+            <p>Enviado por MoliPay — Argentina</p>
             <div className="flex gap-3">
-              <a href="/" className="underline underline-offset-2 hover:text-[#C41E3A]">Molipay</a>
-              <a href="/legales/terminos" className="underline underline-offset-2 hover:text-[#C41E3A]">Terminos y condiciones</a>
+              <a href="/" className="underline underline-offset-2 hover:text-red-500">MoliPay</a>
+              <a href="/legales/terminos" className="underline underline-offset-2 hover:text-red-500">Términos y condiciones</a>
             </div>
           </div>
         </div>

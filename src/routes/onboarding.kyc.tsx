@@ -72,7 +72,7 @@ function KycWizard() {
 
       {step === 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-[#0A1628]">Carga el DNI frente y dorso</h2>
+          <h2 className="text-lg font-semibold text-black-800">Cargá el DNI frente y dorso</h2>
           <FileUpload
             label="DNI frente"
             value={files.dniFrente}
@@ -89,7 +89,7 @@ function KycWizard() {
 
       {step === 1 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-[#0A1628]">Carga un servicio a tu nombre</h2>
+          <h2 className="text-lg font-semibold text-black-800">Cargá un servicio a tu nombre</h2>
           <FileUpload
             label="Factura de servicio"
             hint="Debe contener tu direccion y no debe tener mas de 3 meses de antigüedad."
@@ -102,7 +102,7 @@ function KycWizard() {
 
       {step === 2 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-[#0A1628]">Carga una selfie</h2>
+          <h2 className="text-lg font-semibold text-black-800">Cargá una selfie</h2>
           <FileUpload
             label="Selfie"
             hint="De frente, en un lugar bien iluminado, sin anteojos ni sombreros."
@@ -116,7 +116,7 @@ function KycWizard() {
 
       {step === 3 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-[#0A1628]">Domicilio de residencia</h2>
+          <h2 className="text-lg font-semibold text-black-800">Domicilio de residencia</h2>
           <Field
             label="Direccion"
             value={addr.direccion}

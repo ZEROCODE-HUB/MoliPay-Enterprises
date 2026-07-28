@@ -1,6 +1,5 @@
 ﻿import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
 import { useDemoMode } from "@/contexts/demo-mode";
 import { useOnboarding, type TipoCuenta } from "@/lib/onboarding-store";
@@ -12,8 +11,8 @@ export const Route = createFileRoute("/login")({
   }),
   head: () => ({
     meta: [
-      { title: "Ingresar — Molly Money Life" },
-      { name: "description", content: "Accede al portal de Molly Money Life. Modo demo disponible." },
+      { title: "Ingresar — MoliPay" },
+      { name: "description", content: "Accede al portal de MoliPay. Plataforma de pagos digitales bajo normativa BCRA." },
     ],
   }),
   component: LoginPage,
@@ -31,24 +30,24 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
         onSuccess();
       }}
     >
-      <Field label="Correo Electronico" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="hola@empresa.com" />
-      <PasswordField label="Contrasena" value={pw} onChange={setPw} />
+      <Field label="Correo electrónico" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="hola@empresa.com" />
+      <PasswordField label="Contraseña" value={pw} onChange={setPw} />
       <div className="flex justify-end">
         <button
           type="button"
-          onClick={() => alert("Flujo de recuperacion de contrasena (demo)")}
-          className="text-xs text-[#0A1628]/60 hover:text-[#C41E3A] underline underline-offset-2 transition-colors"
+          onClick={() => alert("Flujo de recuperación de contraseña (demo)")}
+          className="text-xs text-black-400 hover:text-red-500 underline underline-offset-2 transition-colors"
         >
-          ¿Olvidaste tu contrasena?
+          ¿Olvidaste tu contraseña?
         </button>
       </div>
       <div className="pt-1">
-        <PrimaryButton type="submit">Iniciar sesion</PrimaryButton>
+        <PrimaryButton type="submit">Iniciar sesión</PrimaryButton>
       </div>
-      <div className="text-center text-xs text-[#0A1628]/60 space-y-2 pt-2">
+      <div className="text-center text-xs text-black-400 space-y-2 pt-2">
         <p>
           ¿No tienes una cuenta?{" "}
-          <Link to="/login" search={{ register: "pf" }} className="text-[#C41E3A] underline underline-offset-2 hover:opacity-80">
+          <Link to="/login" search={{ register: "pf" }} className="text-red-500 underline underline-offset-2 hover:opacity-80">
             Registrate
           </Link>
         </p>
@@ -56,9 +55,9 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           <button
             type="button"
             onClick={() => alert("Correo reenviado (demo)")}
-            className="text-[#0A1628]/60 hover:text-[#C41E3A] underline underline-offset-2 transition-colors"
+            className="text-black-400 hover:text-red-500 underline underline-offset-2 transition-colors"
           >
-            ¿No te llego el email de verificacion?
+            ¿No te llegó el email de verificación?
           </button>
         </p>
       </div>
@@ -96,85 +95,43 @@ function RegisterForm({
       }}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field
-          label="Nombre"
-          value={f.nombre}
-          onChange={(e) => setF({ ...f, nombre: e.target.value })}
-          error={touched && !f.nombre ? "Requerido" : undefined}
-        />
-        <Field
-          label="Apellido"
-          value={f.apellido}
-          onChange={(e) => setF({ ...f, apellido: e.target.value })}
-          error={touched && !f.apellido ? "Requerido" : undefined}
-        />
+        <Field label="Nombre" value={f.nombre} onChange={(e) => setF({ ...f, nombre: e.target.value })} error={touched && !f.nombre ? "Requerido" : undefined} />
+        <Field label="Apellido" value={f.apellido} onChange={(e) => setF({ ...f, apellido: e.target.value })} error={touched && !f.apellido ? "Requerido" : undefined} />
       </div>
-      <Field
-        label="Fecha de Nacimiento"
-        type="date"
-        value={f.fechaNac}
-        onChange={(e) => setF({ ...f, fechaNac: e.target.value })}
-        error={touched && !f.fechaNac ? "Requerido" : undefined}
-      />
-      <Field
-        label="Correo Electronico"
-        type="email"
-        value={f.email}
-        onChange={(e) => setF({ ...f, email: e.target.value })}
-        placeholder="nombre@dominio.com"
-        error={touched && !emailOk ? "Ingresa un email valido" : undefined}
-      />
-      <PasswordField
-        label="Contrasena"
-        value={f.pw}
-        onChange={(v) => setF({ ...f, pw: v })}
-        showRules
-        error={touched && !pwOk ? "La contrasena no cumple los requisitos" : undefined}
-      />
-      <PasswordField
-        label="Confirmar Contrasena"
-        value={f.pw2}
-        onChange={(v) => setF({ ...f, pw2: v })}
-        error={touched && !pwMatch ? "Las contrasenas no coinciden" : undefined}
-      />
+      <Field label="Fecha de nacimiento" type="date" value={f.fechaNac} onChange={(e) => setF({ ...f, fechaNac: e.target.value })} error={touched && !f.fechaNac ? "Requerido" : undefined} />
+      <Field label="Correo electrónico" type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="nombre@dominio.com" error={touched && !emailOk ? "Ingresá un email válido" : undefined} />
+      <PasswordField label="Contraseña" value={f.pw} onChange={(v) => setF({ ...f, pw: v })} showRules error={touched && !pwOk ? "La contraseña no cumple los requisitos" : undefined} />
+      <PasswordField label="Confirmar contraseña" value={f.pw2} onChange={(v) => setF({ ...f, pw2: v })} error={touched && !pwMatch ? "Las contraseñas no coinciden" : undefined} />
 
-      <label className="flex items-start gap-2.5 text-xs text-[#0A1628]/75 pt-1">
-        <input
-          type="checkbox"
-          checked={terms}
-          onChange={(e) => setTerms(e.target.checked)}
-          className="mt-0.5 accent-[#C41E3A]"
-        />
+      <label className="flex items-start gap-2.5 text-xs text-black-500 pt-1">
+        <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} className="mt-0.5 accent-red-500" />
         <span>
-          He leido y acepto los{" "}
-          <a href="/legales/terminos" className="underline underline-offset-2 hover:text-[#C41E3A]">
-            Terminos y Condiciones
-          </a>
-          .
+          He leído y acepto los{" "}
+          <a href="/legales/terminos" className="underline underline-offset-2 hover:text-red-500">
+            Términos y Condiciones
+          </a>.
         </span>
       </label>
 
       <div className="pt-1">
-        <PrimaryButton type="submit" disabled={!valid}>
-          Registrarse
-        </PrimaryButton>
+        <PrimaryButton type="submit" disabled={!valid}>Registrarse</PrimaryButton>
       </div>
 
-      <div className="text-center text-xs text-[#0A1628]/60 space-y-2 pt-2">
+      <div className="text-center text-xs text-black-400 space-y-2 pt-2">
         <p>
-          ¿Ya tienes una cuenta?{" "}
-          <button type="button" onClick={onSwitchToLogin} className="text-[#C41E3A] underline underline-offset-2 hover:opacity-80">
-            Inicia Sesion
+          ¿Ya tenés una cuenta?{" "}
+          <button type="button" onClick={onSwitchToLogin} className="text-red-500 underline underline-offset-2 hover:opacity-80">
+            Iniciá sesión
           </button>
         </p>
         <p>
-            {tipo === "juridica" ? (
-            <Link to="/login" search={{ register: "pf" }} className="text-[#0A1628]/60 hover:text-[#C41E3A] underline underline-offset-2 transition-colors">
-              ¿Eres una persona fisica? Registrarse como persona fisica
+          {tipo === "juridica" ? (
+            <Link to="/login" search={{ register: "pf" }} className="text-black-400 hover:text-red-500 underline underline-offset-2 transition-colors">
+              ¿Sos persona física? Registrate como persona física
             </Link>
           ) : (
-            <Link to="/login" search={{ register: "pj" }} className="text-[#0A1628]/60 hover:text-[#C41E3A] underline underline-offset-2 transition-colors">
-              ¿Quieres registrar a tu empresa? Registrar Empresa
+            <Link to="/login" search={{ register: "pj" }} className="text-black-400 hover:text-red-500 underline underline-offset-2 transition-colors">
+              ¿Querés registrar tu empresa? Registrar empresa
             </Link>
           )}
         </p>
@@ -229,73 +186,58 @@ function LoginPage() {
 
   return (
     <AuthShell
-      leftEyebrow="Molipay · Acceso"
+      leftEyebrow="MoliPay · Acceso"
       leftTitle="Tu plataforma de pagos, sin intermediarios."
-      leftBody="Molipay opera bajo normativa BCRA. Tus datos viajan cifrados y se almacenan bajo los estandares del sistema financiero argentino."
+      leftBody="MoliPay opera bajo normativa BCRA. Tus datos viajan cifrados y se almacenan bajo los estándares del sistema financiero argentino."
     >
-      {/* Tabs */}
-      <div className="grid grid-cols-2 border-b mb-8" style={{ borderColor: "rgba(10,22,40,0.15)" }}>
+      <div className="grid grid-cols-2 border-b border-black-100 mb-8">
         <button
           onClick={() => setTab("login")}
           className={`pb-3 text-sm font-semibold transition-colors ${
-            tab === "login"
-              ? "border-b-2 text-[#0A1628]"
-              : "text-[#0A1628]/50"
+            tab === "login" ? "border-b-2 border-red-500 text-black-800" : "text-black-400"
           }`}
-          style={{
-            borderBottomColor: tab === "login" ? "#C41E3A" : "transparent",
-          }}
         >
-          Iniciar sesion
+          Iniciar sesión
         </button>
         <button
           onClick={() => setTab("register")}
           className={`pb-3 text-sm font-semibold transition-colors ${
-            tab === "register"
-              ? "border-b-2 text-[#0A1628]"
-              : "text-[#0A1628]/50"
+            tab === "register" ? "border-b-2 border-red-500 text-black-800" : "text-black-400"
           }`}
-          style={{
-            borderBottomColor: tab === "register" ? "#C41E3A" : "transparent",
-          }}
         >
           Crear cuenta
         </button>
       </div>
 
-      {/* Account type selector (only visible on register tab) */}
       {tab === "register" && (
         <div className="flex gap-3 mb-6">
           <button
             type="button"
             onClick={() => setTipoCuenta("fisica")}
-            className={`flex-1 h-11 text-xs font-semibold tracking-wide transition-all ${
+            className={`flex-1 h-11 text-xs font-semibold tracking-wide transition-all rounded-sm ${
               tipoCuenta === "fisica"
-                ? "bg-[#0A1628] text-white"
-                : "bg-white text-[#0A1628]/60 border border-[rgba(10,22,40,0.15)]"
+                ? "bg-black text-white"
+                : "bg-white text-black-400 border border-black-100"
             }`}
-            style={{ borderRadius: 2, textTransform: "uppercase", letterSpacing: "0.06em" }}
           >
-            Persona Fisica
+            Persona Física
           </button>
           <button
             type="button"
             onClick={() => setTipoCuenta("juridica")}
-            className={`flex-1 h-11 text-xs font-semibold tracking-wide transition-all ${
+            className={`flex-1 h-11 text-xs font-semibold tracking-wide transition-all rounded-sm ${
               tipoCuenta === "juridica"
-                ? "bg-[#0A1628] text-white"
-                : "bg-white text-[#0A1628]/60 border border-[rgba(10,22,40,0.15)]"
+                ? "bg-black text-white"
+                : "bg-white text-black-400 border border-black-100"
             }`}
-            style={{ borderRadius: 2, textTransform: "uppercase", letterSpacing: "0.06em" }}
           >
-            Persona Juridica
+            Persona Jurídica
           </button>
         </div>
       )}
 
-      {/* Form */}
       <div className="relative overflow-hidden">
-        <div className="transition-all duration-300 ease-in-out" style={{ opacity: 1, transform: "translateX(0)" }}>
+        <div className="transition-all duration-300 ease-in-out">
           {tab === "login" ? (
             <LoginForm onSuccess={enterAs} />
           ) : (
@@ -304,27 +246,17 @@ function LoginPage() {
         </div>
       </div>
 
-      {/* Demo access */}
       {tab === "login" && (
         <div className="mt-10">
           <div className="relative">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t" style={{ borderColor: "rgba(10,22,40,0.15)" }} /></div>
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-black-100" /></div>
             <div className="relative flex justify-center">
-              <span className="bg-[#F7F5F0] px-3 text-xs text-[#0A1628]/50 uppercase tracking-wide">Acceso demo</span>
+              <span className="bg-plata-50 px-3 text-xs text-black-400 uppercase tracking-wide">Acceso demo</span>
             </div>
           </div>
           <button
             onClick={() => { setRole("empresa"); navigate({ to: "/app" }); }}
-            className="w-full mt-5 h-11 text-sm font-semibold transition-colors"
-            style={{
-              border: "1px solid rgba(10,22,40,0.2)",
-              borderRadius: 2,
-              color: "#0A1628",
-              background: "transparent",
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              fontSize: "0.75rem",
-            }}
+            className="w-full mt-5 h-11 rounded-sm text-sm font-semibold text-black-700 border border-black-200 bg-white hover:bg-black-50 transition-colors"
           >
             Demo empresa
           </button>

@@ -116,29 +116,22 @@ function DatosPersonales() {
 
       {step === 2 && (
         <div className="space-y-5">
-          <div
-            className="p-5 text-xs leading-relaxed text-[#0A1628]/75"
-            style={{ background: "rgba(10,22,40,0.04)", border: "1px solid rgba(10,22,40,0.08)", borderRadius: 2 }}
-          >
-            Se consideran <strong>PEPs</strong> a los Funcionarios Publicos Nacionales, Provinciales y Municipales (tanto
+          <div className="p-5 text-xs leading-relaxed text-black-500 bg-black-50 border border-black-100 rounded-sm">
+            Se consideran <strong>PEPs</strong> a los Funcionarios Públicos Nacionales, Provinciales y Municipales (tanto
             Nacionales como Extranjeros) de los Poderes Ejecutivo, Legislativo y Judicial, que ocupan o que ocuparon
-            altos cargos jerarquicos, asi como tambien a sus familiares hasta el segundo grado de consanguinidad. Los
-            funcionarios calificados como PEPs continuan siendolo hasta dos anos despues de haber cesado en sus
+            altos cargos jerárquicos, así como también a sus familiares hasta el segundo grado de consanguinidad. Los
+            funcionarios calificados como PEPs continúan siéndolo hasta dos años después de haber cesado en sus
             funciones.
           </div>
           <label className="flex items-center justify-between gap-4 py-2">
-            <span className="text-sm font-semibold text-[#0A1628]">¿Es persona politicamente expuesta?</span>
+            <span className="text-sm font-semibold text-black-800">¿Es persona políticamente expuesta?</span>
             <button
               type="button"
               onClick={() => setF({ ...f, esPEP: !f.esPEP })}
-              className="relative w-11 h-6 transition-colors"
-              style={{ background: f.esPEP ? "#C41E3A" : "rgba(10,22,40,0.2)", borderRadius: 999 }}
+              className={`relative w-11 h-6 transition-colors rounded-full ${f.esPEP ? "bg-red-500" : "bg-black-200"}`}
               aria-pressed={f.esPEP}
             >
-              <span
-                className="absolute top-0.5 w-5 h-5 bg-white transition-transform"
-                style={{ borderRadius: 999, transform: f.esPEP ? "translateX(22px)" : "translateX(2px)" }}
-              />
+              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${f.esPEP ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
             </button>
           </label>
           <div className="mt-8 flex flex-col sm:flex-row gap-3">

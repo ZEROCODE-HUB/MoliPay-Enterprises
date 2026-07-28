@@ -23,19 +23,19 @@ function RegistroExito() {
           <>
             <p>
               Enviamos un correo a{" "}
-              <span className="font-semibold text-[#0A1628]">{registro.email ?? "tu email"}</span>. Revisa tu bandeja para validar la cuenta.
+              <span className="font-semibold text-black-800">{registro.email ?? "tu email"}</span>. Revisá tu bandeja para validar la cuenta.
             </p>
-            <p className="mt-3 text-xs text-[#0A1628]/55">
-              Si no lo recibis, revisa spam o{" "}
+            <p className="mt-3 text-xs text-black-400">
+              Si no lo recibís, revisá spam o{" "}
               <button
                 type="button"
                 onClick={() => alert("Correo reenviado (demo)")}
-                className="underline underline-offset-2 hover:text-[#C41E3A]"
+                className="underline underline-offset-2 hover:text-red-500"
               >
-                reenvia el correo
+                reenviá el correo
               </button>
-              . ¿Tenes un problema?{" "}
-              <Link to="/" className="underline underline-offset-2 hover:text-[#C41E3A]">
+              . ¿Tenés un problema?{" "}
+              <Link to="/" className="underline underline-offset-2 hover:text-red-500">
                 Contactanos
               </Link>
               .

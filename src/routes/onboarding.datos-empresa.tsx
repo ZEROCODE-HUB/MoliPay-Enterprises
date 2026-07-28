@@ -110,29 +110,17 @@ function DatosEmpresa() {
 
       {step === 1 && (
         <div>
-          <p
-            className="mb-2"
-            style={{
-              fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-              fontSize: "0.7rem",
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              color: "#0891B2",
-            }}
-          >
+          <p className="mb-2 text-[0.7rem] tracking-[0.2em] uppercase text-red-500">
             Resumen
           </p>
-          <h2
-            className="mb-6"
-            style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.35rem", fontWeight: 500, color: "#0A1628" }}
-          >
+          <h2 className="mb-6 text-[1.35rem] font-semibold text-black-800">
             Confirma los datos ingresados
           </h2>
-          <dl className="divide-y" style={{ borderTop: "1px solid rgba(10,22,40,0.1)", borderBottom: "1px solid rgba(10,22,40,0.1)" }}>
+          <dl className="divide-y border-t border-b border-black-100">
             {rows.map(([k, v]) => (
               <div key={k} className="grid grid-cols-1 sm:grid-cols-[minmax(0,140px)_1fr] gap-1 sm:gap-4 py-3 text-sm">
-                <dt className="text-[#0A1628]/60">{k}</dt>
-                <dd className="text-[#0A1628] font-semibold">{v || "—"}</dd>
+                <dt className="text-black-400">{k}</dt>
+                <dd className="text-black-800 font-semibold">{v || "—"}</dd>
               </div>
             ))}
           </dl>

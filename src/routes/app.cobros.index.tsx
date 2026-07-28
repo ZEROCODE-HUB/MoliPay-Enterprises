@@ -47,21 +47,21 @@ const presets = [
 ];
 
 const MEDIO_COLORS: Record<string, string> = {
-  TRANSFERENCIA: "#0891b2",
-  TARJETA_CREDITO: "#7c3aed",
-  TARJETA_DEBITO: "#2563eb",
-  QR: "#059669",
+  TRANSFERENCIA: "#324595",
+  TARJETA_CREDITO: "#D3001F",
+  TARJETA_DEBITO: "#000000",
+  QR: "#1E8E3E",
 };
 
-const VENC_COLORS = ["#22c55e", "#f59e0b", "#ef4444"];
+const VENC_COLORS = ["#1E8E3E", "#E37B1A", "#D3001F"];
 
 const ESTADO_BADGE: Record<LoteEstado, string> = {
-  cargado: "bg-muted text-muted-foreground",
-  en_proceso: "bg-amber-100 text-amber-800",
-  finalizado: "bg-emerald-100 text-emerald-700",
-  pausado: "bg-blue-100 text-blue-700",
-  eliminado: "bg-red-100 text-red-700",
-  error: "bg-red-100 text-red-700",
+  cargado: "bg-plata-200 text-black-600",
+  en_proceso: "bg-warning-bg text-warning",
+  finalizado: "bg-success-bg text-success",
+  pausado: "bg-navy-50 text-navy-500",
+  eliminado: "bg-error-bg text-error",
+  error: "bg-error-bg text-error",
 };
 
 const ESTADO_LABEL: Record<LoteEstado, string> = {
@@ -146,7 +146,7 @@ function Dashboard() {
             className={
               "px-4 py-2 rounded-lg text-xs font-semibold border transition " +
               (filter.label === p.label
-                ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] border-transparent"
+                ? "bg-navy-50 text-navy-600 border-transparent"
                 : "bg-card hover:bg-muted")
             }
           >
@@ -357,7 +357,7 @@ function Dashboard() {
             <Line
               type="monotone"
               dataKey="monto"
-              stroke="#C8102E"
+              stroke="#D3001F"
               strokeWidth={2}
               name="Monto"
               dot={false}

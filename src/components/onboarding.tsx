@@ -7,7 +7,7 @@ import { MollyLogo } from "@/components/molly-logo";
 
 export function AuthShell({
   children,
-  leftEyebrow = "Molipay · Onboarding",
+  leftEyebrow = "MoliPay · Onboarding",
   leftTitle = "Tus datos están protegidos bajo normativa BCRA",
   leftBody,
   step,
@@ -19,162 +19,89 @@ export function AuthShell({
   step?: string;
 }) {
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 overflow-x-hidden" style={{ background: "#F7F5F0" }}>
-      {/* Panel izquierdo — premium fintech */}
-      <aside
-        className="relative hidden lg:flex flex-col justify-between p-10 xl:p-12 overflow-hidden select-none"
-        style={{
-          background: "linear-gradient(160deg, #0A1628 0%, #111D35 40%, #162240 70%, #1A2747 100%)",
-          color: "#F7F5F0",
-        }}
-      >
-        {/* Ambient glow orbs */}
-        <div
-          aria-hidden
-          className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-[0.08]"
-          style={{
-            background: "radial-gradient(circle, #0891B2 0%, transparent 70%)",
-            filter: "blur(60px)",
-          }}
-        />
-        <div
-          aria-hidden
-          className="absolute -bottom-40 -left-40 w-[30rem] h-[30rem] rounded-full opacity-[0.06]"
-          style={{
-            background: "radial-gradient(circle, #C41E3A 0%, transparent 70%)",
-            filter: "blur(80px)",
-          }}
-        />
+    <div className="min-h-screen grid lg:grid-cols-2 overflow-x-hidden bg-plata-50">
+      <aside className="relative hidden lg:flex flex-col justify-between p-10 xl:p-12 overflow-hidden select-none bg-black text-white">
+        <div aria-hidden className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-[0.06] bg-red-500 blur-[60px]" />
+        <div aria-hidden className="absolute -bottom-40 -left-40 w-[30rem] h-[30rem] rounded-full opacity-[0.04] bg-navy-500 blur-[80px]" />
 
-        {/* Abstract data-flow motif */}
-        <svg
-          aria-hidden
-          className="absolute inset-0 w-full h-full opacity-[0.18]"
-          preserveAspectRatio="none"
-          viewBox="0 0 500 900"
-        >
+        <svg aria-hidden className="absolute inset-0 w-full h-full opacity-[0.12]" preserveAspectRatio="none" viewBox="0 0 500 900">
           <defs>
-            <pattern id="dotGrid" width="32" height="32" patternUnits="userSpaceOnUse">
-              <circle cx="1" cy="1" r="0.8" fill="#0891B2" opacity="0.35" />
+            <pattern id="moliGrid" width="32" height="32" patternUnits="userSpaceOnUse">
+              <circle cx="1" cy="1" r="0.8" fill="#D3001F" opacity="0.3" />
             </pattern>
-            <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#0891B2" stopOpacity="0" />
-              <stop offset="50%" stopColor="#0891B2" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#0891B2" stopOpacity="0" />
+            <linearGradient id="moliLineGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#D3001F" stopOpacity="0" />
+              <stop offset="50%" stopColor="#D3001F" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#D3001F" stopOpacity="0" />
             </linearGradient>
           </defs>
-          <rect width="500" height="900" fill="url(#dotGrid)" />
-          {/* Diagonal data lines */}
-          <g stroke="url(#lineGrad)" strokeWidth="0.8" fill="none">
+          <rect width="500" height="900" fill="url(#moliGrid)" />
+          <g stroke="url(#moliLineGrad)" strokeWidth="0.8" fill="none">
             <path d="M80 0 L180 200 L140 380 L260 500 L220 700 L300 900" />
             <path d="M300 0 L360 150 L320 320 L420 480 L380 650 L450 900" />
             <path d="M450 0 L480 100 L440 250 L500 400" />
           </g>
-          {/* Connection nodes */}
-          <g fill="#0891B2" opacity="0.5">
+          <g fill="#D3001F" opacity="0.4">
             <circle cx="180" cy="200" r="2.5" />
             <circle cx="140" cy="380" r="2" />
             <circle cx="260" cy="500" r="2.5" />
             <circle cx="360" cy="150" r="2" />
             <circle cx="420" cy="480" r="2.5" />
           </g>
-          {/* Faint horizontal pulse lines */}
-          {[120, 250, 400, 600, 780].map((y, i) => (
-            <line
-              key={i}
-              x1="0" y1={y} x2="500" y2={y}
-              stroke="#0891B2" strokeWidth="0.3" opacity={0.12 + i * 0.02}
-            />
-          ))}
         </svg>
 
-        {/* Content */}
         <div className="relative z-10">
           <Link to="/" className="inline-flex">
-            <MollyLogo variant="light" size={34} />
+            <img src="/molly-logo.png" alt="Moli" style={{ height: 34, width: "auto", display: "block", filter: "brightness(0) invert(1)" }} />
           </Link>
           <div className="mt-12">
             <div className="flex items-center gap-2 mb-6">
-              <span className="w-6 h-px bg-[#0891B2]/60" />
-              <span
-                className="uppercase tracking-[0.25em]"
-                style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: "0.65rem", color: "#0891B2", opacity: 0.85 }}
-              >
+              <span className="w-6 h-px bg-red-400/60" />
+              <span className="font-primary text-[0.65rem] tracking-[0.25em] uppercase text-red-400/80">
                 {leftEyebrow}
               </span>
             </div>
-            <h2
-              className="max-w-[22ch] leading-[1.12]"
-              style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "clamp(1.5rem, 2vw, 2rem)", fontWeight: 300, letterSpacing: "-0.01em" }}
-            >
+            <h2 className="text-[clamp(1.5rem,2vw,2rem)] font-light leading-[1.12] tracking-tight max-w-[22ch] text-white">
               {leftTitle}
             </h2>
             {leftBody && (
-              <p className="mt-5 max-w-[34ch] text-white/65 leading-relaxed" style={{ fontSize: "0.85rem", lineHeight: 1.7 }}>
+              <p className="mt-5 max-w-[34ch] text-white/65 leading-relaxed text-sm">
                 {leftBody}
               </p>
             )}
           </div>
         </div>
 
-        {/* Footer area */}
         <div className="relative z-10 space-y-5">
-          <div
-            className="inline-flex items-center gap-2.5 px-3 py-2"
-            style={{
-              border: "1px solid rgba(8,145,178,0.3)",
-              borderRadius: 4,
-              background: "rgba(8,145,178,0.06)",
-              backdropFilter: "blur(4px)",
-            }}
-          >
-            <ShieldCheck size={13} strokeWidth={1.5} color="#0891B2" />
-            <span
-              style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: "0.65rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "#0891B2" }}
-            >
+          <div className="inline-flex items-center gap-2.5 px-3 py-2 border border-red-400/30 rounded-sm bg-red-500/5 backdrop-blur">
+            <ShieldCheck size={13} strokeWidth={1.5} className="text-red-400" />
+            <span className="font-primary text-[0.65rem] tracking-[0.1em] uppercase text-red-400">
               Registrado ante BCRA
             </span>
           </div>
           {step && (
-            <p
-              className="text-white/45"
-              style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: "0.65rem", letterSpacing: "0.15em", textTransform: "uppercase" }}
-            >
+            <p className="text-white/45 font-primary text-[0.65rem] tracking-[0.15em] uppercase">
               {step}
             </p>
           )}
-          <p className="text-white/35 text-[11px]">© {new Date().getFullYear()} Moli Financial S.A.</p>
+          <p className="text-white/35 text-[11px]">© {new Date().getFullYear()} MoliPay</p>
         </div>
       </aside>
 
-      {/* Panel derecho */}
       <main className="flex flex-col">
-        {/* Franja mobile */}
-        <div className="lg:hidden px-6 py-4 flex items-center justify-between" style={{ background: "#0A1628", color: "#fff" }}>
+        <div className="lg:hidden px-6 py-4 flex items-center justify-between bg-black text-white">
           <Link to="/" className="inline-flex items-center gap-2">
-            <MollyLogo variant="light" size={26} />
+            <img src="/molly-logo.png" alt="Moli" style={{ height: 26, width: "auto", display: "block", filter: "brightness(0) invert(1)" }} />
           </Link>
-          <div className="flex items-center gap-3">
-            <span
-              className="text-white/50 font-mono tracking-widest"
-              style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: "0.6rem", letterSpacing: "0.15em", textTransform: "uppercase" }}
-            >
-              BCRA
-            </span>
-            <span className="w-px h-4 bg-white/10" />
-            <span className="text-white/70 text-xs font-mono tracking-wider" style={{ fontFamily: "'IBM Plex Mono', ui-monospace, monospace", fontSize: "0.6rem" }}>
-              PSPCP
-            </span>
-          </div>
         </div>
 
         <div className="flex-1 flex items-start lg:items-center justify-center px-5 sm:px-8 py-8 lg:py-16 overflow-x-hidden">
           <div className="w-full max-w-[480px]">{children}</div>
         </div>
 
-        <footer className="px-6 py-4 text-center text-xs text-[#0A1628]/50">
+        <footer className="px-6 py-4 text-center text-xs text-black-400">
           ¿Necesitás ayuda?{" "}
-          <a href="mailto:soporte@molipay.com.ar" className="underline underline-offset-2 hover:text-[#C41E3A]">
+          <a href="mailto:soporte@molipay.com.ar" className="underline underline-offset-2 hover:text-red-500 transition-colors">
             soporte@molipay.com.ar
           </a>
         </footer>
@@ -194,26 +121,20 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
         return (
           <li key={label} className="flex items-center gap-2 shrink-0">
             <span
-              className="inline-flex items-center justify-center w-7 h-7 text-xs font-semibold"
-              style={{
-                borderRadius: 999,
-                background: done ? "#16A34A" : active ? "#C41E3A" : "transparent",
-                color: done || active ? "#fff" : "#0A1628",
-                border: done || active ? "none" : "1px solid rgba(10,22,40,0.25)",
-              }}
+              className={`inline-flex items-center justify-center w-7 h-7 text-xs font-semibold rounded-full ${
+                done
+                  ? "bg-success text-white"
+                  : active
+                  ? "bg-red-500 text-white"
+                  : "bg-transparent text-black-600 border border-black-200"
+              }`}
             >
               {done ? <Check size={14} /> : i + 1}
             </span>
-            <span
-              className="text-xs"
-              style={{
-                color: active ? "#0A1628" : "rgba(10,22,40,0.55)",
-                fontWeight: active ? 600 : 500,
-              }}
-            >
+            <span className={`text-xs ${active ? "font-semibold text-black-800" : "text-black-400"}`}>
               {label}
             </span>
-            {i < steps.length - 1 && <span className="w-6 h-px" style={{ background: "rgba(10,22,40,0.15)" }} />}
+            {i < steps.length - 1 && <span className="w-6 h-px bg-black-100" />}
           </li>
         );
       })}
@@ -227,31 +148,14 @@ export function FormTitle({ eyebrow, title, subtitle }: { eyebrow?: string; titl
   return (
     <div className="mb-7">
       {eyebrow && (
-        <p
-          className="mb-2"
-          style={{
-            fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
-            fontSize: "0.7rem",
-            letterSpacing: "0.2em",
-            textTransform: "uppercase",
-            color: "#0891B2",
-          }}
-        >
+        <p className="mb-2 font-primary text-[0.7rem] tracking-[0.2em] uppercase text-red-500">
           {eyebrow}
         </p>
       )}
-      <h1
-        style={{
-          fontFamily: "'Fraunces', Georgia, serif",
-          fontSize: "clamp(1.5rem, 2.4vw, 1.9rem)",
-          fontWeight: 500,
-          color: "#0A1628",
-          lineHeight: 1.15,
-        }}
-      >
+      <h1 className="text-[clamp(1.5rem,2.4vw,1.9rem)] font-semibold leading-[1.15] text-black-800">
         {title}
       </h1>
-      {subtitle && <p className="mt-3 text-sm text-[#0A1628]/65 leading-relaxed">{subtitle}</p>}
+      {subtitle && <p className="mt-3 text-sm text-black-400 leading-relaxed">{subtitle}</p>}
     </div>
   );
 }
@@ -267,20 +171,17 @@ type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
 export function Field({ label, error, hint, className = "", ...rest }: FieldProps) {
   return (
     <label className="block">
-      <span className="block mb-1.5 text-xs font-semibold text-[#0A1628]">{label}</span>
+      <span className="block mb-1.5 text-xs font-semibold text-black-700">{label}</span>
       <input
         {...rest}
-        className={`w-full h-11 px-3 bg-white text-sm outline-none transition-colors ${className}`}
-        style={{
-          border: `1px solid ${error ? "#C41E3A" : "rgba(10,22,40,0.15)"}`,
-          borderRadius: 2,
-          color: "#0A1628",
-        }}
+        className={`w-full h-11 px-3 bg-white text-sm text-black-700 outline-none transition-colors rounded-sm ${
+          error ? "border-red-500" : "border-black-100"
+        } border focus:border-navy-500 focus:ring-2 focus:ring-navy-100 placeholder:text-black-300 ${className}`}
       />
       {error ? (
-        <span className="mt-1 block text-xs text-[#C41E3A]">{error}</span>
+        <span className="mt-1 block text-xs text-red-500">{error}</span>
       ) : hint ? (
-        <span className="mt-1 block text-xs text-[#0A1628]/55">{hint}</span>
+        <span className="mt-1 block text-xs text-black-400">{hint}</span>
       ) : null}
     </label>
   );
@@ -303,25 +204,22 @@ export function SelectField({
 }) {
   return (
     <label className="block">
-      <span className="block mb-1.5 text-xs font-semibold text-[#0A1628]">{label}</span>
+      <span className="block mb-1.5 text-xs font-semibold text-black-700">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full h-11 px-3 bg-white text-sm outline-none"
-        style={{
-          border: `1px solid ${error ? "#C41E3A" : "rgba(10,22,40,0.15)"}`,
-          borderRadius: 2,
-          color: value ? "#0A1628" : "rgba(10,22,40,0.5)",
-        }}
+        className={`w-full h-11 px-3 bg-white text-sm outline-none rounded-sm ${
+          error ? "border-red-500" : "border-black-100"
+        } border focus:border-navy-500 focus:ring-2 focus:ring-navy-100 ${
+          value ? "text-black-700" : "text-black-300"
+        }`}
       >
         <option value="">{placeholder}</option>
         {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
+          <option key={o} value={o}>{o}</option>
         ))}
       </select>
-      {error && <span className="mt-1 block text-xs text-[#C41E3A]">{error}</span>}
+      {error && <span className="mt-1 block text-xs text-red-500">{error}</span>}
     </label>
   );
 }
@@ -352,37 +250,33 @@ export function PasswordField({
   return (
     <div>
       <label className="block">
-        <span className="block mb-1.5 text-xs font-semibold text-[#0A1628]">{label}</span>
-        <div
-          className="flex items-center bg-white"
-          style={{
-            border: `1px solid ${error ? "#C41E3A" : "rgba(10,22,40,0.15)"}`,
-            borderRadius: 2,
-          }}
-        >
+        <span className="block mb-1.5 text-xs font-semibold text-black-700">{label}</span>
+        <div className={`flex items-center bg-white rounded-sm border ${
+          error ? "border-red-500" : "border-black-100"
+        } focus-within:border-navy-500 focus-within:ring-2 focus-within:ring-navy-100`}>
           <input
             type={show ? "text" : "password"}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="flex-1 h-11 px-3 bg-transparent text-sm outline-none text-[#0A1628]"
+            className="flex-1 h-11 px-3 bg-transparent text-sm outline-none text-black-700 placeholder:text-black-300"
           />
           <button
             type="button"
             onClick={() => setShow((s) => !s)}
-            className="px-3 text-[#0A1628]/60 hover:text-[#0A1628]"
+            className="px-3 text-black-400 hover:text-black-700"
             aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"}
           >
             {show ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
-        {error && <span className="mt-1 block text-xs text-[#C41E3A]">{error}</span>}
+        {error && <span className="mt-1 block text-xs text-red-500">{error}</span>}
       </label>
       {showRules && (
         <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-3">
           {rules.map((r) => {
             const ok = r.test(value);
             return (
-              <li key={r.id} className="flex items-center gap-1.5 text-[11px]" style={{ color: ok ? "#16A34A" : "rgba(10,22,40,0.55)" }}>
+              <li key={r.id} className={`flex items-center gap-1.5 text-[11px] ${ok ? "text-success" : "text-black-400"}`}>
                 <Check size={12} />
                 {r.label}
               </li>
@@ -418,16 +312,9 @@ export function PrimaryButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`w-full h-11 text-white text-sm font-semibold tracking-wide transition-opacity ${className}`}
-      style={{
-        background: "#C41E3A",
-        borderRadius: 2,
-        opacity: disabled ? 0.45 : 1,
-        cursor: disabled ? "not-allowed" : "pointer",
-        letterSpacing: "0.06em",
-        textTransform: "uppercase",
-        fontSize: "0.8rem",
-      }}
+      className={`w-full h-11 rounded-sm text-white text-sm font-semibold tracking-wide transition-all duration-150 ${
+        disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-red-400 active:bg-red-700"
+      } bg-red-500 ${className}`}
     >
       {children}
     </button>
@@ -447,15 +334,7 @@ export function SecondaryButton({
     <button
       type={type}
       onClick={onClick}
-      className="h-11 px-5 text-sm font-semibold hover:bg-[#0A1628]/5 transition-colors"
-      style={{
-        border: "1px solid #0A1628",
-        color: "#0A1628",
-        borderRadius: 2,
-        letterSpacing: "0.06em",
-        textTransform: "uppercase",
-        fontSize: "0.75rem",
-      }}
+      className="h-11 px-5 rounded-sm text-sm font-semibold transition-colors border border-black-200 text-black-700 hover:bg-black-50"
     >
       {children}
     </button>
@@ -519,44 +398,34 @@ export function FileUpload({
     return () => {
       if (value?.url) URL.revokeObjectURL(value.url);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (value) {
     return (
       <div>
-        <span className="block mb-1.5 text-xs font-semibold text-[#0A1628]">{label}</span>
-        <div
-          className="flex items-center gap-3 bg-white px-3 py-3"
-          style={{ border: "1px solid rgba(10,22,40,0.15)", borderRadius: 2 }}
-        >
-          <FileText size={18} className="text-[#0A1628]/70 shrink-0" />
+        <span className="block mb-1.5 text-xs font-semibold text-black-700">{label}</span>
+        <div className="flex items-center gap-3 bg-white px-3 py-3 rounded-sm border border-black-100">
+          <FileText size={18} className="text-black-400 shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm truncate text-[#0A1628]">{value.name}</p>
-            <p className="text-[11px] text-[#0A1628]/55">Archivo cargado</p>
+            <p className="text-sm truncate text-black-700">{value.name}</p>
+            <p className="text-[11px] text-black-400">Archivo cargado</p>
           </div>
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="text-xs font-semibold text-[#0A1628] hover:text-[#C41E3A] transition-colors"
+            className="text-xs font-semibold text-black-700 hover:text-red-500 transition-colors"
           >
             Reemplazar
           </button>
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="text-[#0A1628]/50 hover:text-[#C41E3A]"
+            className="text-black-400 hover:text-red-500"
             aria-label="Quitar"
           >
             <X size={16} />
           </button>
-          <input
-            ref={inputRef}
-            type="file"
-            accept={accept}
-            className="hidden"
-            onChange={(e) => handle(e.target.files?.[0] ?? null)}
-          />
+          <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={(e) => handle(e.target.files?.[0] ?? null)} />
         </div>
       </div>
     );
@@ -564,47 +433,28 @@ export function FileUpload({
 
   return (
     <div>
-      <span className="block mb-1.5 text-xs font-semibold text-[#0A1628]">{label}</span>
+      <span className="block mb-1.5 text-xs font-semibold text-black-700">{label}</span>
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDrag(true);
-        }}
+        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDrag(false);
-          handle(e.dataTransfer.files?.[0] ?? null);
-        }}
-        className="w-full flex flex-col items-center justify-center gap-2 py-8 px-4 text-center transition-colors"
-        style={{
-          border: `1px dashed ${drag ? "#C41E3A" : "rgba(10,22,40,0.25)"}`,
-          background: drag ? "rgba(196,30,58,0.03)" : "#fff",
-          borderRadius: 2,
-        }}
+        onDrop={(e) => { e.preventDefault(); setDrag(false); handle(e.dataTransfer.files?.[0] ?? null); }}
+        className={`w-full flex flex-col items-center justify-center gap-2 py-8 px-4 text-center transition-colors rounded-sm ${
+          drag ? "border-red-500 bg-red-50/20" : "border-black-200 bg-white"
+        } border-dashed border`}
       >
-        <div
-          className="w-10 h-10 flex items-center justify-center"
-          style={{ background: "#0A1628", color: "#0891B2", borderRadius: 999 }}
-        >
+        <div className="w-10 h-10 flex items-center justify-center bg-black text-red-400 rounded-full">
           <Camera size={18} />
         </div>
-        <span className="text-sm font-semibold text-[#0A1628]">
+        <span className="text-sm font-semibold text-black-700">
           <UploadCloud size={14} className="inline mr-1" />
           Arrastrá o hacé clic para subir
         </span>
-        {hint && <span className="text-xs text-[#0A1628]/55">{hint}</span>}
-        <span className="text-[10px] text-[#0A1628]/45 uppercase tracking-wider">JPG · PNG · PDF · máx 8MB</span>
+        {hint && <span className="text-xs text-black-400">{hint}</span>}
+        <span className="text-[10px] text-black-300 uppercase tracking-wider">JPG · PNG · PDF · máx 8MB</span>
       </button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        className="hidden"
-        onChange={(e) => handle(e.target.files?.[0] ?? null)}
-      />
+      <input ref={inputRef} type="file" accept={accept} className="hidden" onChange={(e) => handle(e.target.files?.[0] ?? null)} />
     </div>
   );
 }
@@ -622,29 +472,14 @@ export function SuccessCard({
   children?: ReactNode;
   variant?: "success" | "info";
 }) {
-  const color = variant === "success" ? "#16A34A" : "#0891B2";
+  const color = variant === "success" ? "#1E8E3E" : "#324595";
   return (
-    <div
-      className="bg-white p-8 sm:p-10 text-center"
-      style={{ border: "1px solid rgba(10,22,40,0.1)", borderRadius: 2 }}
-    >
-      <div
-        className="mx-auto mb-6 inline-flex items-center justify-center w-16 h-16"
-        style={{ borderRadius: 999, background: `${color}14`, color }}
-      >
+    <div className="bg-white p-8 sm:p-10 text-center rounded-md border border-black-100">
+      <div className="mx-auto mb-6 inline-flex items-center justify-center w-16 h-16 rounded-full" style={{ background: `${color}14`, color }}>
         <Check size={30} strokeWidth={2.5} />
       </div>
-      <h1
-        style={{
-          fontFamily: "'Fraunces', Georgia, serif",
-          fontSize: "1.75rem",
-          fontWeight: 500,
-          color: "#0A1628",
-        }}
-      >
-        {title}
-      </h1>
-      {body && <div className="mt-4 text-sm text-[#0A1628]/70 leading-relaxed">{body}</div>}
+      <h1 className="text-[1.75rem] font-semibold text-black-800 leading-tight">{title}</h1>
+      {body && <div className="mt-4 text-sm text-black-400 leading-relaxed">{body}</div>}
       {children && <div className="mt-8 space-y-3">{children}</div>}
     </div>
   );

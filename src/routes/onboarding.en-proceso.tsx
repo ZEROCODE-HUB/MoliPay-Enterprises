@@ -31,9 +31,9 @@ function EnProceso() {
               Tu informacion esta siendo validada por nuestro equipo. Este proceso puede demorar hasta{" "}
               <strong>24 horas habiles</strong>. Te avisaremos por correo cuando el proceso finalice.
             </p>
-            <p className="mt-3 text-xs text-[#0A1628]/55">
-              Si tenes algun problema,{" "}
-              <a href="mailto:soporte@molipay.com.ar" className="underline underline-offset-2 hover:text-[#C41E3A]">
+            <p className="mt-3 text-xs text-black-400">
+              Si tenés algún problema,{" "}
+              <a href="mailto:soporte@molipay.com.ar" className="underline underline-offset-2 hover:text-red-500">
                 contactanos
               </a>
               .

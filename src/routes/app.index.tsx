@@ -21,10 +21,10 @@ type PeriodKey = "today" | "15d" | "30d" | "60d" | "90d" | "day" | "range";
 
 const QUICK: Array<{ k: PeriodKey; l: string; days: number }> = [
   { k: "today", l: "Hoy", days: 1 },
-  { k: "15d", l: "15 dias", days: 15 },
-  { k: "30d", l: "30 dias", days: 30 },
-  { k: "60d", l: "60 dias", days: 60 },
-  { k: "90d", l: "90 dias", days: 90 },
+  { k: "15d", l: "15 días", days: 15 },
+  { k: "30d", l: "30 días", days: 30 },
+  { k: "60d", l: "60 días", days: 60 },
+  { k: "90d", l: "90 días", days: 90 },
 ];
 
 function seriesFor(days: number): Array<{
@@ -73,7 +73,7 @@ function Dashboard() {
   const periodLabel = useMemo(() => {
     if (period === "day") return day;
     if (period === "range") return `${desde || "?"} – ${hasta || "?"}`;
-    return QUICK.find((p) => p.k === period)?.l ?? "30 dias";
+    return QUICK.find((p) => p.k === period)?.l ?? "30 días";
   }, [period, day, desde, hasta]);
 
   const kpis = useMemo(() => {
@@ -98,19 +98,18 @@ function Dashboard() {
     <>
       <PageHeader
         title="Dashboard"
-        description="Panel ejecutivo — estado de tu operacion financiera."
+        description="Panel ejecutivo — estado de tu operación financiera."
         action={
-          <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="hidden md:flex items-center gap-2 text-xs text-black-400">
             <Clock size={14} /> Actualizado hace 2 min
           </div>
         }
       />
 
-      {/* Filtros */}
       <Card className="mb-8">
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide shrink-0">
-            Periodo
+          <span className="text-xs font-semibold text-black-400 uppercase tracking-wide shrink-0">
+            Período
           </span>
           {QUICK.map((p) => (
             <button
@@ -118,8 +117,8 @@ function Dashboard() {
               onClick={() => setPeriod(p.k)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
                 period === p.k
-                  ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] border-transparent"
-                  : "bg-card hover:bg-muted"
+                  ? "bg-navy-50 text-navy-600 border-transparent"
+                  : "bg-white hover:bg-black-50 border-black-100 text-black-500"
               }`}
             >
               {p.l}
@@ -129,18 +128,18 @@ function Dashboard() {
             onClick={() => setPeriod("day")}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
               period === "day"
-                ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] border-transparent"
-                : "bg-card hover:bg-muted"
+                ? "bg-navy-50 text-navy-600 border-transparent"
+                : "bg-white hover:bg-black-50 border-black-100 text-black-500"
             }`}
           >
-            Dia especifico
+            Día específico
           </button>
           <button
             onClick={() => setPeriod("range")}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
               period === "range"
-                ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] border-transparent"
-                : "bg-card hover:bg-muted"
+                ? "bg-navy-50 text-navy-600 border-transparent"
+                : "bg-white hover:bg-black-50 border-black-100 text-black-500"
             }`}
           >
             Rango
@@ -148,31 +147,31 @@ function Dashboard() {
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Dia</span>
+            <span className="text-xs text-black-400">Día</span>
             <input
               type="date"
               value={day}
               onChange={(e) => setDay(e.target.value)}
-              className="h-9 px-3 rounded-md border bg-card text-sm"
+              className="h-9 px-3 rounded-sm border border-black-100 bg-white text-sm text-black-700"
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Desde</span>
+            <span className="text-xs text-black-400">Desde</span>
             <input
               type="date"
               value={desde}
               onChange={(e) => setDesde(e.target.value)}
-              className="h-9 px-3 rounded-md border bg-card text-sm"
+              className="h-9 px-3 rounded-sm border border-black-100 bg-white text-sm text-black-700"
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Hasta</span>
+            <span className="text-xs text-black-400">Hasta</span>
             <input
               type="date"
               value={hasta}
               onChange={(e) => setHasta(e.target.value)}
               min={desde || undefined}
-              className="h-9 px-3 rounded-md border bg-card text-sm"
+              className="h-9 px-3 rounded-sm border border-black-100 bg-white text-sm text-black-700"
             />
           </div>
           <div className="ml-auto flex gap-2">
@@ -186,16 +185,15 @@ function Dashboard() {
         </div>
       </Card>
 
-      {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-xs text-muted-foreground mb-1">Saldo total de la cuenta</div>
-              <div className="text-xl md:text-2xl font-bold text-foreground">{formatARS(kpis.saldo)}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">CBU ···· 67890</div>
+              <div className="text-xs text-black-400 mb-1">Saldo total de la cuenta</div>
+              <div className="text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.saldo)}</div>
+              <div className="text-xs text-black-400 mt-0.5">CBU ···· 67890</div>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-[color:var(--brand-soft)] flex items-center justify-center text-primary shrink-0">
+            <div className="w-9 h-9 rounded-sm bg-navy-50 flex items-center justify-center text-navy-500 shrink-0">
               <Wallet size={18} />
             </div>
           </div>
@@ -203,11 +201,11 @@ function Dashboard() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-xs text-muted-foreground mb-1">Depositos del periodo</div>
-              <div className="text-xl md:text-2xl font-bold text-foreground">{formatARS(kpis.depositos)}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{data.length} dias</div>
+              <div className="text-xs text-black-400 mb-1">Depósitos del período</div>
+              <div className="text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.depositos)}</div>
+              <div className="text-xs text-black-400 mt-0.5">{data.length} días</div>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+            <div className="w-9 h-9 rounded-sm bg-success-bg flex items-center justify-center text-success shrink-0">
               <ArrowDownLeft size={18} />
             </div>
           </div>
@@ -215,11 +213,11 @@ function Dashboard() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-xs text-muted-foreground mb-1">Retiros del periodo</div>
-              <div className="text-xl md:text-2xl font-bold text-foreground">{formatARS(kpis.retiros)}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">48 operaciones</div>
+              <div className="text-xs text-black-400 mb-1">Retiros del período</div>
+              <div className="text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.retiros)}</div>
+              <div className="text-xs text-black-400 mt-0.5">48 operaciones</div>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center text-red-600 shrink-0">
+            <div className="w-9 h-9 rounded-sm bg-error-bg flex items-center justify-center text-error shrink-0">
               <ArrowUpRight size={18} />
             </div>
           </div>
@@ -227,11 +225,11 @@ function Dashboard() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-xs text-muted-foreground mb-1">Total de cuentas</div>
-              <div className="text-xl md:text-2xl font-bold text-foreground">{kpis.cuentas}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">1 principal + 3 subcuentas</div>
+              <div className="text-xs text-black-400 mb-1">Total de cuentas</div>
+              <div className="text-xl md:text-2xl font-bold text-black-800">{kpis.cuentas}</div>
+              <div className="text-xs text-black-400 mt-0.5">1 principal + 3 subcuentas</div>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+            <div className="w-9 h-9 rounded-sm bg-info-bg flex items-center justify-center text-info shrink-0">
               <Users size={18} />
             </div>
           </div>
@@ -241,11 +239,11 @@ function Dashboard() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-xs text-muted-foreground mb-1">Cobros mediante Link de Pago</div>
-              <div className="text-xl md:text-2xl font-bold text-foreground">{formatARS(kpis.cobrosLink)}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{Math.round(kpis.cobrosLink / 85000)} transacciones</div>
+              <div className="text-xs text-black-400 mb-1">Cobros mediante Link de Pago</div>
+              <div className="text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.cobrosLink)}</div>
+              <div className="text-xs text-black-400 mt-0.5">{Math.round(kpis.cobrosLink / 85000)} transacciones</div>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-[color:var(--brand-blue-soft)] flex items-center justify-center text-[color:var(--brand-blue)] shrink-0">
+            <div className="w-9 h-9 rounded-sm bg-navy-50 flex items-center justify-center text-navy-500 shrink-0">
               <Link2 size={18} />
             </div>
           </div>
@@ -253,11 +251,11 @@ function Dashboard() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-xs text-muted-foreground mb-1">Cobros mediante Codigo QR</div>
-              <div className="text-xl md:text-2xl font-bold text-foreground">{formatARS(kpis.cobrosQR)}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{Math.round(kpis.cobrosQR / 32000)} transacciones</div>
+              <div className="text-xs text-black-400 mb-1">Cobros mediante Código QR</div>
+              <div className="text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.cobrosQR)}</div>
+              <div className="text-xs text-black-400 mt-0.5">{Math.round(kpis.cobrosQR / 32000)} transacciones</div>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 shrink-0">
+            <div className="w-9 h-9 rounded-sm bg-warning-bg flex items-center justify-center text-warning shrink-0">
               <QrCode size={18} />
             </div>
           </div>
@@ -265,57 +263,56 @@ function Dashboard() {
         <Card>
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-xs text-muted-foreground mb-1">Pagos realizados mediante QR</div>
-              <div className="text-xl md:text-2xl font-bold text-foreground">{formatARS(kpis.pagosQR)}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{Math.round(kpis.pagosQR / 18000)} transacciones</div>
+              <div className="text-xs text-black-400 mb-1">Pagos realizados mediante QR</div>
+              <div className="text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.pagosQR)}</div>
+              <div className="text-xs text-black-400 mt-0.5">{Math.round(kpis.pagosQR / 18000)} transacciones</div>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+            <div className="w-9 h-9 rounded-sm bg-plata-200 flex items-center justify-center text-black-600 shrink-0">
               <Smartphone size={18} />
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Grafico */}
       <Card>
         <div className="flex items-center justify-between mb-4 gap-3">
           <div className="min-w-0">
-            <h3 className="font-semibold truncate">Movimientos diarios</h3>
-            <p className="text-xs text-muted-foreground truncate">{periodLabel}</p>
+            <h3 className="font-semibold text-black-800 truncate">Movimientos diarios</h3>
+            <p className="text-xs text-black-400 truncate">{periodLabel}</p>
           </div>
-          <span className="text-primary font-semibold inline-flex items-center gap-1 text-xs shrink-0">
+          <span className="text-success font-semibold inline-flex items-center gap-1 text-xs shrink-0">
             <TrendingUp size={14} /> +18,4%
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs mb-4">
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "#C8102E" }} /> Depositos
+            <span className="w-2.5 h-2.5 rounded-sm bg-red-500" /> Depósitos
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "#16213E" }} /> Cobros QR
+            <span className="w-2.5 h-2.5 rounded-sm bg-black" /> Cobros QR
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "#0891B2" }} /> Link de Pago
+            <span className="w-2.5 h-2.5 rounded-sm bg-navy-500" /> Link de Pago
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: "#FBBF24" }} /> Total del dia
+            <span className="w-2.5 h-2.5 rounded-sm bg-warning" /> Total del día
           </span>
         </div>
         <div className="w-full" style={{ height: Math.max(200, Math.min(360, 40 * data.length)) }}>
           {data.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data} margin={{ top: 4, right: 4, left: -8, bottom: 0 }} barGap={2} barCategoryGap={data.length > 30 ? 4 : 8}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#D4D4D4" vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 10, fill: "#64748B" }}
+                  tick={{ fontSize: 10, fill: "#909090" }}
                   tickLine={false}
-                  axisLine={{ stroke: "#E2E8F0" }}
+                  axisLine={{ stroke: "#D4D4D4" }}
                   interval={data.length > 30 ? Math.floor(data.length / 10) : 0}
                 />
                 <YAxis
                   tickFormatter={(v: number) => `$${(v / 1_000_000).toFixed(1)}M`}
-                  tick={{ fontSize: 10, fill: "#64748B" }}
+                  tick={{ fontSize: 10, fill: "#909090" }}
                   tickLine={false}
                   axisLine={false}
                   width={52}
@@ -323,30 +320,30 @@ function Dashboard() {
                 <Tooltip
                   formatter={(value: number, name: string) => {
                     const labels: Record<string, string> = {
-                      depositos: "Depositos",
+                      depositos: "Depósitos",
                       cobrosQR: "Cobros QR",
                       linkPago: "Link de Pago",
-                      total: "Total del dia",
+                      total: "Total del día",
                     };
                     return [formatARS(value), labels[name] || name];
                   }}
                   labelFormatter={(label: string) => `Fecha: ${label}`}
                   contentStyle={{
-                    borderRadius: 8,
-                    border: "1px solid #E2E8F0",
+                    borderRadius: 4,
+                    border: "1px solid #D4D4D4",
                     boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
                     fontSize: 12,
                   }}
                 />
-                <Bar dataKey="depositos" fill="#C8102E" radius={[2, 2, 0, 0]} maxBarSize={32} />
-                <Bar dataKey="cobrosQR" fill="#16213E" radius={[2, 2, 0, 0]} maxBarSize={32} />
-                <Bar dataKey="linkPago" fill="#0891B2" radius={[2, 2, 0, 0]} maxBarSize={32} />
-                <Bar dataKey="total" fill="#FBBF24" radius={[2, 2, 0, 0]} maxBarSize={32} />
+                <Bar dataKey="depositos" fill="#D3001F" radius={[2, 2, 0, 0]} maxBarSize={32} />
+                <Bar dataKey="cobrosQR" fill="#000000" radius={[2, 2, 0, 0]} maxBarSize={32} />
+                <Bar dataKey="linkPago" fill="#324595" radius={[2, 2, 0, 0]} maxBarSize={32} />
+                <Bar dataKey="total" fill="#E37B1A" radius={[2, 2, 0, 0]} maxBarSize={32} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-40 text-sm text-muted-foreground">
-              No hay datos para el periodo seleccionado.
+            <div className="flex items-center justify-center h-40 text-sm text-black-400">
+              No hay datos para el período seleccionado.
             </div>
           )}
         </div>
