@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode, type InputHTMLAttributes }
 import { Link } from "@tanstack/react-router";
 import { Check, Eye, EyeOff, UploadCloud, Camera, FileText, X, ShieldCheck } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
+import loginBg from "@/assets/login-hero.jpg";
 
 /* ============ AuthShell (split-screen) ============ */
 
@@ -20,35 +21,12 @@ export function AuthShell({
 }) {
   return (
     <div className="min-h-screen grid lg:grid-cols-2 overflow-x-hidden bg-plata-50">
-      <aside className="relative hidden lg:flex flex-col justify-between p-10 xl:p-12 overflow-hidden select-none bg-black text-white">
-        <div aria-hidden className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-[0.06] bg-red-500 blur-[60px]" />
-        <div aria-hidden className="absolute -bottom-40 -left-40 w-[30rem] h-[30rem] rounded-full opacity-[0.04] bg-navy-500 blur-[80px]" />
-
-        <svg aria-hidden className="absolute inset-0 w-full h-full opacity-[0.12]" preserveAspectRatio="none" viewBox="0 0 500 900">
-          <defs>
-            <pattern id="moliGrid" width="32" height="32" patternUnits="userSpaceOnUse">
-              <circle cx="1" cy="1" r="0.8" fill="#D3001F" opacity="0.3" />
-            </pattern>
-            <linearGradient id="moliLineGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#D3001F" stopOpacity="0" />
-              <stop offset="50%" stopColor="#D3001F" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#D3001F" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <rect width="500" height="900" fill="url(#moliGrid)" />
-          <g stroke="url(#moliLineGrad)" strokeWidth="0.8" fill="none">
-            <path d="M80 0 L180 200 L140 380 L260 500 L220 700 L300 900" />
-            <path d="M300 0 L360 150 L320 320 L420 480 L380 650 L450 900" />
-            <path d="M450 0 L480 100 L440 250 L500 400" />
-          </g>
-          <g fill="#D3001F" opacity="0.4">
-            <circle cx="180" cy="200" r="2.5" />
-            <circle cx="140" cy="380" r="2" />
-            <circle cx="260" cy="500" r="2.5" />
-            <circle cx="360" cy="150" r="2" />
-            <circle cx="420" cy="480" r="2.5" />
-          </g>
-        </svg>
+      <aside className="relative hidden lg:flex flex-col justify-between p-10 xl:p-12 overflow-hidden select-none text-white">
+        <div className="absolute inset-0">
+          <img src={loginBg} alt="" aria-hidden className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-br from-black/85 via-black/70 to-black/50" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
+        </div>
 
         <div className="relative z-10">
           <Link to="/" className="inline-flex">
