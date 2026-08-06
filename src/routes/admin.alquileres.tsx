@@ -128,8 +128,8 @@ function PropDrawer({ p, onClose }: { p: Prop; onClose: () => void }) {
               <Badge tone={tono(p.e)}>{p.e}</Badge>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div><div className="text-xs text-muted-foreground">Monto</div><div className="font-semibold">{p.m}</div></div>
-              <div><div className="text-xs text-muted-foreground">Vence</div><div className="font-semibold">{p.venc}</div></div>
+              <div><div className="text-xs text-muted-foreground">Monto</div><div className="font-mono tabular-nums font-semibold">{p.m}</div></div>
+              <div><div className="text-xs text-muted-foreground">Vence</div><div className="font-mono tabular-nums font-semibold">{p.venc}</div></div>
             </div>
             <div className="flex gap-2 mt-4">
               <BtnPrimary className="flex-1">Registrar cobro manual</BtnPrimary>
@@ -153,7 +153,7 @@ function PropDrawer({ p, onClose }: { p: Prop; onClose: () => void }) {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold">{pg.m}</span>
+                    <span className="font-mono tabular-nums font-semibold">{pg.m}</span>
                     <button className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-accent"><FileText size={12} /></button>
                   </div>
                 </div>

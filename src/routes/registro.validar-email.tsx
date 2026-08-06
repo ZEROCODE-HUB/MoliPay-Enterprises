@@ -28,7 +28,7 @@ function ValidarEmail() {
       <div className="bg-white overflow-hidden rounded-sm border border-black-100">
         <div className="px-6 py-4 flex items-center justify-between bg-black">
           <MollyLogo />
-          <span className="text-white/60 font-primary text-[0.65rem] tracking-[0.15em] uppercase">
+          <span className="text-white/60 font-sans text-[0.65rem] tracking-[0.15em] uppercase">
             altas@molipay.com.ar
           </span>
         </div>

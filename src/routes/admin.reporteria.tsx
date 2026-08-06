@@ -365,9 +365,9 @@ function Page() {
                 {tipoSel.l} · <Badge tone={tipoSel.cat === "Regulatorio" ? "warn" : "neutral"}>{tipoSel.cat}</Badge> · Periodo mayo 2026
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <Card className="bg-muted/30"><div className="text-xs text-muted-foreground">Ingresos</div><div className="font-semibold text-lg">$ 12.420.300</div></Card>
-                <Card className="bg-muted/30"><div className="text-xs text-muted-foreground">Egresos</div><div className="font-semibold text-lg">$ 8.180.500</div></Card>
-                <Card className="bg-muted/30"><div className="text-xs text-muted-foreground">Neto</div><div className="font-semibold text-lg text-emerald-700">+ $ 4.239.800</div></Card>
+                <Card className="bg-muted/30"><div className="text-xs text-muted-foreground">Ingresos</div><div className="font-display tabular-nums font-semibold text-lg">$ 12.420.300</div></Card>
+                <Card className="bg-muted/30"><div className="text-xs text-muted-foreground">Egresos</div><div className="font-display tabular-nums font-semibold text-lg">$ 8.180.500</div></Card>
+                <Card className="bg-muted/30"><div className="text-xs text-muted-foreground">Neto</div><div className="font-display tabular-nums font-semibold text-lg text-emerald-700">+ $ 4.239.800</div></Card>
               </div>
               <Card>
                 <div className="text-xs text-muted-foreground mb-2">Top 3 conceptos</div>

@@ -175,8 +175,8 @@ function Page() {
                     />
                   </td>
                   <td className="px-3 py-3 font-semibold">{p.name}</td>
-                  <td className="px-3 py-3 text-right">{p.qty}</td>
-                  <td className="px-3 py-3 text-right font-semibold">{formatARS(p.price)}</td>
+                  <td className="px-3 py-3 font-mono tabular-nums text-right">{p.qty}</td>
+                  <td className="px-3 py-3 font-mono tabular-nums text-right font-semibold">{formatARS(p.price)}</td>
                   <td className="px-3 py-3 text-xs text-muted-foreground hidden md:table-cell">
                     {p.desc || "-"}
                   </td>
@@ -468,8 +468,8 @@ function Page() {
                       {l.status}
                     </Badge>
                   </td>
-                  <td className="px-5 py-3 text-right text-xs">{l.views}</td>
-                  <td className="px-5 py-3 text-right text-xs">{l.payments}</td>
+                  <td className="px-5 py-3 font-mono tabular-nums text-right text-xs">{l.views}</td>
+                  <td className="px-5 py-3 font-mono tabular-nums text-right text-xs">{l.payments}</td>
                   <td className="px-5 py-3 text-right text-xs text-muted-foreground">
                     {l.createdAt}
                   </td>

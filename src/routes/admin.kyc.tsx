@@ -235,12 +235,12 @@ function Page() {
                 <tr key={p.dni} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="px-5 py-3">
                     <div className="font-semibold">{p.n}</div>
-                    <div className="text-xs text-muted-foreground">DNI {p.dni}</div>
+                    <div className="text-xs text-muted-foreground font-mono">DNI {p.dni}</div>
                   </td>
                   <td className="px-5 py-3"><Badge tone="neutral">{p.prov}</Badge></td>
                   <td className="px-5 py-3 font-semibold">{p.score || "—"}</td>
-                  <td className="px-5 py-3 text-xs">{p.liveness ? `${p.liveness}%` : "—"}</td>
-                  <td className="px-5 py-3 text-xs">{p.match ? `${p.match}%` : "—"}</td>
+                  <td className="px-5 py-3 text-xs font-mono tabular-nums">{p.liveness ? `${p.liveness}%` : "—"}</td>
+                  <td className="px-5 py-3 font-mono tabular-nums text-xs">{p.match ? `${p.match}%` : "—"}</td>
                   <td className="px-5 py-3"><Badge tone={tonoKYC(p.e)}>{p.e}</Badge></td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{p.f}</td>
                   <td className="px-5 py-3 text-right">
@@ -396,9 +396,9 @@ function Page() {
               <Badge tone={tonoKYC(autoSel.e)}>{autoSel.e}</Badge>
             </div>
             <Card className="grid grid-cols-3 gap-2 text-center">
-              <div><div className="text-xs text-muted-foreground">Score</div><div className="font-semibold text-lg">{autoSel.score || "—"}</div></div>
-              <div><div className="text-xs text-muted-foreground">Liveness</div><div className="font-semibold text-lg">{autoSel.liveness}%</div></div>
-              <div><div className="text-xs text-muted-foreground">Match</div><div className="font-semibold text-lg">{autoSel.match}%</div></div>
+              <div><div className="text-xs text-muted-foreground">Score</div><div className="font-display tabular-nums font-semibold text-lg">{autoSel.score || "—"}</div></div>
+              <div><div className="text-xs text-muted-foreground">Liveness</div><div className="font-display tabular-nums font-semibold text-lg">{autoSel.liveness}%</div></div>
+              <div><div className="text-xs text-muted-foreground">Match</div><div className="font-display tabular-nums font-semibold text-lg">{autoSel.match}%</div></div>
             </Card>
             {autoSel.obs && (
               <div className="text-xs p-3 rounded-md bg-amber-50 text-amber-800 flex gap-2">

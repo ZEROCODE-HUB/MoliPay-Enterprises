@@ -141,7 +141,7 @@ function Page() {
                   <td className="px-5 py-3 text-xs text-muted-foreground">{c.rep}</td>
                   <td className="px-5 py-3"><Badge tone={tono(c.e)}>{c.e}</Badge></td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{c.f}</td>
-                  <td className="px-5 py-3 text-right text-sm font-semibold">{c.vol}</td>
+                  <td className="px-5 py-3 font-mono tabular-nums text-right text-sm font-semibold">{c.vol}</td>
                   <td className="px-5 py-3 text-right">
                     <BtnOutline className="h-8 px-3 text-xs" onClick={() => setDetalle(c)}>
                       Ver legajo <ChevronRight size={12} />
@@ -205,14 +205,14 @@ function DetalleDrawer({ cliente, onClose }: { cliente: typeof clientes[number];
               <div className="flex justify-between text-sm">
                 <div>
                   <div className="font-semibold">{cliente.rep}</div>
-                  <div className="text-xs text-muted-foreground">DNI 30.123.456 · Presidente</div>
+                  <div className="text-xs text-muted-foreground font-mono">DNI 30.123.456 · Presidente</div>
                 </div>
                 <Badge tone="success">Validado</Badge>
               </div>
               <div className="flex justify-between text-sm">
                 <div>
                   <div className="font-semibold">Diego Mendez</div>
-                  <div className="text-xs text-muted-foreground">DNI 29.888.777 · Apoderado</div>
+                  <div className="text-xs text-muted-foreground font-mono">DNI 29.888.777 · Apoderado</div>
                 </div>
                 <Badge tone="success">Validado</Badge>
               </div>

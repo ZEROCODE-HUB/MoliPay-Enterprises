@@ -85,7 +85,7 @@ function Page() {
               </div>
               <div className="text-sm text-muted-foreground">{c.admin}</div>
               <div className="text-sm">{c.uds}</div>
-              <div className="text-right text-sm font-semibold">{c.mes}</div>
+              <div className="font-mono tabular-nums text-right text-sm font-semibold">{c.mes}</div>
               <div><Badge tone={c.e === "Activo" ? "success" : "warn"}>{c.e}</Badge></div>
               <div className="flex justify-end mt-2 md:mt-0">
                 <BtnOutline className="h-9 px-3 text-xs" onClick={() => setDetalle(c)}>

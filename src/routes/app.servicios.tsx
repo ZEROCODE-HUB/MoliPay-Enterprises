@@ -200,25 +200,25 @@ function Page() {
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Servicios adheridos
           </div>
-          <div className="text-base md:text-lg font-semibold mt-0.5">14</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">14</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
             A pagar este mes
           </div>
-          <div className="text-base md:text-lg font-semibold mt-0.5">$ 384.480</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">$ 384.480</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">8 facturas</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Vencidos</div>
-          <div className="text-base md:text-lg font-semibold mt-0.5">1</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">1</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">Cablevision - $ 32.100</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Pagado este mes
           </div>
-          <div className="text-base md:text-lg font-semibold mt-0.5">$ 1.240.300</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">$ 1.240.300</div>
         </div>
       </div>
 
@@ -505,7 +505,7 @@ function Page() {
                         <td className="px-5 py-3 text-xs text-muted-foreground">{t.f}</td>
                         <td className="px-5 py-3 font-semibold text-sm">{t.s}</td>
                         <td className="px-5 py-3 text-xs text-muted-foreground">{t.cat}</td>
-                        <td className="px-5 py-3 text-right font-semibold">{t.m}</td>
+                        <td className="px-5 py-3 font-mono tabular-nums text-right font-semibold">{t.m}</td>
                         <td className="px-5 py-3 text-right">
                           <Badge
                             tone={
@@ -544,27 +544,27 @@ function Page() {
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                 Enviadas este mes
               </div>
-              <div className="text-base md:text-lg font-semibold mt-0.5">12</div>
+              <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">12</div>
               <div className="text-[10px] text-muted-foreground mt-0.5">$ 18,4M ARS</div>
             </div>
             <div className="bg-card border rounded-lg p-3">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                 Paises destino
               </div>
-              <div className="text-base md:text-lg font-semibold mt-0.5">6</div>
+              <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">6</div>
             </div>
             <div className="bg-card border rounded-lg p-3">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                 TC promedio
               </div>
-              <div className="text-base md:text-lg font-semibold mt-0.5">MORE rate</div>
+              <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">MORE rate</div>
               <div className="text-[10px] text-muted-foreground mt-0.5">Bonos · Cripto · P2P</div>
             </div>
             <div className="bg-card border rounded-lg p-3">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                 En proceso
               </div>
-              <div className="text-base md:text-lg font-semibold mt-0.5">2</div>
+              <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">2</div>
             </div>
           </div>
           <div className="grid lg:grid-cols-[1fr_1.4fr] gap-6">
@@ -613,8 +613,8 @@ function Page() {
                           {r.banco} · {r.tc}
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-right font-semibold">{r.mARS}</td>
-                      <td className="px-5 py-3 text-right">{r.mDest}</td>
+                      <td className="px-5 py-3 font-mono tabular-nums text-right font-semibold">{r.mARS}</td>
+                      <td className="px-5 py-3 font-mono tabular-nums text-right">{r.mDest}</td>
                       <td className="px-5 py-3 text-right">
                         <Badge
                           tone={
@@ -672,7 +672,7 @@ function Page() {
       >
         <div className="p-4 rounded-md bg-muted">
           <div className="text-xs text-muted-foreground">Total a pagar</div>
-          <div className="text-2xl font-semibold mt-0.5">{pagar?.v}</div>
+          <div className="font-display tabular-nums text-2xl font-semibold mt-0.5">{pagar?.v}</div>
         </div>
         <div>
           <Label>Subcuenta de origen</Label>

@@ -126,7 +126,7 @@ function Page() {
                       </div>
                     </td>
                     <td className="px-5 py-3 text-xs font-mono text-muted-foreground">{r.ref}</td>
-                    <td className={`px-5 py-3 text-right font-semibold whitespace-nowrap ${isIn ? "text-emerald-700" : ""}`}>$ {r.m.replace(/[+\- ]/g, "")}</td>
+                    <td className={`px-5 py-3 font-mono tabular-nums text-right font-semibold whitespace-nowrap ${isIn ? "text-emerald-700" : ""}`}>$ {r.m.replace(/[+\- ]/g, "")}</td>
                     <td className="px-5 py-3 text-right">
                       <Badge tone={r.e === "OK" ? "success" : r.e === "Pendiente" ? "warn" : r.e === "Alerta" ? "warn" : "danger"}>{r.e}</Badge>
                     </td>
@@ -229,7 +229,7 @@ function MovDrawer({ m, onClose }: { m: Mov; onClose: () => void }) {
         <div className="p-6 space-y-5">
           <Card>
             <div className="text-xs text-muted-foreground uppercase tracking-wide">Monto</div>
-            <div className={`text-3xl font-semibold mt-1 ${isIn ? "text-emerald-700" : ""}`}>$ {m.m.replace(/[+\- ]/g, "")}</div>
+            <div className={`font-display tabular-nums text-3xl font-semibold mt-1 ${isIn ? "text-emerald-700" : ""}`}>$ {m.m.replace(/[+\- ]/g, "")}</div>
             <div className="text-xs text-muted-foreground mt-1">{m.f}</div>
             <div className="mt-3"><Badge tone={m.e === "OK" ? "success" : m.e === "Rechazado" ? "danger" : "warn"}>{m.e}</Badge></div>
           </Card>

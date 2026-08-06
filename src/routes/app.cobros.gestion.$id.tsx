@@ -387,15 +387,15 @@ function DetalleLote() {
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total</span>
-              <span className="font-semibold text-lg">{formatARS(montoTotal)}</span>
+              <span className="font-display tabular-nums font-semibold text-lg">{formatARS(montoTotal)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Cobrado</span>
-              <span className="font-semibold text-emerald-600">{formatARS(montoCobrado)}</span>
+              <span className="font-display tabular-nums font-semibold text-emerald-600">{formatARS(montoCobrado)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Pendiente</span>
-              <span className="font-semibold text-amber-600">
+              <span className="font-display tabular-nums font-semibold text-amber-600">
                 {formatARS(montoTotal - montoCobrado)}
               </span>
             </div>
@@ -444,19 +444,19 @@ function DetalleLote() {
                       <div className="font-semibold truncate" title={r.descripcion}>
                         {r.descripcion}
                       </div>
-                      <div className="text-[10px] text-muted-foreground">{r.id}</div>
+                      <div className="text-[10px] text-muted-foreground font-mono">{r.id}</div>
                     </td>
                     <td className="px-3 py-3 text-right font-semibold whitespace-nowrap">
-                      {formatARS(r.monto)}
+                      <span className="font-mono tabular-nums">{formatARS(r.monto)}</span>
                     </td>
                     <td className="px-3 py-3 text-right whitespace-nowrap">
                       <span
                         className={
                           r.montoPagado >= r.monto
-                            ? "text-emerald-600 font-semibold"
+                            ? "text-emerald-600 font-semibold font-mono tabular-nums"
                             : r.montoPagado > 0
-                              ? "text-amber-600 font-semibold"
-                              : "text-muted-foreground"
+                              ? "text-amber-600 font-semibold font-mono tabular-nums"
+                              : "text-muted-foreground font-mono tabular-nums"
                         }
                       >
                         {formatARS(r.montoPagado)}

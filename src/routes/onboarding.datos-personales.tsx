@@ -88,6 +88,7 @@ function DatosPersonales() {
             value={f.cuitCuil}
             onChange={(e) => setF({ ...f, cuitCuil: e.target.value })}
             placeholder="20-12345678-9"
+            className="font-mono"
             error={err.cuitCuil}
           />
           <SelectField

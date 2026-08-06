@@ -244,7 +244,7 @@ function Page() {
               className="lg:grid lg:grid-cols-[1.2fr_1fr_0.8fr_1fr_0.7fr_1.1fr] gap-4 px-5 py-3.5 border-b last:border-0 items-center"
             >
               <div className="font-semibold text-sm">{p.nombre}</div>
-              <div className="text-sm text-muted-foreground">{p.subcuenta}</div>
+              <div className="font-mono text-sm text-muted-foreground">{p.subcuenta}</div>
               <div className="text-sm text-muted-foreground">{p.tipo}</div>
               <div className="text-sm text-muted-foreground truncate">{p.ubicacion}</div>
               <div>

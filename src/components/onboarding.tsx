@@ -35,7 +35,7 @@ export function AuthShell({
           <div className="mt-12">
             <div className="flex items-center gap-2 mb-6">
               <span className="w-6 h-px bg-red-400/60" />
-              <span className="font-primary text-[0.65rem] tracking-[0.25em] uppercase text-red-400/80">
+              <span className="font-sans text-[0.65rem] tracking-[0.25em] uppercase text-red-400/80">
                 {leftEyebrow}
               </span>
             </div>
@@ -53,12 +53,12 @@ export function AuthShell({
         <div className="relative z-10 space-y-5">
           <div className="inline-flex items-center gap-2.5 px-3 py-2 border border-red-400/30 rounded-sm bg-red-500/5 backdrop-blur">
             <ShieldCheck size={13} strokeWidth={1.5} className="text-red-400" />
-            <span className="font-primary text-[0.65rem] tracking-[0.1em] uppercase text-red-400">
+            <span className="font-sans text-[0.65rem] tracking-[0.1em] uppercase text-red-400">
               Registrado ante BCRA
             </span>
           </div>
           {step && (
-            <p className="text-white/45 font-primary text-[0.65rem] tracking-[0.15em] uppercase">
+            <p className="text-white/45 font-sans text-[0.65rem] tracking-[0.15em] uppercase">
               {step}
             </p>
           )}
@@ -126,7 +126,7 @@ export function FormTitle({ eyebrow, title, subtitle }: { eyebrow?: string; titl
   return (
     <div className="mb-7">
       {eyebrow && (
-        <p className="mb-2 font-primary text-[0.7rem] tracking-[0.2em] uppercase text-red-500">
+        <p className="mb-2 font-sans text-[0.7rem] tracking-[0.2em] uppercase text-red-500">
           {eyebrow}
         </p>
       )}

@@ -5,9 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-primary: "Josefin Sans", "Segoe UI", sans-serif;
-  --font-secondary: "'Null Free', 'Georgia', serif";
-  --font-mono: "SF Mono", "Fira Code", "IBM Plex Mono", monospace;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   --color-black-900: var(--black-900);
   --color-black-800: var(--black-800);
@@ -226,13 +226,13 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-family: var(--font-primary);
+    font-family: var(--font-sans);
     font-weight: 400;
     -webkit-font-smoothing: antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-primary);
+    font-family: var(--font-display);
     font-weight: 600;
   }
 

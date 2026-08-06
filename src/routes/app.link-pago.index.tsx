@@ -132,7 +132,7 @@ function Dashboard() {
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
               {k.label}
             </div>
-            <div className="text-sm md:text-base font-semibold mt-0.5">{k.value}</div>
+            <div className="font-display tabular-nums text-sm md:text-base font-semibold mt-0.5">{k.value}</div>
           </div>
         ))}
       </div>

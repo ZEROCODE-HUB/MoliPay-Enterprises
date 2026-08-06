@@ -129,8 +129,8 @@ function Page() {
                 ].map((r) => (
                   <tr key={r.c} className="border-b last:border-0">
                     <td className="px-5 py-3 font-semibold">{r.c}</td>
-                    <td className="px-5 py-3"><Input defaultValue={r.m} className="h-9 max-w-[180px]" /></td>
-                    <td className="px-5 py-3"><Input defaultValue={r.o} className="h-9 max-w-[120px]" /></td>
+                    <td className="px-5 py-3"><Input defaultValue={r.m} className="h-9 max-w-[180px] font-mono tabular-nums" /></td>
+                    <td className="px-5 py-3"><Input defaultValue={r.o} className="h-9 max-w-[120px] font-mono tabular-nums" /></td>
                     <td className="px-5 py-3 text-xs text-muted-foreground">{r.ult}</td>
                     <td className="px-5 py-3 text-right"><BtnPrimary className="h-9 px-3 text-xs"><Save size={12} /> Guardar</BtnPrimary></td>
                   </tr>

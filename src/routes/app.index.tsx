@@ -190,7 +190,7 @@ function Dashboard() {
           <div className="flex items-start justify-between">
             <div>
               <div className="text-xs text-black-400 mb-1">Saldo total de la cuenta</div>
-              <div className="text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.saldo)}</div>
+              <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.saldo)}</div>
               <div className="text-xs text-black-400 mt-0.5">CBU ···· 67890</div>
             </div>
             <div className="w-9 h-9 rounded-sm bg-navy-50 flex items-center justify-center text-navy-500 shrink-0">
@@ -202,7 +202,7 @@ function Dashboard() {
           <div className="flex items-start justify-between">
             <div>
               <div className="text-xs text-black-400 mb-1">Depósitos del período</div>
-              <div className="text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.depositos)}</div>
+              <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.depositos)}</div>
               <div className="text-xs text-black-400 mt-0.5">{data.length} días</div>
             </div>
             <div className="w-9 h-9 rounded-sm bg-success-bg flex items-center justify-center text-success shrink-0">
@@ -214,7 +214,7 @@ function Dashboard() {
           <div className="flex items-start justify-between">
             <div>
               <div className="text-xs text-black-400 mb-1">Retiros del período</div>
-              <div className="text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.retiros)}</div>
+              <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.retiros)}</div>
               <div className="text-xs text-black-400 mt-0.5">48 operaciones</div>
             </div>
             <div className="w-9 h-9 rounded-sm bg-error-bg flex items-center justify-center text-error shrink-0">
@@ -226,7 +226,7 @@ function Dashboard() {
           <div className="flex items-start justify-between">
             <div>
               <div className="text-xs text-black-400 mb-1">Total de cuentas</div>
-              <div className="text-xl md:text-2xl font-bold text-black-800">{kpis.cuentas}</div>
+              <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">{kpis.cuentas}</div>
               <div className="text-xs text-black-400 mt-0.5">1 principal + 3 subcuentas</div>
             </div>
             <div className="w-9 h-9 rounded-sm bg-info-bg flex items-center justify-center text-info shrink-0">
@@ -240,7 +240,7 @@ function Dashboard() {
           <div className="flex items-start justify-between">
             <div>
               <div className="text-xs text-black-400 mb-1">Cobros mediante Link de Pago</div>
-              <div className="text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.cobrosLink)}</div>
+              <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.cobrosLink)}</div>
               <div className="text-xs text-black-400 mt-0.5">{Math.round(kpis.cobrosLink / 85000)} transacciones</div>
             </div>
             <div className="w-9 h-9 rounded-sm bg-navy-50 flex items-center justify-center text-navy-500 shrink-0">
@@ -252,7 +252,7 @@ function Dashboard() {
           <div className="flex items-start justify-between">
             <div>
               <div className="text-xs text-black-400 mb-1">Cobros mediante Código QR</div>
-              <div className="text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.cobrosQR)}</div>
+              <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.cobrosQR)}</div>
               <div className="text-xs text-black-400 mt-0.5">{Math.round(kpis.cobrosQR / 32000)} transacciones</div>
             </div>
             <div className="w-9 h-9 rounded-sm bg-warning-bg flex items-center justify-center text-warning shrink-0">
@@ -264,7 +264,7 @@ function Dashboard() {
           <div className="flex items-start justify-between">
             <div>
               <div className="text-xs text-black-400 mb-1">Pagos realizados mediante QR</div>
-              <div className="text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.pagosQR)}</div>
+              <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.pagosQR)}</div>
               <div className="text-xs text-black-400 mt-0.5">{Math.round(kpis.pagosQR / 18000)} transacciones</div>
             </div>
             <div className="w-9 h-9 rounded-sm bg-plata-200 flex items-center justify-center text-black-600 shrink-0">

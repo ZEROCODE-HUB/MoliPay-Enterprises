@@ -136,7 +136,7 @@ function Dashboard() {
               <k.icon size={14} className="text-muted-foreground" />
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{k.label}</div>
             </div>
-            <div className="text-sm md:text-base font-semibold">{k.value}</div>
+            <div className="font-display tabular-nums text-sm md:text-base font-semibold">{k.value}</div>
           </div>
         ))}
       </div>

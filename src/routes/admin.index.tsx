@@ -127,7 +127,7 @@ function Page() {
                     <td>
                       <Badge tone={tone as "success" | "warn" | "danger"}>{e}</Badge>
                     </td>
-                    <td className="text-right px-5 font-semibold">{v}</td>
+                    <td className="font-mono tabular-nums text-right px-5 font-semibold">{v}</td>
                   </tr>
                 ))}
               </tbody>

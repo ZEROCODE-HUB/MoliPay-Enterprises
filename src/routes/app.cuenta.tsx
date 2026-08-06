@@ -113,7 +113,7 @@ function Page() {
               <s.icon size={12} className="shrink-0" />
               {s.label}
             </div>
-            <div className="text-sm font-semibold mt-0.5">{s.value}</div>
+            <div className="font-display tabular-nums text-sm font-semibold mt-0.5">{s.value}</div>
             {s.sub && <div className="text-[9px] text-muted-foreground">{s.sub}</div>}
           </div>
         ))}
@@ -251,7 +251,7 @@ function Page() {
               <h3 className="font-semibold">{plan.nombre}</h3>
               <Badge tone="success">Activo</Badge>
             </div>
-            <div className="text-2xl font-semibold">{plan.precio}</div>
+            <div className="font-display tabular-nums text-2xl font-semibold">{plan.precio}</div>
             <div className="text-xs text-muted-foreground">{plan.ops}</div>
             <div className="mt-4">
               <div className="flex justify-between text-xs mb-1">

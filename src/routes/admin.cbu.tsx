@@ -87,7 +87,7 @@ function Page() {
               </div>
               <div className="text-xs text-primary font-semibold">@{r.alias}</div>
             </div>
-            <div className="text-right text-sm font-semibold">{r.saldo}</div>
+            <div className="font-mono tabular-nums text-right text-sm font-semibold">{r.saldo}</div>
             <div className="text-sm">{r.subs}</div>
             <div>
               <Badge tone={r.e === "Activa" ? "success" : r.e === "Pausada" ? "warn" : "danger"}>{r.e}</Badge>
@@ -165,8 +165,8 @@ function CuentaDrawer({ c, onClose }: { c: Cuenta; onClose: () => void }) {
             <div className="flex justify-between items-start">
               <div>
                 <div className="text-xs text-muted-foreground">Saldo consolidado</div>
-                <div className="text-3xl font-semibold mt-1">{c.saldo}</div>
-                <div className="text-xs text-muted-foreground mt-1">CBU principal {c.cbu}</div>
+                <div className="font-display tabular-nums text-3xl font-semibold mt-1">{c.saldo}</div>
+                <div className="text-xs text-muted-foreground mt-1">CBU principal <span className="font-mono">{c.cbu}</span></div>
                 <div className="text-xs text-primary font-semibold">@{c.alias}</div>
               </div>
               <Badge tone={c.e === "Activa" ? "success" : c.e === "Pausada" ? "warn" : "danger"}>{c.e}</Badge>
@@ -186,7 +186,7 @@ function CuentaDrawer({ c, onClose }: { c: Cuenta; onClose: () => void }) {
                     <div className="text-xs text-muted-foreground font-mono">{s.cbu}</div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold">{s.saldo}</span>
+                    <span className="font-mono tabular-nums text-sm font-semibold">{s.saldo}</span>
                     <Badge tone="success">{s.e}</Badge>
                     <button className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-accent"><MoreVertical size={12} /></button>
                   </div>

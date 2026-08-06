@@ -144,10 +144,10 @@ function Page() {
                           {conceptosMeta.map(({ k, label }) => (
                             <tr key={k} className="border-b last:border-0">
                               <td className="py-2.5 font-semibold">{label}</td>
-                              <td className="py-2.5"><div className="relative"><Input defaultValue={cli.c[k].p} className="h-9 max-w-24 pr-6" /><Percent size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" /></div></td>
-                              <td className="py-2.5"><Input defaultValue={cli.c[k].f} className="h-9 max-w-28" /></td>
-                              <td className="py-2.5"><Input defaultValue="50" className="h-9 max-w-28" /></td>
-                              <td className="py-2.5"><Input defaultValue="5.000" className="h-9 max-w-28" /></td>
+                              <td className="py-2.5"><div className="relative"><Input defaultValue={cli.c[k].p} className="h-9 max-w-24 pr-6 font-mono tabular-nums" /><Percent size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground" /></div></td>
+                              <td className="py-2.5"><Input defaultValue={cli.c[k].f} className="h-9 max-w-28 font-mono tabular-nums" /></td>
+                              <td className="py-2.5"><Input defaultValue="50" className="h-9 max-w-28 font-mono tabular-nums" /></td>
+                              <td className="py-2.5"><Input defaultValue="5.000" className="h-9 max-w-28 font-mono tabular-nums" /></td>
                               <td className="py-2.5"></td>
                             </tr>
                           ))}

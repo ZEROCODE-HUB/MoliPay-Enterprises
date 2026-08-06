@@ -96,22 +96,22 @@ function Page() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Disponible hoy</div>
-          <div className="text-base md:text-lg font-semibold mt-0.5">$ 12.479.330</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">$ 12.479.330</div>
           <div className="text-[10px] text-muted-foreground mt-0.5 truncate">Operativa + subcuentas</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Enviado este mes</div>
-          <div className="text-base md:text-lg font-semibold mt-0.5">$ 28.4M</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">$ 28.4M</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">142 operaciones</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Programadas</div>
-          <div className="text-base md:text-lg font-semibold mt-0.5">3</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">3</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">$ 5.185.000 proximos</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Limite diario</div>
-          <div className="text-base md:text-lg font-semibold mt-0.5">$ 25M</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">$ 25M</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">73% utilizado</div>
         </div>
       </div>
@@ -400,7 +400,7 @@ function Unica({
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between py-2.5 px-3 text-sm">
               <span className="text-muted-foreground">{k}</span>
-              <span className="font-semibold">{v}</span>
+              <span className="font-mono tabular-nums font-semibold">{v}</span>
             </div>
           ))}
         </div>
@@ -597,7 +597,7 @@ function Programar({ onSuccess }: { onSuccess: () => void }) {
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between py-2.5 px-3 text-sm">
               <span className="text-muted-foreground">{k}</span>
-              <span className="font-semibold">{v}</span>
+              <span className="font-mono tabular-nums font-semibold">{v}</span>
             </div>
           ))}
         </div>
@@ -695,7 +695,7 @@ function Borradores({ drafts, onDelete, onEdit, onExecute }: {
         <div key={d.id} className="flex items-center justify-between py-3">
           <div className="min-w-0">
             <div className="text-sm font-semibold">{d.destinatario}</div>
-            <div className="text-xs text-muted-foreground">@{d.alias} · {d.monto} · {d.concepto}</div>
+            <div className="text-xs text-muted-foreground">@{d.alias} · <span className="font-mono">{d.monto}</span> · {d.concepto}</div>
             <div className="text-[11px] text-muted-foreground/60">Guardado el {d.fecha}</div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
@@ -738,7 +738,7 @@ function Programadas({ items, onCancel, onEdit, onExecute }: {
         <div key={s.id} className="flex items-center justify-between py-3">
           <div className="min-w-0">
             <div className="text-sm font-semibold">{s.destinatario}</div>
-            <div className="text-xs text-muted-foreground">@{s.alias} · {s.monto} · {s.concepto}</div>
+            <div className="text-xs text-muted-foreground">@{s.alias} · <span className="font-mono">{s.monto}</span> · {s.concepto}</div>
             <div className="text-xs text-muted-foreground/70 flex items-center gap-1 mt-0.5">
               <Calendar size={11} /> {s.fecha} <Clock size={11} className="ml-1" /> {s.hora}
             </div>

@@ -235,7 +235,7 @@ export function PageHeader({ title, description, action }: { title: string; desc
   return (
     <div className="flex flex-wrap items-end justify-between gap-3 mb-6">
       <div>
-        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-black-800">{title}</h1>
+        <h1 className="font-display text-2xl md:text-3xl font-semibold tracking-tight text-black-800">{title}</h1>
         {description && <p className="text-sm text-black-400 mt-1">{description}</p>}
       </div>
       {action}
@@ -251,7 +251,7 @@ export function Stat({ label, value, sub }: { label: string; value: string; sub?
   return (
     <Card>
       <div className="text-xs uppercase tracking-wide text-black-400">{label}</div>
-      <div className="text-2xl md:text-3xl font-semibold mt-1 text-black-800">{value}</div>
+      <div className="font-display text-2xl md:text-3xl font-semibold mt-1 text-black-800 tabular-nums">{value}</div>
       {sub && <div className="text-xs text-black-400 mt-1">{sub}</div>}
     </Card>
   );

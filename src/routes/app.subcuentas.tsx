@@ -146,17 +146,17 @@ function Page() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Saldo total</div>
-          <div className="text-base md:text-lg font-semibold mt-0.5">{fmt(total)}</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">{fmt(total)}</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">{subs.length} subcuentas</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Disponible</div>
-          <div className="text-base md:text-lg font-semibold mt-0.5">{fmt(totalDisp)}</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">{fmt(totalDisp)}</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">Listo para operar</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Retenido</div>
-          <div className="text-base md:text-lg font-semibold mt-0.5">{fmt(totalRet)}</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">{fmt(totalRet)}</div>
           <div className="text-[10px] text-muted-foreground mt-0.5">Pendiente de liberar</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
@@ -449,19 +449,19 @@ function SubDetailModal({ sub, onClose }: { sub: Sub; onClose: () => void }) {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-muted/30 rounded-lg p-3">
                 <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Balance actual</div>
-                <div className="text-base font-semibold mt-1">{fmt(sub.disp)}</div>
+                <div className="font-display tabular-nums text-base font-semibold mt-1">{fmt(sub.disp)}</div>
               </div>
               <div className="bg-muted/30 rounded-lg p-3">
                 <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total depositos</div>
-                <div className="text-base font-semibold mt-1 text-emerald-700">{fmt(totalDepositos)}</div>
+                <div className="font-display tabular-nums text-base font-semibold mt-1 text-emerald-700">{fmt(totalDepositos)}</div>
               </div>
               <div className="bg-muted/30 rounded-lg p-3">
                 <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total retiros</div>
-                <div className="text-base font-semibold mt-1 text-red-700">{fmt(totalRetiros)}</div>
+                <div className="font-display tabular-nums text-base font-semibold mt-1 text-red-700">{fmt(totalRetiros)}</div>
               </div>
               <div className="bg-muted/30 rounded-lg p-3">
                 <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total comisiones</div>
-                <div className="text-base font-semibold mt-1">{fmt(totalComisiones)}</div>
+                <div className="font-display tabular-nums text-base font-semibold mt-1">{fmt(totalComisiones)}</div>
               </div>
             </div>
           </section>
@@ -534,7 +534,7 @@ function SubDetailModal({ sub, onClose }: { sub: Sub; onClose: () => void }) {
                           <p className="text-sm font-semibold">{m.titulo}</p>
                           <p className="text-[11px] font-mono text-muted-foreground mt-0.5">{m.txid}</p>
                         </div>
-                        <span className={`text-sm font-semibold whitespace-nowrap shrink-0 ${m.tipo === "ingreso" ? "text-emerald-700" : "text-red-700"}`}>
+                        <span className={`font-mono tabular-nums text-sm font-semibold whitespace-nowrap shrink-0 ${m.tipo === "ingreso" ? "text-emerald-700" : "text-red-700"}`}>
                           {fmtMov(m.tipo === "ingreso" ? m.monto : -m.monto)}
                         </span>
                       </div>

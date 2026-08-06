@@ -51,7 +51,7 @@ function Page() {
               {filas.map((f) => (
                 <tr key={f.op} className="border-t">
                   <td className="px-4 py-3">{f.op}</td>
-                  <td className="px-4 py-3 text-right font-semibold whitespace-nowrap">{f.com}</td>
+                  <td className="px-4 py-3 font-mono tabular-nums text-right font-semibold whitespace-nowrap">{f.com}</td>
                 </tr>
               ))}
             </tbody>

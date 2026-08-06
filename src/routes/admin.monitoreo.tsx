@@ -81,7 +81,7 @@ function Page() {
                   <td className="px-5 py-2.5 text-xs text-muted-foreground font-mono">{t.f}</td>
                   <td className="px-5 py-2.5 font-semibold text-sm">{t.cli}</td>
                   <td className="px-5 py-2.5 text-xs">{t.op}</td>
-                  <td className="px-5 py-2.5 text-right font-semibold">{t.m}</td>
+                  <td className="px-5 py-2.5 font-mono tabular-nums text-right font-semibold">{t.m}</td>
                   <td className="px-5 py-2.5 text-right">
                     <Badge tone={t.e === "OK" ? "success" : t.e === "Alertada" ? "danger" : "warn"}>{t.e}</Badge>
                   </td>

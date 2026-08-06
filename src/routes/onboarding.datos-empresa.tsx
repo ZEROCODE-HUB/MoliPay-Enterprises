@@ -71,6 +71,7 @@ function DatosEmpresa() {
             value={f.cuit}
             onChange={(e) => setF({ ...f, cuit: e.target.value })}
             placeholder="30-12345678-9"
+            className="font-mono"
             error={err.cuit}
           />
           <Field

@@ -504,7 +504,7 @@ function NuevoLote() {
                             {r.tipo_entidad} {r.id_entidad} - {r.sub_entidad}
                           </td>
                           <td className="px-3 py-2">{r.identificacion_usuario}</td>
-                          <td className="px-3 py-2 text-right font-medium">
+                          <td className="px-3 py-2 font-mono tabular-nums text-right font-medium">
                             ${r.monto.toLocaleString("es-AR")}
                           </td>
                           <td className="px-3 py-2 max-w-[150px] truncate">{r.descripcion}</td>
@@ -608,12 +608,12 @@ function NuevoLote() {
           <Card>
             <h3 className="font-semibold mb-4">Registros cargados</h3>
             <div className="text-sm">
-              <span className="font-semibold text-lg">{csvData.length}</span>{" "}
+              <span className="font-display tabular-nums font-semibold text-lg">{csvData.length}</span>{" "}
               <span className="text-muted-foreground">registros</span>
             </div>
             <div className="text-xs text-muted-foreground mt-1">
               Monto total estimado:{" "}
-              <strong className="text-foreground">
+              <strong className="font-mono tabular-nums text-foreground">
                 ${csvData.reduce((s, r) => s + r.monto, 0).toLocaleString("es-AR")}
               </strong>
             </div>

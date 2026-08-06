@@ -137,8 +137,8 @@ function Page() {
                     r.m === "GET" ? "text-blue-700" : "text-emerald-700"
                   }`}>{r.m}</span>
                   <span className="font-mono flex-1 truncate">{r.p}</span>
-                  <span className={`font-semibold ${r.c.startsWith("2") ? "text-emerald-700" : "text-red-700"}`}>{r.c}</span>
-                  <span className="text-muted-foreground w-16 text-right">{r.t}</span>
+                  <span className={`font-mono font-semibold ${r.c.startsWith("2") ? "text-emerald-700" : "text-red-700"}`}>{r.c}</span>
+                  <span className="font-mono text-muted-foreground w-16 text-right">{r.t}</span>
                 </div>
               ))}
             </div>

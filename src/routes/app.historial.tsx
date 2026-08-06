@@ -191,7 +191,7 @@ function Page() {
       <div className="grid md:grid-cols-4 gap-5 mb-6">
         <Card className="p-5">
           <div className="text-xs text-muted-foreground mb-1">Ingresos del periodo</div>
-          <div className="text-xl md:text-2xl font-bold text-emerald-700">{formatARS(totalIngresos)}</div>
+          <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-emerald-700">{formatARS(totalIngresos)}</div>
           <div className="text-xs text-muted-foreground mt-1">{filtered.filter((r) => r.tipo === "ingreso").length} movimientos</div>
         </Card>
         <Card className="p-5">
@@ -201,13 +201,13 @@ function Page() {
         </Card>
         <Card className="p-5">
           <div className="text-xs text-muted-foreground mb-1">Neto</div>
-          <div className={`text-xl md:text-2xl font-bold ${totalIngresos - totalEgresos >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+          <div className={`font-display tabular-nums text-xl md:text-2xl font-bold ${totalIngresos - totalEgresos >= 0 ? "text-emerald-700" : "text-red-600"}`}>
             {totalIngresos - totalEgresos >= 0 ? "+ " : "- "}{formatARS(Math.abs(totalIngresos - totalEgresos))}
           </div>
         </Card>
         <Card className="p-5">
           <div className="text-xs text-muted-foreground mb-1">Pendientes / Rechazados</div>
-          <div className="text-xl md:text-2xl font-bold text-foreground">{totalPendientes}</div>
+          <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-foreground">{totalPendientes}</div>
           <div className="text-xs text-muted-foreground mt-1">{filtered.filter((r) => r.estado === "Pendiente").length} pendientes, {filtered.filter((r) => r.estado === "Rechazado").length} rechazados</div>
         </Card>
       </div>
@@ -326,7 +326,7 @@ function Page() {
                   <td className="px-5 py-4 text-sm font-medium truncate max-w-[160px]">{r.titular}</td>
                   <td className="px-5 py-4 text-xs font-mono text-muted-foreground">{r.cuit}</td>
                   <td className="px-5 py-4 text-xs text-muted-foreground whitespace-nowrap">{r.fecha}</td>
-                  <td className={`px-5 py-4 text-right font-semibold whitespace-nowrap text-sm ${r.tipo === "ingreso" ? "text-emerald-700" : ""}`}>
+                  <td className={`px-5 py-4 font-mono tabular-nums text-right font-semibold whitespace-nowrap text-sm ${r.tipo === "ingreso" ? "text-emerald-700" : ""}`}>
                     {r.tipo === "ingreso" ? "+ " : "- "}{formatARS(r.monto)}
                   </td>
                   <td className="px-5 py-4 text-right">
@@ -413,7 +413,7 @@ function Page() {
               <div className="flex items-end justify-between pb-5 border-b">
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Monto</div>
-                  <div className={`text-2xl font-bold ${detalle.tipo === "ingreso" ? "text-emerald-700" : ""}`}>
+                  <div className={`font-display tabular-nums text-2xl font-bold ${detalle.tipo === "ingreso" ? "text-emerald-700" : ""}`}>
                     {detalle.tipo === "ingreso" ? "+ " : "- "}{formatARS(detalle.monto)}
                   </div>
                 </div>
@@ -554,9 +554,9 @@ function Page() {
               </div>
               <Card className="bg-muted/30 p-5">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                  <div><div className="text-xs text-muted-foreground">Ingresos</div><div className="font-semibold">{formatARS(totalIngresos)}</div></div>
-                  <div><div className="text-xs text-muted-foreground">Egresos</div><div className="font-semibold">{formatARS(totalEgresos)}</div></div>
-                  <div><div className="text-xs text-muted-foreground">Neto</div><div className="font-semibold text-emerald-700">{totalIngresos - totalEgresos >= 0 ? "+ " : "- "}{formatARS(Math.abs(totalIngresos - totalEgresos))}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Ingresos</div><div className="font-display tabular-nums font-semibold">{formatARS(totalIngresos)}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Egresos</div><div className="font-display tabular-nums font-semibold">{formatARS(totalEgresos)}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Neto</div><div className="font-display tabular-nums font-semibold text-emerald-700">{totalIngresos - totalEgresos >= 0 ? "+ " : "- "}{formatARS(Math.abs(totalIngresos - totalEgresos))}</div></div>
                 </div>
               </Card>
               <div className="text-xs text-muted-foreground border-t pt-4">

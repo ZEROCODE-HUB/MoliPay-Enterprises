@@ -50,7 +50,7 @@ function Page() {
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">CUIT</label>
-              <input required className="w-full h-10 px-3 rounded-md border bg-background text-sm" />
+              <input required className="w-full h-10 px-3 rounded-md border bg-background text-sm font-mono tabular-nums" />
             </div>
             <div>
               <label className="block text-xs font-semibold mb-1">Email de contacto</label>

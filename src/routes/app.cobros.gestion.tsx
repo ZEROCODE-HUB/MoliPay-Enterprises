@@ -284,16 +284,16 @@ function GestionLotes() {
                       <span className="text-xs font-semibold">{l.progreso}%</span>
                     </div>
                   </td>
-                  <td className="px-5 py-3 text-right">{l.cantidadPagos}</td>
-                  <td className="px-5 py-3 text-right text-amber-600">{l.cantidadParciales}</td>
-                  <td className="px-5 py-3 text-right text-muted-foreground">
+                  <td className="px-5 py-3 font-mono tabular-nums text-right">{l.cantidadPagos}</td>
+                  <td className="px-5 py-3 font-mono tabular-nums text-right text-amber-600">{l.cantidadParciales}</td>
+                  <td className="px-5 py-3 font-mono tabular-nums text-right text-muted-foreground">
                     {l.cantidadPendientes}
                   </td>
-                  <td className="px-5 py-3 text-right font-semibold">{formatARS(l.montoTotal)}</td>
-                  <td className="px-5 py-3 text-right text-emerald-600 font-semibold">
+                  <td className="px-5 py-3 font-mono tabular-nums text-right font-semibold">{formatARS(l.montoTotal)}</td>
+                  <td className="px-5 py-3 font-mono tabular-nums text-right text-emerald-600 font-semibold">
                     {formatARS(l.montoCobrado)}
                   </td>
-                  <td className="px-5 py-3 text-right text-amber-600 font-semibold">
+                  <td className="px-5 py-3 font-mono tabular-nums text-right text-amber-600 font-semibold">
                     {formatARS(l.montoPorCobrar)}
                   </td>
                   <td className="px-5 py-3 text-center">
@@ -558,9 +558,9 @@ function GestionLotes() {
                   <Card>
                     <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Montos</h4>
                     <div className="space-y-3">
-                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total</span><span className="font-semibold text-lg">{formatARS(montoTotal)}</span></div>
-                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">Cobrado</span><span className="font-semibold text-emerald-600">{formatARS(montoCobrado)}</span></div>
-                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">Pendiente</span><span className="font-semibold text-amber-600">{formatARS(montoTotal - montoCobrado)}</span></div>
+                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">Total</span><span className="font-display tabular-nums font-semibold text-lg">{formatARS(montoTotal)}</span></div>
+                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">Cobrado</span><span className="font-display tabular-nums font-semibold text-emerald-600">{formatARS(montoCobrado)}</span></div>
+                      <div className="flex justify-between text-sm"><span className="text-muted-foreground">Pendiente</span><span className="font-display tabular-nums font-semibold text-amber-600">{formatARS(montoTotal - montoCobrado)}</span></div>
                       <div className="h-3 rounded-full bg-muted overflow-hidden mt-2">
                         <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pctCobrado}%` }} />
                       </div>
@@ -601,9 +601,9 @@ function GestionLotes() {
                                 <div className="font-semibold truncate" title={r.descripcion}>{r.descripcion}</div>
                                 <div className="text-[10px] text-muted-foreground">{r.id}</div>
                               </td>
-                              <td className="px-3 py-3 text-right font-semibold whitespace-nowrap">{formatARS(r.monto)}</td>
+                              <td className="px-3 py-3 font-mono tabular-nums text-right font-semibold whitespace-nowrap">{formatARS(r.monto)}</td>
                               <td className="px-3 py-3 text-right whitespace-nowrap">
-                                <span className={r.montoPagado >= r.monto ? "text-emerald-600 font-semibold" : r.montoPagado > 0 ? "text-amber-600 font-semibold" : "text-muted-foreground"}>
+                                <span className={`${r.montoPagado >= r.monto ? "text-emerald-600" : r.montoPagado > 0 ? "text-amber-600" : "text-muted-foreground"} font-mono tabular-nums font-semibold`}>
                                   {formatARS(r.montoPagado)}
                                 </span>
                               </td>

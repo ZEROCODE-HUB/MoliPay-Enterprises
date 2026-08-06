@@ -39,7 +39,7 @@ export const Route = createFileRoute("/")({
 
 function Eyebrow({ children, tone = "muted" }: { children: React.ReactNode; tone?: "muted" | "accent" | "light" }) {
   const color = tone === "accent" ? "#D3001F" : tone === "light" ? "rgba(255,255,255,0.7)" : "#909090";
-  return <div className="font-primary text-[0.72rem] tracking-[0.14em] uppercase font-medium" style={{ color }}>{children}</div>;
+  return <div className="font-sans text-[0.72rem] tracking-[0.14em] uppercase font-medium" style={{ color }}>{children}</div>;
 }
 
 function GlassCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -71,7 +71,7 @@ function SiteHeader() {
     <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-[12px] border-b border-black-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 md:h-20 flex items-center justify-between gap-3">
         <MollyLogo size={32} />
-        <nav className="hidden md:flex items-center gap-8 lg:gap-10 font-primary text-[0.975rem] font-medium text-black-800">
+        <nav className="hidden md:flex items-center gap-8 lg:gap-10 font-sans text-[0.975rem] font-medium text-black-800">
           <a href="#servicios" className="hover:text-red-500 transition-colors">Servicios</a>
           <a href="#nosotros" className="hover:text-red-500 transition-colors">Nosotros</a>
           <a href="#contacto" className="hover:text-red-500 transition-colors">Contacto</a>
@@ -167,8 +167,8 @@ function LedgerStrip() {
         <div className="grid grid-cols-2 md:grid-cols-4">
           {items.map(([label, value], i) => (
             <div key={label} className={`py-3 md:py-7 px-2 md:px-6 ${i > 0 ? "border-l border-white/10" : ""}`}>
-              <div className="font-primary text-[0.6rem] tracking-[0.14em] uppercase text-red-400">{label}</div>
-              <div className="mt-1 md:mt-2 font-primary text-[clamp(0.7rem,2.5vw,0.875rem)] tracking-wider text-white">{value}</div>
+              <div className="font-sans text-[0.6rem] tracking-[0.14em] uppercase text-red-400">{label}</div>
+              <div className="mt-1 md:mt-2 font-sans text-[clamp(0.7rem,2.5vw,0.875rem)] tracking-wider text-white">{value}</div>
             </div>
           ))}
         </div>
@@ -248,7 +248,7 @@ function MisionVision() {
           <article className="p-8 sm:p-10 bg-white/5 backdrop-blur border border-white/10 rounded-md">
             <div className="flex items-center gap-3">
               <Target size={22} strokeWidth={1.4} className="text-red-400" />
-              <span className="font-primary text-[0.65rem] tracking-[0.14em] uppercase text-red-400">01 — Misión</span>
+              <span className="font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">01 — Misión</span>
             </div>
             <h3 className="font-semibold text-[clamp(1.75rem,2.4vw,2.15rem)] leading-tight mt-5 text-white">
               Facilitar la gestión digital de cobros y pagos.
@@ -262,7 +262,7 @@ function MisionVision() {
           <article className="p-8 sm:p-10 bg-black-800 border border-red-400/30 rounded-md">
             <div className="flex items-center gap-3">
               <Compass size={22} strokeWidth={1.4} className="text-red-400" />
-              <span className="font-primary text-[0.65rem] tracking-[0.14em] uppercase text-red-400">02 — Visión</span>
+              <span className="font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">02 — Visión</span>
             </div>
             <h3 className="font-semibold text-[clamp(1.75rem,2.4vw,2.15rem)] leading-tight mt-5 text-white">
               Ser un referente Fintech en la región.
@@ -323,15 +323,15 @@ function RegulatoryStrip() {
     <section className="bg-black-800 border-t border-white/10 text-white">
       <div className="max-w-6xl mx-auto px-6 py-8 md:py-10 flex flex-col md:flex-row gap-6 md:items-center md:justify-between">
         <div className="flex items-center gap-5">
-          <div className="border border-red-400 px-3 py-1.5 font-primary text-[0.7rem] tracking-[0.14em] uppercase text-white">
+          <div className="border border-red-400 px-3 py-1.5 font-sans text-[0.7rem] tracking-[0.14em] uppercase text-white">
             BCRA
           </div>
           <div>
-            <div className="font-primary text-[0.65rem] tracking-[0.14em] uppercase text-red-400">Usuarios financieros</div>
-            <div className="mt-1 font-primary text-sm text-white/80">Banco Central de la República Argentina — protección al usuario financiero.</div>
+            <div className="font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">Usuarios financieros</div>
+            <div className="mt-1 font-sans text-sm text-white/80">Banco Central de la República Argentina — protección al usuario financiero.</div>
           </div>
         </div>
-        <a href="https://www.usuariosfinancieros.gob.ar" target="_blank" rel="noreferrer" className="font-primary text-sm text-white border-b border-red-400 pb-0.5 hover:text-red-400 transition-colors">
+        <a href="https://www.usuariosfinancieros.gob.ar" target="_blank" rel="noreferrer" className="font-sans text-sm text-white border-b border-red-400 pb-0.5 hover:text-red-400 transition-colors">
           usuariosfinancieros.gob.ar →
         </a>
       </div>
@@ -350,13 +350,13 @@ function SiteFooter() {
           <p className="mt-6 text-sm text-white/50 leading-relaxed max-w-[260px]">
             © 2026 MOLIPAY. Todos los derechos reservados.
           </p>
-          <p className="mt-4 font-primary text-[0.65rem] tracking-[0.14em] uppercase text-red-400">
+          <p className="mt-4 font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">
             PSPCP · Marco BCRA
           </p>
         </div>
         <div>
-          <div className="font-primary text-[0.65rem] tracking-[0.14em] uppercase text-red-400">Enlaces útiles</div>
-          <ul className="mt-5 space-y-3 font-primary text-sm text-white/70">
+          <div className="font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">Enlaces útiles</div>
+          <ul className="mt-5 space-y-3 font-sans text-sm text-white/70">
             <li><Link to="/legales/privacidad" className="hover:text-white transition-colors">Políticas de privacidad</Link></li>
             <li><Link to="/legales/terminos" className="hover:text-white transition-colors">Términos y condiciones</Link></li>
             <li><Link to="/legales/comisiones" className="hover:text-white transition-colors">Comisiones</Link></li>
@@ -364,26 +364,26 @@ function SiteFooter() {
           </ul>
         </div>
         <div>
-          <div className="font-primary text-[0.65rem] tracking-[0.14em] uppercase text-red-400">Contactanos</div>
-          <ul className="mt-5 space-y-3 font-primary text-sm text-white/70">
+          <div className="font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">Contactanos</div>
+          <ul className="mt-5 space-y-3 font-sans text-sm text-white/70">
             <li><a href="mailto:contacto@molipay.com.ar" className="hover:text-white transition-colors">contacto@molipay.com.ar</a></li>
             <li><a href="mailto:admin@molipay.com.ar" className="hover:text-white transition-colors">admin@molipay.com.ar</a></li>
             <li><a href="mailto:reclamos@molipay.com.ar" className="hover:text-white transition-colors">reclamos@molipay.com.ar</a></li>
           </ul>
         </div>
         <div>
-          <div className="font-primary text-[0.65rem] tracking-[0.14em] uppercase text-red-400">Ente fiscalizador</div>
+          <div className="font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">Ente fiscalizador</div>
           <div className="mt-5 border border-white/10 p-4 bg-black-800">
-            <div className="font-primary text-[0.6rem] tracking-[0.14em] uppercase text-red-400">BCRA</div>
-            <div className="mt-1.5 font-primary text-sm text-white/80 leading-relaxed">Banco Central de la República Argentina</div>
-            <a href="https://www.bcra.gob.ar" target="_blank" rel="noreferrer" className="mt-2 inline-block font-primary text-[0.6rem] tracking-[0.14em] uppercase text-white hover:text-red-400 transition-colors">
+            <div className="font-sans text-[0.6rem] tracking-[0.14em] uppercase text-red-400">BCRA</div>
+            <div className="mt-1.5 font-sans text-sm text-white/80 leading-relaxed">Banco Central de la República Argentina</div>
+            <a href="https://www.bcra.gob.ar" target="_blank" rel="noreferrer" className="mt-2 inline-block font-sans text-[0.6rem] tracking-[0.14em] uppercase text-white hover:text-red-400 transition-colors">
               bcra.gob.ar →
             </a>
           </div>
         </div>
       </div>
       <div className="border-t border-white/5">
-        <div className="max-w-6xl mx-auto px-6 py-5 flex flex-col md:flex-row gap-3 md:items-center md:justify-between font-primary text-[0.7rem] text-white/40">
+        <div className="max-w-6xl mx-auto px-6 py-5 flex flex-col md:flex-row gap-3 md:items-center md:justify-between font-sans text-[0.7rem] text-white/40">
           <div>MOLIPAY — CUIT 30-71000000-0</div>
           <div>Los fondos depositados no constituyen depósitos en una entidad financiera ni cuentan con la garantía de la Ley 24.485.</div>
         </div>
