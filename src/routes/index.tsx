@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
 import heroShotSrc from "@/assets/Capturadepantalla.png";
-import ogImageSrc from "@/assets/miniatura.png";
+import ogImageSrc from "@/assets/miniaturafinal.png";
 import hero17Src from "@/assets/hero-17.jpg";
 
 export const Route = createFileRoute("/")({
@@ -30,8 +30,8 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "MoliPay — Soluciones financieras digitales" },
       { property: "og:description", content: "Cuenta de pago, Crossborder, CVU Collect y Billetera. Plataforma tecnológica escalable y regulada." },
       { property: "og:image", content: ogImageSrc },
-      { property: "og:image:width", content: "1166" },
-      { property: "og:image:height", content: "552" },
+      { property: "og:image:width", content: "1901" },
+      { property: "og:image:height", content: "904" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:image", content: ogImageSrc },
     ],
