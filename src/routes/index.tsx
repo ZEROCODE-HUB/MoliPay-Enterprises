@@ -55,10 +55,8 @@ function GlassCard({ children, className = "" }: { children: React.ReactNode; cl
 function Landing() {
   return (
     <div className="bg-white text-black-700">
-      <HeroShell>
-        <SiteHeader />
-        <Hero />
-      </HeroShell>
+      <SiteHeader />
+      <Hero />
       <LedgerStrip />
       <Servicios />
       <ContamosCon />
@@ -66,21 +64,6 @@ function Landing() {
       <PorQueElegirnos />
       <RegulatoryStrip />
       <SiteFooter />
-    </div>
-  );
-}
-
-function HeroShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative isolation">
-      <div className="hero-kenburns">
-        <img src={hero17Src} alt="" aria-hidden className="hero-bg-float" />
-      </div>
-      <div aria-hidden className="absolute inset-0 bg-black/55 pointer-events-none" />
-      <div aria-hidden className="hero-vignette absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.05),rgba(0,0,0,0.4))] pointer-events-none" />
-      <div aria-hidden className="absolute -top-[15%] right-[5%] w-[500px] h-[500px] rounded-full bg-red-500/10 blur-[60px] pointer-events-none" />
-      <div aria-hidden className="absolute -bottom-[10%] -left-[5%] w-[400px] h-[400px] rounded-full bg-navy-500/10 blur-[60px] pointer-events-none" />
-      <div className="relative">{children}</div>
     </div>
   );
 }
@@ -147,8 +130,20 @@ function DashboardMockup() {
 
 function Hero() {
   return (
-    <section className="relative">
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 flex flex-col justify-center min-h-[60vh] md:min-h-[68vh] py-16 sm:py-20 lg:py-24">
+    <section className="relative isolation -mt-16 md:-mt-20">
+      <div className="hero-kenburns">
+        <div
+          className="hero-bg-float"
+          style={{ backgroundImage: `url(${hero17Src})` }}
+          aria-hidden
+        />
+      </div>
+      <div aria-hidden className="absolute inset-0 bg-black/55 pointer-events-none" />
+      <div aria-hidden className="hero-vignette absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.05),rgba(0,0,0,0.4))] pointer-events-none" />
+      <div aria-hidden className="absolute -top-[15%] right-[5%] w-[500px] h-[500px] rounded-full bg-red-500/10 blur-[60px] pointer-events-none" />
+      <div aria-hidden className="absolute -bottom-[10%] -left-[5%] w-[400px] h-[400px] rounded-full bg-navy-500/10 blur-[60px] pointer-events-none" />
+
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 flex flex-col justify-center min-h-[60vh] md:min-h-[68vh] pt-24 md:pt-40 pb-16 sm:pb-20 lg:pb-24">
         <div className="grid lg:grid-cols-2 lg:gap-14 items-center">
           <div>
             <Eyebrow tone="light">MoliPay — Plataforma financiera digital</Eyebrow>
