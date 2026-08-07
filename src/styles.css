@@ -251,19 +251,43 @@
 
 .hero-bg-float {
   position: absolute;
-  inset: 0;
+  inset: -8%;
   background-repeat: no-repeat;
   background-size: cover;
   background-position: center;
   will-change: transform;
-  animation: hero-kenburns 12s ease-in-out infinite alternate;
+  animation: hero-kenburns 18s ease-in-out infinite alternate;
 }
 
 @keyframes hero-kenburns {
   0% {
-    transform: translate3d(0, -2%, 0) scale(1.05);
+    transform: translate3d(-3%, -3%, 0) scale(1.12) rotate(-1.2deg);
+  }
+  50% {
+    transform: translate3d(2%, 1%, 0) scale(1.22) rotate(0.6deg);
   }
   100% {
-    transform: translate3d(0, 2%, 0) scale(1.16);
+    transform: translate3d(3%, -2%, 0) scale(1.18) rotate(1.2deg);
+  }
+}
+
+.hero-dashboard-float {
+  will-change: transform;
+  animation: hero-dashboard-float 7s ease-in-out infinite alternate;
+}
+
+@keyframes hero-dashboard-float {
+  0% {
+    transform: translateY(0) rotate(0.4deg);
+  }
+  100% {
+    transform: translateY(-14px) rotate(-0.4deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-bg-float,
+  .hero-dashboard-float {
+    animation: none;
   }
 }

@@ -122,7 +122,7 @@ function SiteHeader() {
 
 function DashboardMockup() {
   return (
-    <div className="bg-white/5 backdrop-blur-[20px] border border-white/10 rounded-xl p-1 shadow-2xl">
+    <div className="bg-white/5 backdrop-blur-[20px] border border-white/10 rounded-xl p-1 shadow-2xl hero-dashboard-float">
       <img src={heroShotSrc} alt="Panel de control MoliPay" className="block w-full h-auto rounded-lg" />
     </div>
   );
