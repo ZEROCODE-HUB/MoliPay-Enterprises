@@ -258,7 +258,7 @@
   object-fit: cover;
   object-position: center;
   will-change: transform;
-  animation: hero-kenburns 30s ease-in-out infinite alternate;
+  animation: hero-kenburns 24s ease-in-out infinite alternate;
 }
 
 @keyframes hero-kenburns {
@@ -267,16 +267,5 @@
   }
   100% {
     transform: translate3d(0, 1.5%, 0) scale(1.05);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-bg-float {
-    animation: none;
-    transform: none;
-    will-change: auto;
-  }
-  .hero-kenburns {
-    will-change: auto;
   }
 }
