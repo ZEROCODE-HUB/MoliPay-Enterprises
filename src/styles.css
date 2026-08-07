@@ -253,17 +253,17 @@
   position: absolute;
   inset: 0;
   background-repeat: no-repeat;
-  background-size: 100% auto;
+  background-size: cover;
   background-position: center;
   will-change: transform;
-  animation: hero-kenburns 14s ease-in-out infinite alternate;
+  animation: hero-kenburns 12s ease-in-out infinite alternate;
 }
 
 @keyframes hero-kenburns {
   0% {
-    transform: translate3d(0, -1%, 0) scale(1.02);
+    transform: translate3d(0, -2%, 0) scale(1.05);
   }
   100% {
-    transform: translate3d(0, 1%, 0) scale(1.1);
+    transform: translate3d(0, 2%, 0) scale(1.16);
   }
 }

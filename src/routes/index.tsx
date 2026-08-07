@@ -143,7 +143,7 @@ function Hero() {
       <div aria-hidden className="absolute -top-[15%] right-[5%] w-[500px] h-[500px] rounded-full bg-red-500/10 blur-[60px] pointer-events-none" />
       <div aria-hidden className="absolute -bottom-[10%] -left-[5%] w-[400px] h-[400px] rounded-full bg-navy-500/10 blur-[60px] pointer-events-none" />
 
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 flex flex-col justify-center min-h-[60vh] md:min-h-[68vh] pt-24 md:pt-40 pb-16 sm:pb-20 lg:pb-24">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 flex flex-col justify-center min-h-[80vh] md:min-h-[90vh] pt-24 md:pt-40 pb-16 sm:pb-20 lg:pb-24">
         <div className="grid lg:grid-cols-2 lg:gap-14 items-center">
           <div>
             <Eyebrow tone="light">MoliPay — Plataforma financiera digital</Eyebrow>
