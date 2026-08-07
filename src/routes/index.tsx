@@ -148,7 +148,7 @@ function DashboardMockup() {
 function Hero() {
   return (
     <section className="relative">
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 flex flex-col justify-center min-h-[72vh] md:min-h-[82vh] py-16 sm:py-20 lg:py-24">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 flex flex-col justify-center min-h-[60vh] md:min-h-[68vh] py-16 sm:py-20 lg:py-24">
         <div className="grid lg:grid-cols-2 lg:gap-14 items-center">
           <div>
             <Eyebrow tone="light">MoliPay — Plataforma financiera digital</Eyebrow>
