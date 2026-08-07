@@ -1,4 +1,5 @@
 ﻿import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Wallet,
@@ -54,8 +55,10 @@ function GlassCard({ children, className = "" }: { children: React.ReactNode; cl
 function Landing() {
   return (
     <div className="bg-white text-black-700">
-      <SiteHeader />
-      <Hero />
+      <HeroShell>
+        <SiteHeader />
+        <Hero />
+      </HeroShell>
       <LedgerStrip />
       <Servicios />
       <ContamosCon />
@@ -67,12 +70,40 @@ function Landing() {
   );
 }
 
-function SiteHeader() {
+function HeroShell({ children }: { children: React.ReactNode }) {
   return (
-    <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-[12px] border-b border-black-100">
+    <div className="relative isolation">
+      <div className="hero-kenburns">
+        <img src={hero17Src} alt="" aria-hidden className="hero-bg-float" />
+      </div>
+      <div aria-hidden className="absolute inset-0 bg-black/55 pointer-events-none" />
+      <div aria-hidden className="hero-vignette absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.05),rgba(0,0,0,0.4))] pointer-events-none" />
+      <div aria-hidden className="absolute -top-[15%] right-[5%] w-[500px] h-[500px] rounded-full bg-red-500/10 blur-[60px] pointer-events-none" />
+      <div aria-hidden className="absolute -bottom-[10%] -left-[5%] w-[400px] h-[400px] rounded-full bg-navy-500/10 blur-[60px] pointer-events-none" />
+      <div className="relative">{children}</div>
+    </div>
+  );
+}
+
+function SiteHeader() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const solid = scrolled ? "bg-white/85 backdrop-blur-[12px] border-b border-black-100" : "bg-transparent";
+  const text = scrolled ? "text-black-800" : "text-white/90";
+  const outline = scrolled ? "border-black-200 text-black-700 hover:bg-black-50" : "border-white/40 text-white hover:bg-white/10";
+
+  return (
+    <header className={`sticky top-0 z-40 transition-colors duration-300 ${solid}`}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 md:h-20 flex items-center justify-between gap-3">
         <MollyLogo size={32} />
-        <nav className="hidden md:flex items-center gap-8 lg:gap-10 font-sans text-[0.975rem] font-medium text-black-800">
+        <nav className={`hidden md:flex items-center gap-8 lg:gap-10 font-sans text-[0.975rem] font-medium ${text}`}>
           <a href="#servicios" className="hover:text-red-500 transition-colors">Servicios</a>
           <a href="#nosotros" className="hover:text-red-500 transition-colors">Nosotros</a>
           <a href="#contacto" className="hover:text-red-500 transition-colors">Contacto</a>
@@ -81,14 +112,14 @@ function SiteHeader() {
           <Link
             to="/login"
             search={{ register: undefined }}
-            className="hidden md:inline-flex h-10 items-center px-4 rounded-sm text-sm font-medium text-black-700 border border-black-200 hover:bg-black-50 transition-colors"
+            className={`hidden md:inline-flex h-10 items-center px-4 rounded-sm text-sm font-medium border transition-colors ${outline}`}
           >
             Iniciá sesión
           </Link>
           <Link
             to="/login"
             search={{ register: "pf" }}
-            className="hidden sm:inline-flex h-10 items-center px-4 rounded-sm text-sm font-medium text-black-700 border border-black-200 hover:bg-black-50 transition-colors"
+            className={`hidden sm:inline-flex h-10 items-center px-4 rounded-sm text-sm font-medium border transition-colors ${outline}`}
           >
             Registrate
           </Link>
@@ -116,20 +147,7 @@ function DashboardMockup() {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden isolation bg-black-900">
-      <div aria-hidden className="hero-kenburns absolute inset-0 pointer-events-none overflow-hidden">
-        <img
-          src={hero17Src}
-          alt=""
-          aria-hidden
-          className="hero-bg-float absolute inset-0 w-full h-full object-cover object-center"
-        />
-      </div>
-      <div aria-hidden className="absolute inset-0 bg-black/55 pointer-events-none" />
-      <div aria-hidden className="hero-vignette absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.05),rgba(0,0,0,0.4))] pointer-events-none" />
-      <div aria-hidden className="absolute -top-[15%] right-[5%] w-[500px] h-[500px] rounded-full bg-red-500/10 blur-[60px] pointer-events-none" />
-      <div aria-hidden className="absolute -bottom-[10%] -left-[5%] w-[400px] h-[400px] rounded-full bg-navy-500/10 blur-[60px] pointer-events-none" />
-
+    <section className="relative">
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-16 sm:pt-16 sm:pb-20 lg:pt-20 lg:pb-24">
         <div className="grid lg:grid-cols-2 lg:gap-14 items-center">
           <div>

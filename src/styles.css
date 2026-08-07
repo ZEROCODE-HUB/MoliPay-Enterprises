@@ -243,20 +243,30 @@
 }
 
 .hero-kenburns {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
   will-change: transform;
 }
 
 .hero-bg-float {
+  position: absolute;
+  inset: -5%;
+  width: 110%;
+  height: 110%;
+  object-fit: cover;
+  object-position: center;
   will-change: transform;
-  animation: hero-kenburns 42s ease-in-out infinite alternate;
+  animation: hero-kenburns 30s ease-in-out infinite alternate;
 }
 
 @keyframes hero-kenburns {
   0% {
-    transform: scale(1) translate3d(0, 0, 0);
+    transform: translate3d(0, -1.5%, 0) scale(1.02);
   }
   100% {
-    transform: scale(1.03) translate3d(0, -1.5%, 0);
+    transform: translate3d(0, 1.5%, 0) scale(1.05);
   }
 }
 
