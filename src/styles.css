@@ -241,3 +241,32 @@
     outline-offset: 2px;
   }
 }
+
+.hero-kenburns {
+  will-change: transform;
+}
+
+.hero-bg-float {
+  will-change: transform;
+  animation: hero-kenburns 42s ease-in-out infinite alternate;
+}
+
+@keyframes hero-kenburns {
+  0% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  100% {
+    transform: scale(1.03) translate3d(0, -1.5%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-bg-float {
+    animation: none;
+    transform: none;
+    will-change: auto;
+  }
+  .hero-kenburns {
+    will-change: auto;
+  }
+}

@@ -19,6 +19,7 @@ import {
 import { MollyLogo } from "@/components/molly-logo";
 import heroShotSrc from "@/assets/Capturadepantalla.png";
 import ogImageSrc from "@/assets/miniatura.png";
+import hero17Src from "@/assets/hero-17.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -115,10 +116,19 @@ function DashboardMockup() {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden isolation bg-gradient-to-br from-black via-black-800 to-black-600">
-      <div aria-hidden className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[length:24px_24px] pointer-events-none" />
-      <div aria-hidden className="absolute -top-[15%] right-[5%] w-[500px] h-[500px] rounded-full bg-red-500/5 blur-[60px] pointer-events-none" />
-      <div aria-hidden className="absolute -bottom-[10%] -left-[5%] w-[400px] h-[400px] rounded-full bg-navy-500/5 blur-[60px] pointer-events-none" />
+    <section className="relative overflow-hidden isolation bg-black-900">
+      <div aria-hidden className="hero-kenburns absolute inset-0 pointer-events-none overflow-hidden">
+        <img
+          src={hero17Src}
+          alt=""
+          aria-hidden
+          className="hero-bg-float absolute inset-0 w-full h-full object-cover object-center"
+        />
+      </div>
+      <div aria-hidden className="absolute inset-0 bg-black/55 pointer-events-none" />
+      <div aria-hidden className="hero-vignette absolute inset-0 bg-[linear-gradient(to_bottom,rgba(0,0,0,0.05),rgba(0,0,0,0.4))] pointer-events-none" />
+      <div aria-hidden className="absolute -top-[15%] right-[5%] w-[500px] h-[500px] rounded-full bg-red-500/10 blur-[60px] pointer-events-none" />
+      <div aria-hidden className="absolute -bottom-[10%] -left-[5%] w-[400px] h-[400px] rounded-full bg-navy-500/10 blur-[60px] pointer-events-none" />
 
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-12 pb-16 sm:pt-16 sm:pb-20 lg:pt-20 lg:pb-24">
         <div className="grid lg:grid-cols-2 lg:gap-14 items-center">
