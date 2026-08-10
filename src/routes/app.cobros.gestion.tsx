@@ -5,6 +5,7 @@ import {
   Play, Pause, PlayIcon, Trash2, Copy, ExternalLink,
 } from "lucide-react";
 import { Card, BtnPrimary, BtnOutline, Input, Label } from "@/components/portal-shell";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "sonner";
 import {
   getLotesGestion,
@@ -57,6 +58,15 @@ function GestionLotes() {
   const [pageSize, setPageSize] = useState(10);
   const [detalleLote, setDetalleLote] = useState<Lote | null>(null);
   const [detalleOpen, setDetalleOpen] = useState(false);
+  const [confirmarEliminarId, setConfirmarEliminarId] = useState<string | null>(null);
+
+  const ejecutarEliminar = () => {
+    if (confirmarEliminarId !== null && eliminarLote(confirmarEliminarId)) {
+      toast.success("Lote eliminado");
+      setDetalleOpen(false);
+      setDetalleLote(null);
+    }
+  };
 
   const lotes = useMemo(() => {
     let data = getLotesGestion();
@@ -396,13 +406,6 @@ function GestionLotes() {
             toast.error("No se pudo reanudar el lote");
           }
         };
-        const handleEliminar = () => {
-          if (eliminarLote(id)) {
-            toast.success("Lote eliminado");
-            setDetalleOpen(false);
-            setDetalleLote(null);
-          }
-        };
         const copyLink = (url: string) => {
           navigator.clipboard.writeText(url);
           toast.success("Link copiado al portapapeles");
@@ -448,7 +451,7 @@ function GestionLotes() {
             actions.push({ label: "Reanudar", icon: <PlayIcon size={14} />, onClick: handleReanudar, variant: "primary" });
           }
           if (lote.estado !== "finalizado" && lote.estado !== "eliminado") {
-            actions.push({ label: "Eliminar", icon: <Trash2 size={14} />, onClick: handleEliminar, variant: "danger" });
+            actions.push({ label: "Eliminar", icon: <Trash2 size={14} />, onClick: () => setConfirmarEliminarId(id), variant: "danger" });
           }
           return actions;
         };
@@ -665,6 +668,14 @@ function GestionLotes() {
           </div>
         );
       })()}
+
+      <ConfirmDialog
+        open={confirmarEliminarId !== null}
+        title="¿Eliminar lote?"
+        description="Esta accion no se puede deshacer. Los links de pago generados dejaran de funcionar."
+        onClose={() => setConfirmarEliminarId(null)}
+        onConfirm={ejecutarEliminar}
+      />
     </>
   );
 }

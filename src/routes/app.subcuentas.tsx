@@ -8,6 +8,7 @@ import {
 import { PageHeader, Card, BtnPrimary, BtnOutline, Badge, Stat, Input, Label } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export const Route = createFileRoute("/app/subcuentas")({ component: Page });
 
@@ -110,6 +111,7 @@ function Page() {
   const [estado, setEstado] = useState("Todos");
   const [page, setPage] = useState(1);
   const pageSize = 10;
+  const [confirmarBorrar, setConfirmarBorrar] = useState<Sub | null>(null);
 
   const filtradas = useMemo(
     () => subs.filter(s =>
@@ -223,7 +225,7 @@ function Page() {
                     <div className="flex gap-1 justify-end">
                       <button onClick={() => setDetailSub(s)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition" title="Ver detalle"><Eye size={14} /></button>
                       <button onClick={() => { setEditSub(s); setNuevoOpen(true); }} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition" title="Editar"><Pencil size={14} /></button>
-                      <button onClick={() => { setDeletedNames((prev) => { const next = new Set(prev); next.add(s.n); return next; }); toast.success("Subcuenta eliminada"); }} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 hover:text-red-600 transition" title="Borrar"><Trash2 size={14} /></button>
+                      <button onClick={() => setConfirmarBorrar(s)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 hover:text-red-600 transition" title="Borrar"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -298,6 +300,19 @@ function Page() {
           onClose={() => setDetailSub(null)}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmarBorrar !== null}
+        title="¿Eliminar usuario de la subcuenta?"
+        description={`Se quitara a ${confirmarBorrar?.apellido} (${confirmarBorrar?.n}) de esta subcuenta. Esta accion no se puede deshacer.`}
+        onClose={() => setConfirmarBorrar(null)}
+        onConfirm={() => {
+          if (confirmarBorrar) {
+            setDeletedNames((prev) => { const next = new Set(prev); next.add(confirmarBorrar.n); return next; });
+            toast.success("Subcuenta eliminada");
+          }
+        }}
+      />
     </>
   );
 }

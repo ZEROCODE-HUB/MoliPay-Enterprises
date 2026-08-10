@@ -11,6 +11,7 @@ import {
 } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
   mockProducts,
   mockLinks,
@@ -34,6 +35,7 @@ function Page() {
   const [showResult, setShowResult] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<PaymentLink | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState("");
+  const [confirmarEliminarId, setConfirmarEliminarId] = useState<string | null>(null);
 
   const [linkPartial, setLinkPartial] = useState(false);
   const [linkMethods, setLinkMethods] = useState<string[]>(
@@ -193,7 +195,7 @@ function Page() {
                       </BtnOutline>
                       <BtnOutline
                         className="h-7 px-2 text-[11px]"
-                        onClick={() => deleteProduct(p.id)}
+                        onClick={() => setConfirmarEliminarId(p.id)}
                       >
                         Eliminar
                       </BtnOutline>
@@ -479,6 +481,16 @@ function Page() {
           </table>
         </div>
       </Card>
+
+      <ConfirmDialog
+        open={confirmarEliminarId !== null}
+        title="¿Eliminar producto?"
+        description="Esta accion no se puede deshacer."
+        onClose={() => setConfirmarEliminarId(null)}
+        onConfirm={() => {
+          if (confirmarEliminarId) deleteProduct(confirmarEliminarId);
+        }}
+      />
     </>
   );
 }

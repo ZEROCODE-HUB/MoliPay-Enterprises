@@ -4,6 +4,7 @@ import { ArrowUpRight, Calendar, Clock, ShieldCheck, Star, Trash2, Edit3, Play, 
 import { PageHeader, Input, Label, BtnPrimary, BtnOutline, Badge } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 export const Route = createFileRoute("/app/transferencias")({ component: Page });
 
@@ -55,6 +56,10 @@ function Page() {
   const [otpOpen, setOtpOpen] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [confirmarEliminacion, setConfirmarEliminacion] = useState<{
+    tipo: "borrador" | "programada";
+    id: string;
+  } | null>(null);
 
   const resetOtp = () => {
     setOtp(["", "", "", "", "", ""]);
@@ -171,10 +176,7 @@ function Page() {
           {tab === "borradores" && (
             <Borradores
               drafts={drafts}
-              onDelete={(id) => {
-                setDrafts((prev) => prev.filter((d) => d.id !== id));
-                toast.success("Borrador eliminado");
-              }}
+              onDelete={(id) => setConfirmarEliminacion({ tipo: "borrador", id })}
               onEdit={(id) => {
                 setTab("unica");
                 toast.success("Borrador cargado en el formulario");
@@ -187,10 +189,7 @@ function Page() {
           {tab === "programadas" && (
             <Programadas
               items={scheduled}
-              onCancel={(id) => {
-                setScheduled((prev) => prev.filter((s) => s.id !== id));
-                toast.success("Transferencia cancelada");
-              }}
+              onCancel={(id) => setConfirmarEliminacion({ tipo: "programada", id })}
               onEdit={(id) => toast.success("Editando transferencia programada")}
               onExecute={(id) => toast.success("Transferencia ejecutada")}
             />
@@ -318,6 +317,27 @@ function Page() {
           Si presionas "Cancelar" no se guardara.
         </div>
       </FormDialog>
+
+      <ConfirmDialog
+        open={confirmarEliminacion !== null}
+        title={
+          confirmarEliminacion?.tipo === "borrador"
+            ? "¿Eliminar borrador?"
+            : "¿Cancelar transferencia programada?"
+        }
+        description="Esta accion no se puede deshacer."
+        confirmLabel={confirmarEliminacion?.tipo === "borrador" ? "Eliminar" : "Cancelar"}
+        onClose={() => setConfirmarEliminacion(null)}
+        onConfirm={() => {
+          if (confirmarEliminacion?.tipo === "borrador") {
+            setDrafts((prev) => prev.filter((d) => d.id !== confirmarEliminacion.id));
+            toast.success("Borrador eliminado");
+          } else if (confirmarEliminacion?.tipo === "programada") {
+            setScheduled((prev) => prev.filter((s) => s.id !== confirmarEliminacion.id));
+            toast.success("Transferencia cancelada");
+          }
+        }}
+      />
     </>
   );
 }

@@ -16,6 +16,7 @@ import {
   Download,
 } from "lucide-react";
 import { Card, BtnPrimary, BtnOutline, Badge } from "@/components/portal-shell";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "sonner";
 import {
   getLoteById,
@@ -77,6 +78,7 @@ function DetalleLote() {
   const [refresh, setRefresh] = useState(0);
   const [page, setPage] = useState(1);
   const pageSize = 10;
+  const [confirmarEliminar, setConfirmarEliminar] = useState(false);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const lote = useMemo(() => getLoteById(id), [id, refresh]);
@@ -213,7 +215,7 @@ function DetalleLote() {
       actions.push({
         label: "Eliminar",
         icon: <Trash2 size={14} />,
-        onClick: handleEliminar,
+        onClick: () => setConfirmarEliminar(true),
         variant: "danger",
       });
     }
@@ -559,6 +561,14 @@ function DetalleLote() {
           </div>
         )}
       </Card>
+
+      <ConfirmDialog
+        open={confirmarEliminar}
+        title="¿Eliminar lote?"
+        description="Esta accion no se puede deshacer. Los links de pago generados dejaran de funcionar."
+        onClose={() => setConfirmarEliminar(false)}
+        onConfirm={handleEliminar}
+      />
     </div>
   );
 }
