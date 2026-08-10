@@ -5,8 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-sans: "Josefin Sans", "Inter", system-ui, sans-serif;
+  --font-display: "Josefin Sans", "Inter", system-ui, sans-serif;
+  --font-display-serif: "Null Free", ui-serif, Georgia, serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
   --color-black-900: var(--black-900);
