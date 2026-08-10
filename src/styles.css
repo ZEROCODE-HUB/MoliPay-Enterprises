@@ -6,7 +6,7 @@
 
 @theme inline {
   --font-sans: "Inter", system-ui, sans-serif;
-  --font-display: "Josefin Sans", "Inter", system-ui, sans-serif;
+  --font-display: "Inter", system-ui, sans-serif;
   --font-display-serif: "Null Free", ui-serif, Georgia, serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
@@ -235,10 +235,6 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
     font-weight: 600;
-  }
-
-  .font-display.tabular-nums {
-    font-family: var(--font-sans) !important;
   }
 
   :focus-visible {
