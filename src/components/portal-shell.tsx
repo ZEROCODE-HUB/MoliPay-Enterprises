@@ -71,7 +71,7 @@ export function PortalShell({
       </header>
 
       <div className="flex flex-1 min-h-0">
-        <aside className="hidden lg:flex flex-col w-60 border-r border-navy-600 bg-navy-500 shrink-0">
+        <aside className="hidden lg:flex flex-col w-60 border-r border-navy-700 bg-navy-600 shrink-0">
           <nav className="p-3 flex-1 overflow-y-auto">
             <SidebarNav nav={nav} path={path} />
           </nav>
@@ -80,8 +80,8 @@ export function PortalShell({
         {open && (
           <div className="lg:hidden fixed inset-0 z-40">
             <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-            <aside className="absolute left-0 top-0 bottom-0 w-72 bg-navy-500 border-r border-navy-600 flex flex-col">
-              <div className="p-4 border-b border-navy-600">
+            <aside className="absolute left-0 top-0 bottom-0 w-72 bg-navy-600 border-r border-navy-700 flex flex-col">
+              <div className="p-4 border-b border-navy-700">
                 <MollyLogo size={28} />
               </div>
               <nav className="p-3 flex-1 overflow-y-auto">
@@ -174,7 +174,7 @@ function SidebarLink({
             : "text-white/60 hover:text-white hover:bg-navy-700/40"
           : active
             ? "bg-navy-700 text-white font-semibold"
-            : "text-white/80 hover:text-white hover:bg-navy-600"
+            : "text-white/80 hover:text-white hover:bg-navy-700"
       }`}
     >
       {!nested && <Icon size={18} strokeWidth={1.75} />}
@@ -205,7 +205,7 @@ function SidebarGroup({
         className={`w-full flex items-center gap-3 px-3 py-2 rounded-sm text-sm transition-colors ${
           containsActive
             ? "text-white font-semibold"
-            : "text-white/80 hover:text-white hover:bg-navy-600"
+            : "text-white/80 hover:text-white hover:bg-navy-700"
         }`}
         aria-expanded={expanded}
       >
