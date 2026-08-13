@@ -30,6 +30,9 @@
   --color-red-100: var(--red-100);
   --color-red-50: var(--red-50);
 
+  --color-moli-orange: var(--moli-orange);
+  --color-moli-orange-dark: var(--moli-orange-dark);
+
   --color-navy-700: var(--navy-700);
   --color-navy-600: var(--navy-600);
   --color-navy-500: var(--navy-500);
@@ -126,6 +129,9 @@
   --red-200: #F5A0AA;
   --red-100: #FCD3D8;
   --red-50: #FFF0F1;
+
+  --moli-orange: #f97316;
+  --moli-orange-dark: #ea580c;
 
   --navy-700: #1A235A;
   --navy-600: #26327A;

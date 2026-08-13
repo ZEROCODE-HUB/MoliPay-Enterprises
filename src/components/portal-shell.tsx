@@ -130,7 +130,7 @@ export function PortalShell({
               key={item.to}
               to={item.to}
               className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] ${
-                active ? "text-red-500 font-semibold" : "text-black-400"
+                active ? "text-moli-orange font-semibold" : "text-black-400"
               }`}
             >
               <Icon size={20} strokeWidth={1.75} />
@@ -228,7 +228,7 @@ function SidebarLink({
         aria-label={item.label}
         className={`flex items-center justify-center w-11 h-11 mx-auto mb-1 rounded-lg transition-colors ${
           active
-            ? "bg-navy-500 text-white font-semibold"
+            ? "bg-moli-orange text-white font-semibold"
             : "text-white/80 hover:text-white hover:bg-navy-600"
         }`}
       >
@@ -246,10 +246,10 @@ function SidebarLink({
       } ${
         nested
           ? active
-            ? "bg-navy-600 text-white font-semibold"
+            ? "bg-moli-orange-dark text-white font-semibold"
             : "text-white/60 hover:text-white hover:bg-navy-600/50"
           : active
-            ? "bg-navy-500 text-white font-semibold"
+            ? "bg-moli-orange text-white font-semibold"
             : "text-white/80 hover:text-white hover:bg-navy-600"
       }`}
     >
@@ -280,7 +280,7 @@ function SidebarGroup({
         onClick={() => setOpen((v) => !v)}
         className={`w-full flex items-center gap-3 px-3 py-2 rounded-sm text-sm transition-colors ${
           containsActive
-            ? "text-white font-semibold"
+            ? "text-moli-orange font-semibold"
             : "text-white/80 hover:text-white hover:bg-navy-600"
         }`}
         aria-expanded={expanded}
