@@ -189,7 +189,7 @@ export function SelectField({
         className={`w-full h-11 px-3 bg-white text-sm outline-none rounded-sm ${
           error ? "border-red-500" : "border-black-100"
         } border focus:border-navy-500 focus:ring-2 focus:ring-navy-100 ${
-          value ? "text-black-700" : "text-black-300"
+          value ? "text-black-800 font-medium" : "text-black-500"
         }`}
       >
         <option value="">{placeholder}</option>
@@ -378,12 +378,22 @@ export function FileUpload({
     };
   }, []);
 
+  const isImage = value?.file?.type?.startsWith("image/");
+
   if (value) {
     return (
       <div>
         <span className="block mb-1.5 text-xs font-semibold text-black-700">{label}</span>
         <div className="flex items-center gap-3 bg-white px-3 py-3 rounded-sm border border-black-100">
-          <FileText size={18} className="text-black-400 shrink-0" />
+          {isImage ? (
+            <img
+              src={value.url}
+              alt={value.name}
+              className="w-12 h-12 rounded-sm object-cover shrink-0 bg-black-50 ring-1 ring-black-100"
+            />
+          ) : (
+            <FileText size={18} className="text-black-400 shrink-0" />
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-sm truncate text-black-700">{value.name}</p>
             <p className="text-[11px] text-black-400">Archivo cargado</p>

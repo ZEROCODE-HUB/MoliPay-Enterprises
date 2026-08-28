@@ -129,10 +129,17 @@ function DatosPersonales() {
             <button
               type="button"
               onClick={() => setF({ ...f, esPEP: !f.esPEP })}
-              className={`relative w-11 h-6 transition-colors rounded-full ${f.esPEP ? "bg-red-500" : "bg-black-200"}`}
-              aria-pressed={f.esPEP}
+              role="switch"
+              aria-checked={f.esPEP}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300 ${
+                f.esPEP ? "bg-red-500" : "bg-black-300"
+              }`}
             >
-              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${f.esPEP ? "translate-x-[22px]" : "translate-x-[2px]"}`} />
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                  f.esPEP ? "translate-x-[22px]" : "translate-x-0.5"
+                }`}
+              />
             </button>
           </label>
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
