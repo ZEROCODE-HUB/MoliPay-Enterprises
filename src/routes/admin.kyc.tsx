@@ -52,9 +52,11 @@ const TIPO_BG: Record<string, string> = {
   selfie: "linear-gradient(135deg,#475569,#94a3b8)",
 };
 
+const IMG_EXT = ["png", "jpg", "jpeg", "jpe", "jfif", "jif", "webp", "gif", "bmp", "heic", "avif", "tiff", "tif"];
+
 function kindOf(label: string, url: string): DocReal["kind"] {
   const ext = (label || url).split(".").pop()?.toLowerCase() ?? "";
-  if (["png", "jpg", "jpeg", "webp", "gif", "bmp"].includes(ext)) return "image";
+  if (IMG_EXT.includes(ext)) return "image";
   if (ext === "pdf") return "pdf";
   return "file";
 }
