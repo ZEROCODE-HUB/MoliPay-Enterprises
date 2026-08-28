@@ -10,7 +10,9 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerificarCorreoRouteImport } from './routes/verificar-correo'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
@@ -55,9 +57,19 @@ const VerificarCorreoRoute = VerificarCorreoRouteImport.update({
   path: '/verificar-correo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegistroRoute = RegistroRouteImport.update({
   id: '/registro',
   path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecuperarRoute = RecuperarRouteImport.update({
+  id: '/recuperar',
+  path: '/recuperar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -257,7 +269,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRouteWithChildren
+  '/reset-password': typeof ResetPasswordRoute
   '/verificar-correo': typeof VerificarCorreoRoute
   '/app/api': typeof AppApiRoute
   '/app/api-config': typeof AppApiConfigRoute
@@ -298,7 +312,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRouteWithChildren
+  '/reset-password': typeof ResetPasswordRoute
   '/verificar-correo': typeof VerificarCorreoRoute
   '/app/api': typeof AppApiRoute
   '/app/api-config': typeof AppApiConfigRoute
@@ -338,7 +354,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/recuperar': typeof RecuperarRoute
   '/registro': typeof RegistroRouteWithChildren
+  '/reset-password': typeof ResetPasswordRoute
   '/verificar-correo': typeof VerificarCorreoRoute
   '/app/api': typeof AppApiRoute
   '/app/api-config': typeof AppApiConfigRoute
@@ -382,7 +400,9 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/recuperar'
     | '/registro'
+    | '/reset-password'
     | '/verificar-correo'
     | '/app/api'
     | '/app/api-config'
@@ -423,7 +443,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/recuperar'
     | '/registro'
+    | '/reset-password'
     | '/verificar-correo'
     | '/app/api'
     | '/app/api-config'
@@ -462,7 +484,9 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/recuperar'
     | '/registro'
+    | '/reset-password'
     | '/verificar-correo'
     | '/app/api'
     | '/app/api-config'
@@ -505,7 +529,9 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  RecuperarRoute: typeof RecuperarRoute
   RegistroRoute: typeof RegistroRouteWithChildren
+  ResetPasswordRoute: typeof ResetPasswordRoute
   VerificarCorreoRoute: typeof VerificarCorreoRoute
   LegalesArrepentimientoRoute: typeof LegalesArrepentimientoRoute
   LegalesComisionesRoute: typeof LegalesComisionesRoute
@@ -526,11 +552,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerificarCorreoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/registro': {
       id: '/registro'
       path: '/registro'
       fullPath: '/registro'
       preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recuperar': {
+      id: '/recuperar'
+      path: '/recuperar'
+      fullPath: '/recuperar'
+      preLoaderRoute: typeof RecuperarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -915,7 +955,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  RecuperarRoute: RecuperarRoute,
   RegistroRoute: RegistroRouteWithChildren,
+  ResetPasswordRoute: ResetPasswordRoute,
   VerificarCorreoRoute: VerificarCorreoRoute,
   LegalesArrepentimientoRoute: LegalesArrepentimientoRoute,
   LegalesComisionesRoute: LegalesComisionesRoute,

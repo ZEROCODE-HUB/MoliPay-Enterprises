@@ -46,7 +46,7 @@ function VerificarCorreo() {
       step="Correo verificado"
     >
       {estado === "loading" && (
-        <SuccessCard variant="info" title="Verificando tu correo..." body={<p>Un momento por favor.</p>} />
+        <SuccessCard variant="loading" title="Verificando tu correo…" body={<p>Estamos confirmando el enlace que nos enviaste. Esto solo toma un instante.</p>} />
       )}
 
       {estado === "ok" && (

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type InputHTMLAttributes } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, Eye, EyeOff, UploadCloud, Camera, FileText, X, ShieldCheck } from "lucide-react";
+import { Check, Eye, EyeOff, UploadCloud, Camera, FileText, X, ShieldCheck, Loader2 } from "lucide-react";
 import { MollyLogo } from "@/components/molly-logo";
 import loginBg from "@/assets/login-hero.jpg";
 
@@ -479,14 +479,14 @@ export function SuccessCard({
   title: string;
   body?: ReactNode;
   children?: ReactNode;
-  variant?: "success" | "info" | "error";
+  variant?: "success" | "info" | "error" | "loading";
 }) {
   const color = variant === "success" ? "#1E8E3E" : variant === "error" ? "#DC2626" : "#324595";
-  const Icon = variant === "error" ? X : Check;
+  const Icon = variant === "error" ? X : variant === "loading" ? Loader2 : Check;
   return (
     <div className="bg-white p-8 sm:p-10 text-center rounded-md border border-black-100">
       <div className="mx-auto mb-6 inline-flex items-center justify-center w-16 h-16 rounded-full" style={{ background: `${color}14`, color }}>
-        <Icon size={30} strokeWidth={2.5} />
+        <Icon size={30} strokeWidth={2.5} className={variant === "loading" ? "animate-spin" : undefined} />
       </div>
       <h1 className="text-[1.75rem] font-semibold text-black-800 leading-tight">{title}</h1>
       {body && <div className="mt-4 text-sm text-black-400 leading-relaxed">{body}</div>}

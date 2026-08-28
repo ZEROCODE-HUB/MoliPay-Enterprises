@@ -59,13 +59,12 @@ function LoginForm({ onSuccess }: { onSuccess: (estado: "aprobado" | "pendiente"
       <Field label="Correo electrónico" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="hola@empresa.com" />
       <PasswordField label="Contraseña" value={pw} onChange={setPw} />
       <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => alert("Flujo de recuperación de contraseña (demo)")}
+        <Link
+          to="/recuperar"
           className="text-xs text-black-400 hover:text-red-500 underline underline-offset-2 transition-colors"
         >
           ¿Olvidaste tu contraseña?
-        </button>
+        </Link>
       </div>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="pt-1">
