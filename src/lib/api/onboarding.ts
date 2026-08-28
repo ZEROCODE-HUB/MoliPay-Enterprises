@@ -48,7 +48,19 @@ export async function submitOnboarding(
   const { data, error } = await supabase.functions.invoke("crear-cliente", {
     body: payload,
   });
-  if (error) throw new Error(error.message || "No se pudo enviar el onboarding");
+  if (error) {
+    let message = error.message || "No se pudo enviar el onboarding";
+    try {
+      const ctx = (error as unknown as { context?: unknown }).context;
+      if (ctx && typeof (ctx as { json?: unknown }).json === "function") {
+        const body = await (ctx as { json: () => Promise<{ error?: string }> }).json();
+        if (body?.error) message = body.error;
+      }
+    } catch {
+      /* ignore: keep generic message */
+    }
+    throw new Error(message);
+  }
   return data as OnboardingResult;
 }
 

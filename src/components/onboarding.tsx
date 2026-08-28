@@ -447,6 +447,27 @@ export function FileUpload({
   );
 }
 
+/* ============ Empty table row ============ */
+
+export function EmptyRow({
+  colSpan = 12,
+  message = "No hay información disponible",
+}: {
+  colSpan?: number;
+  message?: string;
+}) {
+  return (
+    <tr>
+      <td
+        colSpan={colSpan}
+        className="px-4 py-12 text-center text-sm text-black-500 bg-white"
+      >
+        {message}
+      </td>
+    </tr>
+  );
+}
+
 /* ============ SuccessCard ============ */
 
 export function SuccessCard({

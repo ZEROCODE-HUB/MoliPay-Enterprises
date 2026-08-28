@@ -65,9 +65,17 @@ Deno.serve(async (req) => {
     .single();
 
   if (cliErr || !cli) {
-    const dup = cliErr?.message?.includes("clientes_correo_key");
+    const msg = cliErr?.message ?? "";
+    const dupCorreo = msg.includes("clientes_correo_key");
+    const dupLegajo = msg.includes("clientes_legajo_key");
     return json(
-      { error: dup ? "Ya existe una cuenta con ese correo" : cliErr?.message ?? "No se pudo crear el cliente" },
+      {
+        error: dupCorreo
+          ? "Ya existe una cuenta con ese correo"
+          : dupLegajo
+            ? "Ya existe una cuenta con ese CUIT"
+            : msg || "No se pudo crear el cliente",
+      },
       400,
     );
   }

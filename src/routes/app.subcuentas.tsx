@@ -9,6 +9,7 @@ import { PageHeader, Card, BtnPrimary, BtnOutline, Badge, Stat, Input, Label } f
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { EmptyRow } from "@/components/onboarding";
 
 export const Route = createFileRoute("/app/subcuentas")({ component: Page });
 
@@ -22,26 +23,7 @@ type Sub = {
   retirosHab: boolean;
 };
 
-const subs: Sub[] = [
-  { n: "Sucursal Centro", apellido: "Solis", email: "msolis@empresa.com", cbu: "0000003 100011112222 01", tipo: "Operativa", e: "Activa",
-    disp: 4220000, ret: 180000, conc: 3950000, ing: "$ 1.840.000", egr: "$ 920.000",
-    resp: "M. Solis", lim: "$ 8.000.000 / dia", color: "var(--brand-primary)", retirosHab: true },
-  { n: "Sucursal Norte", apellido: "Vega", email: "tvega@empresa.com", cbu: "0000003 100011112222 02", tipo: "Operativa", e: "Activa",
-    disp: 1870500, ret: 0, conc: 1870500, ing: "$ 1.220.000", egr: "$ 540.000",
-    resp: "T. Vega", lim: "$ 4.000.000 / dia", color: "var(--brand-blue)", retirosHab: true },
-  { n: "Operaciones", apellido: "Diaz", email: "ldiaz@empresa.com", cbu: "0000003 100011112222 03", tipo: "Operativa", e: "Activa",
-    disp: 6389830, ret: 420000, conc: 5800000, ing: "$ 4.220.000", egr: "$ 2.180.000",
-    resp: "L. Diaz", lim: "$ 20.000.000 / dia", color: "var(--brand-dark)", retirosHab: true },
-  { n: "Recaudacion expensas", apellido: "Sosa", email: "psosa@empresa.com", cbu: "0000003 100011112222 04", tipo: "Recaudacion", e: "Activa",
-    disp: 2150000, ret: 0, conc: 2150000, ing: "$ 5.840.000", egr: "$ 0",
-    resp: "P. Sosa", lim: "Sin limite", color: "var(--brand-blue)", retirosHab: true },
-  { n: "Sueldos", apellido: "RRHH", email: "rrhh@empresa.com", cbu: "0000003 100011112222 05", tipo: "Sueldos", e: "Activa",
-    disp: 980000, ret: 0, conc: 980000, ing: "$ 980.000", egr: "$ 0",
-    resp: "RRHH", lim: "$ 5.000.000 / dia", color: "var(--brand-primary)", retirosHab: false },
-  { n: "Fondos en garantia", apellido: "Compliance", email: "compliance@empresa.com", cbu: "0000003 100011112222 06", tipo: "Garantias", e: "Pausada",
-    disp: 0, ret: 350000, conc: 350000, ing: "$ 0", egr: "$ 0",
-    resp: "Compliance", lim: "Solo retiro autorizado", color: "var(--muted-foreground)", retirosHab: false },
-];
+const subs: Sub[] = [];
 
 type Mov = {
   tipo: "ingreso" | "egreso";
@@ -57,44 +39,7 @@ type Mov = {
 
 
 
-const movimientosPorSub: Record<string, Mov[]> = {
-  "Sucursal Centro": [
-    { tipo: "ingreso", titulo: "Ingresaste dinero", txid: "TX-2026-06-02-8841", cbu: "0000003100054321678901", entidad: "Carlos Mendez S.A.", fecha: "02/06/2026", hora: "14:32", monto: 1840000 },
-    { tipo: "egreso", titulo: "Retiraste dinero", txid: "TX-2026-06-02-8842", cbu: "0000003100023456789012", entidad: "Proveedor SA", fecha: "02/06/2026", hora: "11:08", monto: 220000 },
-    { tipo: "ingreso", titulo: "Ingresaste dinero", txid: "TX-2026-06-01-8844", cbu: "0000003100034567890123", entidad: "Cliente #4821", fecha: "01/06/2026", hora: "10:42", monto: 18400 },
-    { tipo: "egreso", titulo: "Retiraste dinero", txid: "TX-2026-05-30-8847", cbu: "0000003100056789012345", entidad: "Edesur S.A.", fecha: "30/05/2026", hora: "18:11", monto: 64320 },
-    { tipo: "ingreso", titulo: "Ingresaste dinero", txid: "TX-2026-05-29-8848", cbu: "0000003100067890123456", entidad: "Link de pago Factura 0033", fecha: "29/05/2026", hora: "09:30", monto: 64800 },
-    { tipo: "egreso", titulo: "Retiraste dinero", txid: "TX-2026-05-28-8849", cbu: "0000003100078901234567", entidad: "AFIP", fecha: "28/05/2026", hora: "09:00", monto: 890000 },
-    { tipo: "ingreso", titulo: "Ingresaste dinero", txid: "TX-2026-05-27-8850", cbu: "0000003100089012345678", entidad: "Conciliacion bancaria", fecha: "27/05/2026", hora: "06:00", monto: 0 },
-  ],
-  "Operaciones": [
-    { tipo: "egreso", titulo: "Retiraste dinero", txid: "TX-2026-06-02-8851", cbu: "0000003100090123456789", entidad: "Proveedor Logistica SA", fecha: "02/06/2026", hora: "10:18", monto: 220000 },
-    { tipo: "egreso", titulo: "Retiraste dinero", txid: "TX-2026-06-01-8852", cbu: "0000003100101234567890", entidad: "Edesur S.A.", fecha: "01/06/2026", hora: "18:11", monto: 64320 },
-    { tipo: "egreso", titulo: "Comision Molly", txid: "TX-2026-05-31-8853", cbu: "0000003100112345678901", entidad: "Moli Financial S.A.", fecha: "31/05/2026", hora: "12:00", monto: 4820 },
-    { tipo: "ingreso", titulo: "Ingresaste dinero", txid: "TX-2026-05-30-8854", cbu: "0000003100123456789012", entidad: "Inmobiliaria del Plata", fecha: "30/05/2026", hora: "10:30", monto: 2800000 },
-    { tipo: "egreso", titulo: "Retiraste dinero", txid: "TX-2026-05-29-8855", cbu: "0000003100134567890123", entidad: "OSECAC", fecha: "29/05/2026", hora: "08:30", monto: 420000 },
-    { tipo: "ingreso", titulo: "Ingresaste dinero", txid: "TX-2026-05-28-8856", cbu: "0000003100145678901234", entidad: "Alquileres Galeria Central", fecha: "28/05/2026", hora: "11:00", monto: 3200000 },
-  ],
-  "Sucursal Norte": [
-    { tipo: "ingreso", titulo: "Ingresaste dinero", txid: "TX-2026-06-02-8857", cbu: "0000003100156789012345", entidad: "Link de pago Factura 0033", fecha: "02/06/2026", hora: "09:30", monto: 64800 },
-    { tipo: "egreso", titulo: "Retiraste dinero", txid: "TX-2026-06-01-8858", cbu: "0000003100167890123456", entidad: "Proveedor SA", fecha: "01/06/2026", hora: "17:44", monto: 35000 },
-    { tipo: "ingreso", titulo: "Ingresaste dinero", txid: "TX-2026-05-30-8859", cbu: "0000003100178901234567", entidad: "Lucia Fernandez", fecha: "30/05/2026", hora: "09:05", monto: 8200 },
-    { tipo: "egreso", titulo: "Retiraste dinero", txid: "TX-2026-05-29-8860", cbu: "0000003100189012345678", entidad: "Pago QR Proveedor", fecha: "29/05/2026", hora: "16:30", monto: 78000 },
-  ],
-  "Recaudacion expensas": [
-    { tipo: "ingreso", titulo: "Cobro masivo — Lote expensas Abril", txid: "TX-2026-06-15-8870", cbu: "0000003100245678901234", entidad: "Lote expensas Abril (102/128)", fecha: "15/06/2026", hora: "08:30", monto: 4120000 },
-    { tipo: "ingreso", titulo: "Cobro masivo — Lote expensas Marzo", txid: "TX-2026-06-01-8861", cbu: "0000003100190123456789", entidad: "Lote expensas Marzo (84/128)", fecha: "01/06/2026", hora: "17:02", monto: 3840000 },
-    { tipo: "ingreso", titulo: "Cobro masivo — Lote expensas Febrero", txid: "TX-2026-05-25-8862", cbu: "0000003100201234567890", entidad: "Lote expensas Febrero (76/128)", fecha: "25/05/2026", hora: "16:30", monto: 3520000 },
-    { tipo: "ingreso", titulo: "Subcuenta creada por cobro masivo", txid: "CREACION-EXP-001", cbu: "0000003100190123456789", entidad: "Creacion automatica desde lote de cobros", fecha: "25/05/2026", hora: "16:30", monto: 0 },
-  ],
-  "Sueldos": [
-    { tipo: "ingreso", titulo: "Ingresaste dinero", txid: "TX-2026-06-01-8863", cbu: "0000003100212345678901", entidad: "Transferencia cuenta madre", fecha: "01/06/2026", hora: "14:30", monto: 980000 },
-    { tipo: "egreso", titulo: "Retiraste dinero", txid: "TX-2026-05-25-8864", cbu: "0000003100223456789012", entidad: "Liquidacion mayo", fecha: "25/05/2026", hora: "10:00", monto: 950000 },
-  ],
-  "Fondos en garantia": [
-    { tipo: "ingreso", titulo: "Ingresaste dinero", txid: "TX-2026-05-01-8865", cbu: "0000003100234567890123", entidad: "Aporte inicial", fecha: "01/05/2026", hora: "09:00", monto: 350000 },
-  ],
-};
+const movimientosPorSub: Record<string, Mov[]> = {};
 
 const fmt = (n: number) => "$ " + n.toLocaleString("es-AR");
 
