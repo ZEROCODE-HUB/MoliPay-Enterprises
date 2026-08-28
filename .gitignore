@@ -7,6 +7,14 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Env (anon key is public, but keep local overrides out of VCS)
+.env
+.env.*
+!.env.example
+
+# Live DB dump (schema-only, do not commit)
+db_schema_dump.sql
+
 node_modules
 dist
 dist-ssr

@@ -10,6 +10,7 @@ import {
   WizardNav,
 } from "@/components/onboarding";
 import { PROVINCIAS, useOnboarding, type FileRef } from "@/lib/onboarding-store";
+import { submitOnboarding, fileToB64 } from "@/lib/api/onboarding";
 
 export const Route = createFileRoute("/onboarding/kyc")({
   head: () => ({
@@ -25,7 +26,8 @@ const STEPS = ["DNI", "Servicio", "Selfie", "Residencia"];
 
 function KycWizard() {
   const nav = useNavigate();
-  const { kyc, setKyc } = useOnboarding();
+  const store = useOnboarding();
+  const { kyc, setKyc } = store;
   const [step, setStep] = useState(0);
   const [files, setFiles] = useState<{ dniFrente: FileRef; dniDorso: FileRef; servicio: FileRef; selfie: FileRef }>({
     dniFrente: null,
@@ -41,6 +43,8 @@ function KycWizard() {
     cp: kyc.cp ?? "",
   });
   const [err, setErr] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const canNext =
     (step === 0 && files.dniFrente && files.dniDorso) ||
@@ -48,7 +52,7 @@ function KycWizard() {
     (step === 2 && files.selfie) ||
     step === 3;
 
-  const finish = () => {
+  const finish = async () => {
     const e: Record<string, string> = {};
     if (!addr.direccion.trim()) e.direccion = "Requerido";
     if (!addr.ciudad.trim()) e.ciudad = "Requerido";
@@ -57,7 +61,59 @@ function KycWizard() {
     setErr(e);
     if (Object.keys(e).length) return;
     setKyc(addr);
-    nav({ to: "/onboarding/en-proceso" });
+
+    const { tipoCuenta, registro, datosPersonales, datosEmpresa } = store;
+    const perfil: Record<string, unknown> = {
+      direccion: addr.direccion,
+      direccion2: addr.direccion2,
+      ciudad: addr.ciudad,
+      provincia: addr.provincia,
+      cp: addr.cp,
+    };
+    let cuit: string;
+    if (tipoCuenta === "juridica") {
+      cuit = datosEmpresa.cuit ?? "";
+      perfil.tipoSociedad = datosEmpresa.tipoId;
+      perfil.nombreLegal = datosEmpresa.nombreLegal;
+      perfil.nombreFantasia = datosEmpresa.nombreFantasia;
+      perfil.fechaInscripcion = datosEmpresa.fechaInscripcion;
+    } else {
+      cuit = datosPersonales.cuitCuil ?? "";
+      perfil.genero = datosPersonales.genero;
+      perfil.cuitCuil = datosPersonales.cuitCuil;
+      perfil.ocupacion = datosPersonales.ocupacion;
+      perfil.origenFondos = datosPersonales.origenFondos;
+      perfil.esPEP = datosPersonales.esPEP;
+    }
+
+    const kycB64: Record<string, { name: string; type: string; data: string } | null> = {};
+    for (const key of ["dniFrente", "dniDorso", "servicio", "selfie"] as const) {
+      const f = files[key];
+      kycB64[key] = f?.file ? await fileToB64(f.file) : null;
+    }
+
+    const nombre =
+      tipoCuenta === "juridica"
+        ? datosEmpresa.nombreLegal || registro.nombre
+        : `${registro.nombre} ${registro.apellido}`.trim();
+
+    try {
+      setSubmitting(true);
+      setSubmitError(null);
+      await submitOnboarding({
+        email: registro.email ?? "",
+        tipoCuenta: tipoCuenta as "fisica" | "juridica",
+        nombre: nombre ?? "",
+        cuit,
+        perfil,
+        kyc: kycB64,
+      });
+      nav({ to: "/onboarding/en-proceso" });
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Error al enviar el alta");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -150,7 +206,10 @@ function KycWizard() {
             onChange={(e) => setAddr({ ...addr, cp: e.target.value })}
             error={err.cp}
           />
-          <WizardNav onBack={() => setStep(2)} onNext={finish} nextLabel="Finalizar" />
+          {submitError && (
+            <p className="text-sm text-red-600">{submitError}</p>
+          )}
+          <WizardNav onBack={() => setStep(2)} onNext={finish} nextLabel={submitting ? "Enviando..." : "Finalizar"} nextDisabled={submitting} />
         </div>
       )}
     </AuthShell>

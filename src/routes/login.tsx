@@ -4,6 +4,8 @@ import { MollyLogo } from "@/components/molly-logo";
 import { useDemoMode } from "@/contexts/demo-mode";
 import { useOnboarding, type TipoCuenta } from "@/lib/onboarding-store";
 import { AuthShell, Field, PasswordField, PrimaryButton, validatePassword } from "@/components/onboarding";
+import { requireSupabase } from "@/lib/supabase";
+import { registerClient } from "@/lib/api/onboarding";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, string | undefined>) => ({
@@ -18,16 +20,40 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-function LoginForm({ onSuccess }: { onSuccess: () => void }) {
+function LoginForm({ onSuccess }: { onSuccess: (estado: "aprobado" | "pendiente" | "rechazado", email: string) => void }) {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   return (
     <form
       className="space-y-4"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        onSuccess();
+        setLoading(true);
+        setError(null);
+        const sb = requireSupabase();
+        const { data, error: authErr } = await sb.auth.signInWithPassword({ email, password: pw });
+        if (authErr || !data.user) {
+          setLoading(false);
+          setError(authErr?.message ?? "No se pudo iniciar sesión");
+          return;
+        }
+        const { data: cli, error: cliErr } = await sb
+          .from("clientes")
+          .select("estado_onboarding")
+          .eq("correo", data.user.email ?? email)
+          .maybeSingle();
+        setLoading(false);
+        if (cliErr) {
+          setError("No se pudo consultar el estado de tu cuenta");
+          return;
+        }
+        onSuccess(
+          (cli?.estado_onboarding as "aprobado" | "pendiente" | "rechazado") ?? "pendiente",
+          data.user.email ?? email,
+        );
       }}
     >
       <Field label="Correo electrónico" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="hola@empresa.com" />
@@ -41,8 +67,9 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
           ¿Olvidaste tu contraseña?
         </button>
       </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="pt-1">
-        <PrimaryButton type="submit">Iniciar sesión</PrimaryButton>
+        <PrimaryButton type="submit" disabled={loading}>{loading ? "Ingresando..." : "Iniciar sesión"}</PrimaryButton>
       </div>
       <div className="text-center text-xs text-black-400 space-y-2 pt-2">
         <p>
@@ -69,10 +96,14 @@ function RegisterForm({
   tipo,
   onSuccess,
   onSwitchToLogin,
+  submitting,
+  error,
 }: {
   tipo: TipoCuenta;
-  onSuccess: (data: { nombre: string; apellido: string; fechaNac: string; email: string }) => void;
+  onSuccess: (data: { nombre: string; apellido: string; fechaNac: string; email: string; password: string }) => void;
   onSwitchToLogin?: () => void;
+  submitting?: boolean;
+  error?: string | null;
 }) {
   const [f, setF] = useState({ nombre: "", apellido: "", fechaNac: "", email: "", pw: "", pw2: "" });
   const [terms, setTerms] = useState(false);
@@ -91,7 +122,7 @@ function RegisterForm({
         e.preventDefault();
         setTouched(true);
         if (!valid) return;
-        onSuccess({ nombre: f.nombre, apellido: f.apellido, fechaNac: f.fechaNac, email: f.email });
+        onSuccess({ nombre: f.nombre, apellido: f.apellido, fechaNac: f.fechaNac, email: f.email, password: f.pw });
       }}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -113,8 +144,11 @@ function RegisterForm({
         </span>
       </label>
 
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <div className="pt-1">
-        <PrimaryButton type="submit" disabled={!valid}>Registrarse</PrimaryButton>
+        <PrimaryButton type="submit" disabled={!valid || submitting}>
+          {submitting ? "Registrando..." : "Registrarse"}
+        </PrimaryButton>
       </div>
 
       <div className="text-center text-xs text-black-400 space-y-2 pt-2">
@@ -148,40 +182,49 @@ function LoginPage() {
   const { setRole } = useDemoMode();
   const store = useOnboarding();
   const navigate = useNavigate();
+  const [registering, setRegistering] = useState(false);
+  const [registerError, setRegisterError] = useState<string | null>(null);
 
-  const enterAs = () => {
-    setRole("empresa");
-    store.setTipo(store.tipoCuenta ?? "juridica");
-    if (!store.emailValidado) {
-      navigate({ to: "/registro/exito" });
-    } else if (!store.aprobado) {
-      const dp = store.datosPersonales;
-      if (!dp.genero || !dp.cuitCuil || !dp.ocupacion) {
-        navigate({ to: "/onboarding/datos-personales" });
-      } else if (store.tipoCuenta === "juridica") {
-        const de = store.datosEmpresa;
-        if (!de.cuit || !de.nombreLegal) {
-          navigate({ to: "/onboarding/datos-empresa" });
-        } else if (!store.kyc.direccion) {
-          navigate({ to: "/onboarding/kyc" });
-        } else {
-          navigate({ to: "/onboarding/en-proceso" });
-        }
-      } else if (!store.kyc.direccion) {
-        navigate({ to: "/onboarding/kyc" });
-      } else {
-        navigate({ to: "/onboarding/en-proceso" });
-      }
-    } else {
-      navigate({ to: "/app" });
-    }
-  };
-
-  const handleRegisterSuccess = (data: { nombre: string; apellido: string; fechaNac: string; email: string }) => {
+  const handleRegisterSuccess = async (data: { nombre: string; apellido: string; fechaNac: string; email: string; password: string }) => {
     store.reset();
     store.setTipo(tipoCuenta);
     store.setRegistro(data);
-    navigate({ to: "/registro/exito" });
+    try {
+      setRegistering(true);
+      setRegisterError(null);
+      await registerClient({
+        email: data.email,
+        password: data.password,
+        nombre: data.nombre,
+        apellido: data.apellido,
+        fechaNac: data.fechaNac,
+        tipoCuenta,
+      });
+      navigate({ to: "/registro/exito" });
+    } catch (e) {
+      setRegisterError(e instanceof Error ? e.message : "No se pudo registrar la cuenta");
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const handleLoginSuccess = async (estado: "aprobado" | "pendiente" | "rechazado", email: string) => {
+    setRole("empresa");
+    if (estado === "aprobado") {
+      navigate({ to: "/app" });
+      return;
+    }
+    const sb = requireSupabase();
+    const { data: cli } = await sb
+      .from("clientes")
+      .select("legajo")
+      .eq("correo", email)
+      .maybeSingle();
+    if (!cli) {
+      navigate({ to: "/onboarding/datos-personales" });
+    } else {
+      navigate({ to: "/onboarding/en-proceso" });
+    }
   };
 
   return (
@@ -239,9 +282,15 @@ function LoginPage() {
       <div className="relative overflow-hidden">
         <div className="transition-all duration-300 ease-in-out">
           {tab === "login" ? (
-            <LoginForm onSuccess={enterAs} />
+            <LoginForm onSuccess={handleLoginSuccess} />
           ) : (
-            <RegisterForm tipo={tipoCuenta} onSuccess={handleRegisterSuccess} onSwitchToLogin={() => setTab("login")} />
+            <RegisterForm
+              tipo={tipoCuenta}
+              onSuccess={handleRegisterSuccess}
+              onSwitchToLogin={() => setTab("login")}
+              submitting={registering}
+              error={registerError}
+            />
           )}
         </div>
       </div>

@@ -1,11 +1,10 @@
 ﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { AuthShell, PrimaryButton, SecondaryButton, SuccessCard } from "@/components/onboarding";
-import { useOnboarding } from "@/lib/onboarding-store";
+import { AuthShell, PrimaryButton, SuccessCard } from "@/components/onboarding";
 
 export const Route = createFileRoute("/onboarding/en-proceso")({
   head: () => ({
     meta: [
-      { title: "Validacion en proceso — Molipay" },
+      { title: "Solicitud enviada — Molipay" },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -14,22 +13,21 @@ export const Route = createFileRoute("/onboarding/en-proceso")({
 
 function EnProceso() {
   const nav = useNavigate();
-  const { markAprobado } = useOnboarding();
   return (
     <AuthShell
       leftEyebrow="Paso 6 · Revision"
-      leftTitle="Tu legajo esta en revision."
-      leftBody="Nuestro equipo de compliance revisara tu informacion y te notificara al correo altas@molipay.com.ar cuando la cuenta quede habilitada."
+      leftTitle="Tu solicitud fue enviada."
+      leftBody="Nuestro equipo de compliance revisara tu informacion y te notificara al correo cuando la cuenta quede habilitada."
       step="En proceso"
     >
       <SuccessCard
         variant="info"
-        title="Validacion en proceso"
+        title="Solicitud enviada"
         body={
           <>
             <p>
-              Tu informacion esta siendo validada por nuestro equipo. Este proceso puede demorar hasta{" "}
-              <strong>24 horas habiles</strong>. Te avisaremos por correo cuando el proceso finalice.
+              Tu alta fue registrada y esta siendo validada por nuestro equipo de compliance. Este proceso puede
+              demorar hasta <strong>24 horas habiles</strong>. Te avisaremos por correo cuando quede habilitada.
             </p>
             <p className="mt-3 text-xs text-black-400">
               Si tenés algún problema,{" "}
@@ -41,17 +39,7 @@ function EnProceso() {
           </>
         }
       >
-        <PrimaryButton onClick={() => nav({ to: "/" })}>Volver al inicio</PrimaryButton>
-        <div className="flex justify-center">
-          <SecondaryButton
-            onClick={() => {
-              markAprobado();
-              nav({ to: "/app" });
-            }}
-          >
-            Simular aprobacion (demo)
-          </SecondaryButton>
-        </div>
+        <PrimaryButton onClick={() => nav({ to: "/login", search: { register: undefined } })}>Ir a iniciar sesion</PrimaryButton>
       </SuccessCard>
     </AuthShell>
   );

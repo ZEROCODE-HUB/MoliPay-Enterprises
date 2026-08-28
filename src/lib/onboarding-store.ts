@@ -8,6 +8,7 @@ export type Registro = {
   apellido: string;
   fechaNac: string;
   email: string;
+  password?: string;
 };
 
 export type DatosPersonales = {
@@ -26,7 +27,7 @@ export type DatosEmpresa = {
   nombreFantasia: string;
 };
 
-export type FileRef = { name: string; url?: string } | null;
+export type FileRef = { name: string; url?: string; file?: File } | null;
 
 export type KYC = {
   dniFrente: FileRef;
@@ -85,7 +86,12 @@ export const useOnboarding = create<State>()(
       name: "molipay-onboarding",
       partialize: (s) => ({
         tipoCuenta: s.tipoCuenta,
-        registro: s.registro,
+        registro: {
+          nombre: s.registro.nombre,
+          apellido: s.registro.apellido,
+          fechaNac: s.registro.fechaNac,
+          email: s.registro.email,
+        },
         datosPersonales: s.datosPersonales,
         datosEmpresa: s.datosEmpresa,
         kyc: {

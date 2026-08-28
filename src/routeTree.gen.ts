@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerificarCorreoRouteImport } from './routes/verificar-correo'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
@@ -49,6 +50,11 @@ import { Route as AppCobrosNuevoRouteImport } from './routes/app.cobros.nuevo'
 import { Route as AppCobrosGestionRouteImport } from './routes/app.cobros.gestion'
 import { Route as AppCobrosGestionIdRouteImport } from './routes/app.cobros.gestion.$id'
 
+const VerificarCorreoRoute = VerificarCorreoRouteImport.update({
+  id: '/verificar-correo',
+  path: '/verificar-correo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegistroRoute = RegistroRouteImport.update({
   id: '/registro',
   path: '/registro',
@@ -252,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/registro': typeof RegistroRouteWithChildren
+  '/verificar-correo': typeof VerificarCorreoRoute
   '/app/api': typeof AppApiRoute
   '/app/api-config': typeof AppApiConfigRoute
   '/app/cobros': typeof AppCobrosRouteWithChildren
@@ -292,6 +299,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/registro': typeof RegistroRouteWithChildren
+  '/verificar-correo': typeof VerificarCorreoRoute
   '/app/api': typeof AppApiRoute
   '/app/api-config': typeof AppApiConfigRoute
   '/app/cuenta': typeof AppCuentaRoute
@@ -331,6 +339,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/registro': typeof RegistroRouteWithChildren
+  '/verificar-correo': typeof VerificarCorreoRoute
   '/app/api': typeof AppApiRoute
   '/app/api-config': typeof AppApiConfigRoute
   '/app/cobros': typeof AppCobrosRouteWithChildren
@@ -374,6 +383,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/registro'
+    | '/verificar-correo'
     | '/app/api'
     | '/app/api-config'
     | '/app/cobros'
@@ -414,6 +424,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/registro'
+    | '/verificar-correo'
     | '/app/api'
     | '/app/api-config'
     | '/app/cuenta'
@@ -452,6 +463,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/login'
     | '/registro'
+    | '/verificar-correo'
     | '/app/api'
     | '/app/api-config'
     | '/app/cobros'
@@ -494,6 +506,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   RegistroRoute: typeof RegistroRouteWithChildren
+  VerificarCorreoRoute: typeof VerificarCorreoRoute
   LegalesArrepentimientoRoute: typeof LegalesArrepentimientoRoute
   LegalesComisionesRoute: typeof LegalesComisionesRoute
   LegalesPrivacidadRoute: typeof LegalesPrivacidadRoute
@@ -506,6 +519,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verificar-correo': {
+      id: '/verificar-correo'
+      path: '/verificar-correo'
+      fullPath: '/verificar-correo'
+      preLoaderRoute: typeof VerificarCorreoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/registro': {
       id: '/registro'
       path: '/registro'
@@ -896,6 +916,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   RegistroRoute: RegistroRouteWithChildren,
+  VerificarCorreoRoute: VerificarCorreoRoute,
   LegalesArrepentimientoRoute: LegalesArrepentimientoRoute,
   LegalesComisionesRoute: LegalesComisionesRoute,
   LegalesPrivacidadRoute: LegalesPrivacidadRoute,

@@ -355,8 +355,8 @@ export function FileUpload({
 }: {
   label: string;
   hint?: string;
-  value: { name: string; url?: string } | null | undefined;
-  onChange: (f: { name: string; url: string } | null) => void;
+  value: { name: string; url?: string; file?: File } | null | undefined;
+  onChange: (f: { name: string; url: string; file?: File } | null) => void;
   accept?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -369,7 +369,7 @@ export function FileUpload({
       return;
     }
     const url = URL.createObjectURL(file);
-    onChange({ name: file.name, url });
+    onChange({ name: file.name, url, file });
   };
 
   useEffect(() => {
@@ -448,13 +448,14 @@ export function SuccessCard({
   title: string;
   body?: ReactNode;
   children?: ReactNode;
-  variant?: "success" | "info";
+  variant?: "success" | "info" | "error";
 }) {
-  const color = variant === "success" ? "#1E8E3E" : "#324595";
+  const color = variant === "success" ? "#1E8E3E" : variant === "error" ? "#DC2626" : "#324595";
+  const Icon = variant === "error" ? X : Check;
   return (
     <div className="bg-white p-8 sm:p-10 text-center rounded-md border border-black-100">
       <div className="mx-auto mb-6 inline-flex items-center justify-center w-16 h-16 rounded-full" style={{ background: `${color}14`, color }}>
-        <Check size={30} strokeWidth={2.5} />
+        <Icon size={30} strokeWidth={2.5} />
       </div>
       <h1 className="text-[1.75rem] font-semibold text-black-800 leading-tight">{title}</h1>
       {body && <div className="mt-4 text-sm text-black-400 leading-relaxed">{body}</div>}
