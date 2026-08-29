@@ -1,47 +1,36 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Search, Eye, Edit3, Trash2, Info, X, Download, Printer } from "lucide-react";
 import { Card, Input, Label, BtnPrimary, BtnOutline, Badge, PageHeader } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
+import { requireSupabase } from "@/lib/supabase";
 import QRCode from "qrcode";
 
 export const Route = createFileRoute("/app/qr/puntos-de-venta")({ component: Page });
 
-interface PuntoVenta {
+type EstadoPdv = "Activado" | "Desactivado";
+
+type PuntoVenta = {
   id: string;
   nombre: string;
-  subcuenta: string;
-  tipo: "Estatico" | "Dinamico";
-  ubicacion: string;
-  estado: "Activo" | "Pausado";
-  fecha: string;
-}
-
-const mockPDVs: PuntoVenta[] = [
-  { id: "1", nombre: "Caja principal", subcuenta: "Sucursal Centro", tipo: "Estatico", ubicacion: "Av. Corrientes 1234", estado: "Activo", fecha: "2025-11-10" },
-  { id: "2", nombre: "Caja secundaria", subcuenta: "Sucursal Centro", tipo: "Dinamico", ubicacion: "Av. Corrientes 1234", estado: "Activo", fecha: "2025-12-01" },
-  { id: "3", nombre: "Sucursal Norte", subcuenta: "Sucursal Norte", tipo: "Estatico", ubicacion: "Av. Cabildo 3400", estado: "Activo", fecha: "2026-01-15" },
-  { id: "4", nombre: "Evento Mayo", subcuenta: "Operaciones", tipo: "Dinamico", ubicacion: "Predio Ferial", estado: "Pausado", fecha: "2026-02-20" },
-  { id: "5", nombre: "Kiosco Demo", subcuenta: "Operaciones", tipo: "Estatico", ubicacion: "Lavalle 789", estado: "Activo", fecha: "2026-03-05" },
-  { id: "6", nombre: "Expreso Norte", subcuenta: "Sucursal Norte", tipo: "Dinamico", ubicacion: "Panamericana Km 38", estado: "Activo", fecha: "2026-04-12" },
-  { id: "7", nombre: "Food Truck", subcuenta: "Operaciones", tipo: "Dinamico", ubicacion: "Parque Central", estado: "Pausado", fecha: "2026-05-01" },
-  { id: "8", nombre: "Local Once", subcuenta: "Sucursal Centro", tipo: "Estatico", ubicacion: "Av. Rivadavia 2200", estado: "Activo", fecha: "2026-05-20" },
-];
+  estado: EstadoPdv;
+  created_at: string;
+};
 
 const ROWS_OPTIONS = [10, 20, 50];
 
-const initialForm = {
-  nombre: "",
-  subcuenta: "Sucursal Centro",
-  tipo: "Estatico" as PuntoVenta["tipo"],
-  ubicacion: "",
-  concepto: "",
-  montoFijo: "",
-};
+function fmtFecha(iso: string): string {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso.slice(0, 10);
+  return d.toLocaleDateString("es-AR", { year: "numeric", month: "2-digit", day: "2-digit" });
+}
 
 function Page() {
-  const [pdvs, setPdvs] = useState<PuntoVenta[]>(mockPDVs);
+  const [pdvs, setPdvs] = useState<PuntoVenta[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [comercioId, setComercioId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("Todos");
   const [fechaInicio, setFechaInicio] = useState("");
@@ -50,33 +39,100 @@ function Page() {
   const [pageSize, setPageSize] = useState(10);
 
   const [crearOpen, setCrearOpen] = useState(false);
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState({ nombre: "", estado: "Activado" as EstadoPdv });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [detallePd, setDetallePd] = useState<PuntoVenta | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState("");
   const [eliminarOpen, setEliminarOpen] = useState(false);
   const [eliminarId, setEliminarId] = useState<string | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState("");
+
+  useEffect(() => {
+    cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function resolverComercio(s: ReturnType<typeof requireSupabase>): Promise<string | null> {
+    const { data: u } = await s.auth.getUser();
+    const mail = u.user?.email;
+    if (!mail) return null;
+    const { data: cli } = await s
+      .from("clientes")
+      .select("legajo")
+      .eq("correo", mail)
+      .maybeSingle();
+    if (!cli?.legajo) return null;
+
+    const { data: com } = await s
+      .from("comercios")
+      .select("id")
+      .eq("legajo", cli.legajo)
+      .maybeSingle();
+    if (com?.id) return com.id;
+
+    // Si el usuario no tiene un comercio todavia, lo creamos para poder vincular PDVs.
+    const { data: nuevo, error } = await s
+      .from("comercios")
+      .insert({ usuario: mail, legajo: cli.legajo, estado: "Activado", nivel: "Estándar" })
+      .select("id")
+      .single();
+    if (error) {
+      console.error(error);
+      return null;
+    }
+    return nuevo?.id ?? null;
+  }
+
+  async function cargar() {
+    setLoading(true);
+    try {
+      const s = requireSupabase();
+      const cid = await resolverComercio(s);
+      setComercioId(cid);
+      if (!cid) {
+        setPdvs([]);
+        return;
+      }
+      const { data, error } = await s
+        .from("puntos_venta")
+        .select("id, nombre, estado, created_at")
+        .eq("comercio_id", cid)
+        .order("created_at", { ascending: true });
+      if (error) {
+        toast.error("No se pudieron cargar los puntos de venta");
+        console.error(error);
+        return;
+      }
+      setPdvs(
+        (data ?? []).map((r: any) => ({
+          id: r.id,
+          nombre: r.nombre,
+          estado: r.estado,
+          created_at: r.created_at,
+        })),
+      );
+    } catch (e) {
+      toast.error("Error al cargar los puntos de venta");
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const filtered = useMemo(() => {
     let list = [...pdvs];
     if (search) {
       const q = search.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.nombre.toLowerCase().includes(q) ||
-          p.subcuenta.toLowerCase().includes(q) ||
-          p.ubicacion.toLowerCase().includes(q),
-      );
+      list = list.filter((p) => p.nombre.toLowerCase().includes(q));
     }
     if (estadoFilter !== "Todos") {
       list = list.filter((p) => p.estado === estadoFilter);
     }
     if (fechaInicio) {
-      list = list.filter((p) => p.fecha >= fechaInicio);
+      list = list.filter((p) => (p.created_at ?? "").slice(0, 10) >= fechaInicio);
     }
     if (fechaFin) {
-      list = list.filter((p) => p.fecha <= fechaFin);
+      list = list.filter((p) => (p.created_at ?? "").slice(0, 10) <= fechaFin);
     }
     return list;
   }, [pdvs, search, estadoFilter, fechaInicio, fechaFin]);
@@ -93,43 +149,49 @@ function Page() {
   };
 
   const openCrear = () => {
-    setForm(initialForm);
+    setForm({ nombre: "", estado: "Activado" });
     setEditingId(null);
     setCrearOpen(true);
   };
 
   const openEditar = (p: PuntoVenta) => {
-    setForm({ nombre: p.nombre, subcuenta: p.subcuenta, tipo: p.tipo, ubicacion: p.ubicacion, concepto: "", montoFijo: "" });
+    setForm({ nombre: p.nombre, estado: p.estado });
     setEditingId(p.id);
     setCrearOpen(true);
   };
 
-  const guardar = () => {
+  const guardar = async () => {
     if (!form.nombre.trim()) {
       toast.error("El nombre es obligatorio");
       return;
     }
-    if (editingId) {
-      setPdvs((prev) =>
-        prev.map((p) =>
-          p.id === editingId ? { ...p, nombre: form.nombre, subcuenta: form.subcuenta, tipo: form.tipo, ubicacion: form.ubicacion } : p,
-        ),
-      );
-      toast.success("Punto de venta actualizado");
-    } else {
-      const nuevo: PuntoVenta = {
-        id: String(Date.now()),
-        nombre: form.nombre,
-        subcuenta: form.subcuenta,
-        tipo: form.tipo,
-        ubicacion: form.ubicacion,
-        estado: "Activo",
-        fecha: new Date().toISOString().slice(0, 10),
-      };
-      setPdvs((prev) => [nuevo, ...prev]);
-      toast.success("Punto de venta creado");
+    if (!comercioId) {
+      toast.error("No se encontró un comercio asociado para este usuario");
+      return;
     }
-    setCrearOpen(false);
+    try {
+      const s = requireSupabase();
+      if (editingId) {
+        const { error } = await s
+          .from("puntos_venta")
+          .update({ nombre: form.nombre.trim(), estado: form.estado })
+          .eq("id", editingId);
+        if (error) throw error;
+        toast.success("Punto de venta actualizado");
+      } else {
+        const { error } = await s
+          .from("puntos_venta")
+          .insert({ comercio_id: comercioId, nombre: form.nombre.trim(), estado: form.estado });
+        if (error) throw error;
+        toast.success("Punto de venta creado");
+      }
+      setCrearOpen(false);
+      setEditingId(null);
+      await cargar();
+    } catch (e) {
+      toast.error("No se pudo guardar el punto de venta");
+      console.error(e);
+    }
   };
 
   const confirmarEliminar = (id: string) => {
@@ -137,13 +199,33 @@ function Page() {
     setEliminarOpen(true);
   };
 
-  const ejecutarEliminar = () => {
-    if (eliminarId) {
-      setPdvs((prev) => prev.filter((p) => p.id !== eliminarId));
+  const ejecutarEliminar = async () => {
+    if (!eliminarId) return;
+    try {
+      const s = requireSupabase();
+      const { error } = await s.from("puntos_venta").delete().eq("id", eliminarId);
+      if (error) throw error;
       toast.success("Punto de venta eliminado");
+      setPdvs((prev) => prev.filter((p) => p.id !== eliminarId));
+    } catch (e) {
+      toast.error("No se pudo eliminar el punto de venta");
+      console.error(e);
+    } finally {
+      setEliminarOpen(false);
+      setEliminarId(null);
     }
-    setEliminarOpen(false);
-    setEliminarId(null);
+  };
+
+  const verDetalle = async (p: PuntoVenta) => {
+    setDetallePd(p);
+    setDetalleOpen(true);
+    try {
+      const url = `https://molipay.com.ar/qr/pdv/${p.id}`;
+      const qr = await QRCode.toDataURL(url, { width: 280, margin: 2 });
+      setQrDataUrl(qr);
+    } catch {
+      setQrDataUrl("");
+    }
   };
 
   return (
@@ -152,13 +234,16 @@ function Page() {
         title="Puntos de Venta"
         description="Crea y gestiona los puntos de venta con cobro mediante QR."
       />
+
       {/* Top bar */}
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
           <p className="text-sm text-muted-foreground">
-            {filtered.length === pdvs.length
-              ? `Total: ${pdvs.length} punto${pdvs.length !== 1 ? "s" : ""} de venta`
-              : `${filtered.length} de ${pdvs.length} punto${pdvs.length !== 1 ? "s" : ""}`}
+            {loading
+              ? "Cargando…"
+              : filtered.length === pdvs.length
+                ? `Total: ${pdvs.length} punto${pdvs.length !== 1 ? "s" : ""} de venta`
+                : `${filtered.length} de ${pdvs.length} punto${pdvs.length !== 1 ? "s" : ""}`}
           </p>
         </div>
         <BtnPrimary onClick={openCrear}>
@@ -170,12 +255,12 @@ function Page() {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 flex items-start gap-3">
         <Info size={18} className="text-blue-600 shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-blue-800">InformaciOn sobre Puntos de Venta</p>
+          <p className="text-sm font-semibold text-blue-800">Información sobre Puntos de Venta</p>
           <p className="text-xs text-blue-700 mt-1 leading-relaxed">
             Los puntos de venta permiten identificar y gestionar los cobros realizados dentro de una misma entidad.
           </p>
           <p className="text-xs text-blue-700 mt-1 leading-relaxed">
-            Si necesita separar la operaciOn por una unidad de negocio distinta, se recomienda crear una subcuenta y
+            Si necesita separar la operación por una unidad de negocio distinta, se recomienda crear una subcuenta y
             habilitar el cobro con QR en dicha subcuenta.
           </p>
         </div>
@@ -204,8 +289,8 @@ function Page() {
               onChange={(e) => { setEstadoFilter(e.target.value); setPage(1); }}
             >
               <option value="Todos">Todos</option>
-              <option value="Activo">Activo</option>
-              <option value="Pausado">Pausado</option>
+              <option value="Activado">Activado</option>
+              <option value="Desactivado">Desactivado</option>
             </select>
           </div>
           <div>
@@ -229,42 +314,33 @@ function Page() {
 
       {/* Tabla */}
       <Card className="p-0 overflow-hidden">
-        <div className="hidden lg:grid grid-cols-[1.2fr_1fr_0.8fr_1fr_0.7fr_1.1fr] gap-4 px-5 py-3 border-b text-xs uppercase tracking-wide text-muted-foreground bg-muted/30">
+        <div className="hidden lg:grid grid-cols-[1.4fr_0.8fr_1fr_1.1fr] gap-4 px-5 py-3 border-b text-xs uppercase tracking-wide text-muted-foreground bg-muted/30">
           <div>Nombre</div>
-          <div>Subcuenta</div>
-          <div>Tipo QR</div>
-          <div>UbicaciOn</div>
           <div>Estado</div>
+          <div>Fecha de creación</div>
           <div className="text-right">Acciones</div>
         </div>
-        {paginated.length === 0 ? (
+        {loading ? (
           <div className="px-5 py-12 text-center text-sm text-muted-foreground">
-            No se encontraron puntos de venta
+            Cargando puntos de venta…
+          </div>
+        ) : paginated.length === 0 ? (
+          <div className="px-5 py-12 text-center text-sm text-muted-foreground">
+            No hay registros
           </div>
         ) : (
           paginated.map((p) => (
             <div
               key={p.id}
-              className="lg:grid lg:grid-cols-[1.2fr_1fr_0.8fr_1fr_0.7fr_1.1fr] gap-4 px-5 py-3.5 border-b last:border-0 items-center"
+              className="lg:grid lg:grid-cols-[1.4fr_0.8fr_1fr_1.1fr] gap-4 px-5 py-3.5 border-b last:border-0 items-center"
             >
               <div className="font-semibold text-sm">{p.nombre}</div>
-              <div className="font-mono text-sm text-muted-foreground">{p.subcuenta}</div>
-              <div className="text-sm text-muted-foreground">{p.tipo}</div>
-              <div className="text-sm text-muted-foreground truncate">{p.ubicacion}</div>
               <div>
-                <Badge tone={p.estado === "Activo" ? "success" : "warn"}>{p.estado}</Badge>
+                <Badge tone={p.estado === "Activado" ? "success" : "warn"}>{p.estado}</Badge>
               </div>
+              <div className="text-sm text-muted-foreground">{fmtFecha(p.created_at)}</div>
               <div className="flex gap-1 justify-end">
-                <BtnOutline
-                  className="h-8 px-2.5 text-xs"
-                  onClick={async () => {
-                    setDetallePd(p);
-                    setDetalleOpen(true);
-                    const payload = `https://molipay.com.ar/qr/pdv/${p.id}`;
-                    const url = await QRCode.toDataURL(payload, { width: 280, margin: 2 });
-                    setQrDataUrl(url);
-                  }}
-                >
+                <BtnOutline className="h-8 px-2.5 text-xs" onClick={() => verDetalle(p)}>
                   <Eye size={13} /> Ver
                 </BtnOutline>
                 <BtnOutline className="h-8 px-2.5 text-xs" onClick={() => openEditar(p)}>
@@ -282,66 +358,64 @@ function Page() {
         )}
       </Card>
 
-      {/* PaginaciOn */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mt-4">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Filas por pAgina:</span>
-          <select
-            className="h-8 px-2 rounded border bg-card text-xs"
-            value={pageSize}
-            onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-          >
-            {ROWS_OPTIONS.map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </select>
-          <span>
-            {filtered.length === 0
-              ? "0 registros"
-              : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, filtered.length)} de ${filtered.length}`}
-          </span>
+      {/* Paginación */}
+      {!loading && paginated.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-4 mt-4">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Filas por página:</span>
+            <select
+              className="h-8 px-2 rounded border bg-card text-xs"
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+            >
+              {ROWS_OPTIONS.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+            <span>
+              {filtered.length === 0
+                ? "0 registros"
+                : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, filtered.length)} de ${filtered.length}`}
+            </span>
+          </div>
+          <div className="flex gap-1">
+            <BtnOutline className="h-8 px-3 text-xs" disabled={page <= 1} onClick={() => setPage(1)}>
+              Primero
+            </BtnOutline>
+            <BtnOutline
+              className="h-8 px-3 text-xs"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Anterior
+            </BtnOutline>
+            <span className="flex items-center px-3 text-xs text-muted-foreground">
+              {page} / {totalPages}
+            </span>
+            <BtnOutline
+              className="h-8 px-3 text-xs"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Siguiente
+            </BtnOutline>
+            <BtnOutline
+              className="h-8 px-3 text-xs"
+              disabled={page >= totalPages}
+              onClick={() => setPage(totalPages)}
+            >
+              ultimo
+            </BtnOutline>
+          </div>
         </div>
-        <div className="flex gap-1">
-          <BtnOutline
-            className="h-8 px-3 text-xs"
-            disabled={page <= 1}
-            onClick={() => setPage(1)}
-          >
-            Primero
-          </BtnOutline>
-          <BtnOutline
-            className="h-8 px-3 text-xs"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-          >
-            Anterior
-          </BtnOutline>
-          <span className="flex items-center px-3 text-xs text-muted-foreground">
-            {page} / {totalPages}
-          </span>
-          <BtnOutline
-            className="h-8 px-3 text-xs"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-          >
-            Siguiente
-          </BtnOutline>
-          <BtnOutline
-            className="h-8 px-3 text-xs"
-            disabled={page >= totalPages}
-            onClick={() => setPage(totalPages)}
-          >
-            ultimo
-          </BtnOutline>
-        </div>
-      </div>
+      )}
 
       {/* Modal: Crear / Editar */}
       <FormDialog
         open={crearOpen}
         onClose={() => setCrearOpen(false)}
         title={editingId ? "Editar Punto de Venta" : "Crear Punto de Venta"}
-        description="Complete la informaciOn para habilitar el cobro mediante QR."
+        description="Complete la información para habilitar el cobro mediante QR."
         submitLabel={editingId ? "Guardar cambios" : "Crear Punto de Venta"}
         size="lg"
         onSubmit={guardar}
@@ -356,54 +430,16 @@ function Page() {
             />
           </div>
           <div>
-            <Label>Subcuenta destino</Label>
+            <Label>Estado</Label>
             <select
               className="w-full h-10 px-3 rounded-md border bg-card text-sm"
-              value={form.subcuenta}
-              onChange={(e) => setForm((f) => ({ ...f, subcuenta: e.target.value }))}
+              value={form.estado}
+              onChange={(e) => setForm((f) => ({ ...f, estado: e.target.value as EstadoPdv }))}
             >
-              <option>Sucursal Centro</option>
-              <option>Sucursal Norte</option>
-              <option>Operaciones</option>
+              <option value="Activado">Activado</option>
+              <option value="Desactivado">Desactivado</option>
             </select>
           </div>
-          <div>
-            <Label>Tipo de QR</Label>
-            <select
-              className="w-full h-10 px-3 rounded-md border bg-card text-sm"
-              value={form.tipo}
-              onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value as PuntoVenta["tipo"] }))}
-            >
-              <option value="Estatico">Estatico (monto libre)</option>
-              <option value="Dinamico">Dinamico (monto fijo)</option>
-            </select>
-          </div>
-          <div>
-            <Label>UbicaciOn</Label>
-            <Input
-              placeholder="DirecciOn o referencia"
-              value={form.ubicacion}
-              onChange={(e) => setForm((f) => ({ ...f, ubicacion: e.target.value }))}
-            />
-          </div>
-          <div>
-            <Label>Concepto sugerido (opcional)</Label>
-            <Input
-              placeholder="Ej. Venta mostrador"
-              value={form.concepto}
-              onChange={(e) => setForm((f) => ({ ...f, concepto: e.target.value }))}
-            />
-          </div>
-          {form.tipo === "Dinamico" && (
-            <div>
-              <Label>Monto fijo</Label>
-              <Input
-                placeholder="$ 0,00"
-                value={form.montoFijo}
-                onChange={(e) => setForm((f) => ({ ...f, montoFijo: e.target.value }))}
-              />
-            </div>
-          )}
         </div>
       </FormDialog>
 
@@ -424,24 +460,12 @@ function Page() {
               {/* Info */}
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subcuenta</span>
-                  <span className="font-semibold">{detallePd.subcuenta}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Tipo QR</span>
-                  <span className="font-semibold">{detallePd.tipo}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ubicaci&oacute;n</span>
-                  <span className="font-semibold">{detallePd.ubicacion}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-muted-foreground">Estado</span>
-                  <Badge tone={detallePd.estado === "Activo" ? "success" : "warn"}>{detallePd.estado}</Badge>
+                  <Badge tone={detallePd.estado === "Activado" ? "success" : "warn"}>{detallePd.estado}</Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fecha de creaci&oacute;n</span>
-                  <span className="font-semibold">{detallePd.fecha}</span>
+                  <span className="text-muted-foreground">Fecha de creación</span>
+                  <span className="font-semibold">{fmtFecha(detallePd.created_at)}</span>
                 </div>
               </div>
 
@@ -455,7 +479,7 @@ function Page() {
                   )}
                 </div>
                 <span className="text-[10px] text-muted-foreground text-center leading-tight">
-                  EscaneA para pagar en<br />
+                  Escaneá para pagar en<br />
                   {detallePd.nombre}
                 </span>
               </div>
@@ -505,14 +529,14 @@ function Page() {
         </div>
       )}
 
-      {/* Modal: Confirmar eliminaciOn */}
+      {/* Modal: Confirmar eliminación */}
       {eliminarOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setEliminarOpen(false)} />
           <div className="relative bg-card rounded-lg max-w-sm w-full p-6 shadow-xl text-center">
             <Trash2 size={28} className="mx-auto text-red-500 mb-3" />
             <h3 className="font-semibold text-base mb-2">¿Eliminar punto de venta?</h3>
-            <p className="text-sm text-muted-foreground mb-6">Esta acciOn no se puede deshacer.</p>
+            <p className="text-sm text-muted-foreground mb-6">Esta acción no se puede deshacer.</p>
             <div className="flex gap-3 justify-center">
               <BtnOutline onClick={() => setEliminarOpen(false)}>Cancelar</BtnOutline>
               <BtnPrimary
