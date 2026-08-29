@@ -1,19 +1,20 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import {
-  Plus, Copy, ArrowDownLeft, ArrowUpRight, Eye, Pencil, Trash2, Search,
-  ArrowLeftRight, Lock, Download, Filter, X, Key, Pause,
-  Building2, ChevronDown, ChevronUp, PieChart,
+  Plus, ArrowDownLeft, ArrowUpRight, Eye, Pencil, Trash2, Search,
+  ArrowLeftRight, Lock, Download, Filter, X, Pause,
+  Building2, ChevronUp, PieChart,
 } from "lucide-react";
-import { PageHeader, Card, BtnPrimary, BtnOutline, Badge, Stat, Input, Label } from "@/components/portal-shell";
+import { PageHeader, Card, BtnPrimary, BtnOutline, Badge, Input, Label } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { EmptyRow } from "@/components/onboarding";
+import { requireSupabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/app/subcuentas")({ component: Page });
 
 type Sub = {
+  id?: string;
   n: string; apellido: string; email: string; cbu: string;
   tipo: "Operativa" | "Recaudacion" | "Garantias" | "Sueldos";
   e: "Activa" | "Pausada";
@@ -22,8 +23,6 @@ type Sub = {
   resp: string; lim: string; color: string;
   retirosHab: boolean;
 };
-
-const subs: Sub[] = [];
 
 type Mov = {
   tipo: "ingreso" | "egreso";
@@ -36,21 +35,48 @@ type Mov = {
   monto: number;
 };
 
+const PALETTE = ["#6366f1", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
-
-
-const movimientosPorSub: Record<string, Mov[]> = {};
+const mapSubs = (rows: any[]): Sub[] =>
+  rows.map((r, i) => ({
+    id: r.id,
+    n: r.nombre,
+    apellido: r.apellido ?? "",
+    email: r.email ?? "",
+    cbu: r.cbu,
+    tipo: r.tipo,
+    e: r.estado,
+    disp: Number(r.saldo_disponible ?? 0),
+    ret: Number(r.saldo_retenido ?? 0),
+    conc: Number(r.saldo_conciliado ?? 0),
+    ing: r.ingresos ?? "",
+    egr: r.egresos ?? "",
+    resp: r.responsable ?? "",
+    lim: r.limite ?? "",
+    color: PALETTE[i % PALETTE.length],
+    retirosHab: !!r.retiros_habilitados,
+  }));
 
 const fmt = (n: number) => "$ " + n.toLocaleString("es-AR");
-
 const fmtMov = (n: number) => (n >= 0 ? "+" : "") + "$ " + Math.abs(n).toLocaleString("es-AR");
 
+const TITULO_MOV: Record<string, string> = {
+  deposito: "Depósito",
+  cobro_pct: "Cobro QR / Punto de venta",
+  retiro: "Retiro",
+  pago_pct: "Pago QR",
+  tarjeta: "Cobro con tarjeta",
+};
+
 function Page() {
+  const [subs, setSubs] = useState<Sub[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [clienteLegajo, setClienteLegajo] = useState<string | null>(null);
+
   const [nuevoOpen, setNuevoOpen] = useState(false);
   const [transfOpen, setTransfOpen] = useState(false);
   const [detailSub, setDetailSub] = useState<Sub | null>(null);
   const [editSub, setEditSub] = useState<Sub | null>(null);
-  const [deletedNames, setDeletedNames] = useState<Set<string>>(new Set());
   const [q, setQ] = useState("");
   const [tipo, setTipo] = useState("Todos");
   const [estado, setEstado] = useState("Todos");
@@ -58,14 +84,34 @@ function Page() {
   const pageSize = 10;
   const [confirmarBorrar, setConfirmarBorrar] = useState<Sub | null>(null);
 
+  const [form, setForm] = useState({ n: "", tipo: "Operativa", resp: "", lim: "", saldo: "", activar: true });
+
+  const cargar = async () => {
+    const s = requireSupabase();
+    const { data: u } = await s.auth.getUser();
+    const mail = u.user?.email;
+    if (!mail) return null;
+    const { data: cli } = await s.from("clientes").select("legajo").eq("correo", mail).maybeSingle();
+    setClienteLegajo(cli?.legajo ?? null);
+    const { data: rows } = await s.from("subcuentas").select("*");
+    setSubs(mapSubs(rows ?? []));
+    return cli;
+  };
+
+  useEffect(() => {
+    (async () => {
+      try { await cargar(); } catch { /* silencioso */ } finally { setLoading(false); }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const filtradas = useMemo(
-    () => subs.filter(s =>
-      !deletedNames.has(s.n) &&
+    () => subs.filter((s) =>
       (q === "" || s.n.toLowerCase().includes(q.toLowerCase()) || s.cbu.includes(q)) &&
       (tipo === "Todos" || s.tipo === tipo) &&
       (estado === "Todos" || s.e === estado)
     ),
-    [q, tipo, estado, deletedNames]
+    [subs, q, tipo, estado]
   );
 
   const totalPages = Math.max(1, Math.ceil(filtradas.length / pageSize));
@@ -77,6 +123,85 @@ function Page() {
   const totalDisp = subs.reduce((a, s) => a + s.disp, 0);
   const totalRet = subs.reduce((a, s) => a + s.ret, 0);
 
+  const abrirNuevo = () => {
+    setEditSub(null);
+    setForm({ n: "", tipo: "Operativa", resp: "", lim: "", saldo: "", activar: true });
+    setNuevoOpen(true);
+  };
+  const abrirEditar = (s: Sub) => {
+    setEditSub(s);
+    setForm({ n: s.n, tipo: s.tipo, resp: s.resp, lim: s.lim, saldo: "", activar: s.e === "Activa" });
+    setNuevoOpen(true);
+  };
+
+  const onSubmitSub = async () => {
+    const s = requireSupabase();
+    if (!clienteLegajo) { toast.error("No se pudo identificar la cuenta"); return; }
+    try {
+      if (editSub && editSub.id) {
+        const { error } = await s.from("subcuentas").update({
+          nombre: form.n,
+          tipo: form.tipo,
+          responsable: form.resp,
+          limite: form.lim || null,
+        }).eq("id", editSub.id);
+        if (error) throw error;
+        toast.success("Subcuenta actualizada");
+      } else {
+        const cbu = "0000003" + Math.floor(100000000000 + Math.random() * 899999999999);
+        const { error } = await s.from("subcuentas").insert({
+          cliente_legajo: clienteLegajo,
+          nombre: form.n,
+          tipo: form.tipo,
+          responsable: form.resp,
+          limite: form.lim || null,
+          cbu,
+          estado: form.activar ? "Activa" : "Pausada",
+          saldo_disponible: Number(form.saldo || 0),
+          saldo_retenido: 0,
+          saldo_conciliado: 0,
+          ingresos: "",
+          egresos: "",
+          email: "",
+          retiros_habilitados: true,
+        });
+        if (error) throw error;
+        toast.success("Subcuenta creada correctamente");
+      }
+      setNuevoOpen(false);
+      setEditSub(null);
+      await cargar();
+    } catch {
+      toast.error("No se pudo guardar la subcuenta");
+    }
+  };
+
+  const onBorrar = async () => {
+    if (!confirmarBorrar?.id) return;
+    const s = requireSupabase();
+    try {
+      await s.from("subcuentas").delete().eq("id", confirmarBorrar.id);
+      setSubs((prev) => prev.filter((x) => x.id !== confirmarBorrar.id));
+      toast.success("Subcuenta eliminada");
+    } catch {
+      toast.error("No se pudo eliminar la subcuenta");
+    } finally {
+      setConfirmarBorrar(null);
+    }
+  };
+
+  const cambiarEstado = async (id: string, estado: "Activa" | "Pausada") => {
+    const s = requireSupabase();
+    try {
+      await s.from("subcuentas").update({ estado }).eq("id", id);
+      setSubs((prev) => prev.map((x) => (x.id === id ? { ...x, e: estado } : x)));
+      if (detailSub?.id === id) setDetailSub((d) => (d ? { ...d, e: estado } : d));
+      toast.success(estado === "Activa" ? "Subcuenta reactivada" : "Subcuenta pausada");
+    } catch {
+      toast.error("No se pudo actualizar el estado");
+    }
+  };
+
   return (
     <>
       <PageHeader
@@ -85,7 +210,7 @@ function Page() {
         action={
           <div className="flex gap-2">
             <BtnOutline onClick={() => setTransfOpen(true)}><ArrowLeftRight size={14} /> Transferir entre subcuentas</BtnOutline>
-            <BtnPrimary onClick={() => setNuevoOpen(true)}><Plus size={16} /> Nueva subcuenta</BtnPrimary>
+            <BtnPrimary onClick={abrirNuevo}><Plus size={16} /> Nueva subcuenta</BtnPrimary>
           </div>
         }
       />
@@ -112,9 +237,9 @@ function Page() {
           </div>
           <div className="text-[10px] mt-1.5 space-y-1.5">
             {subs.slice(0, 3).map((s) => {
-              const pct = ((s.disp + s.ret) / total * 100).toFixed(1);
+              const pct = total > 0 ? ((s.disp + s.ret) / total * 100).toFixed(1) : "0.0";
               return (
-                <div key={s.n}>
+                <div key={s.id ?? s.n}>
                   <div className="flex justify-between text-[10px] leading-tight">
                     <span className="truncate mr-1">{s.n}</span>
                     <span className="font-semibold shrink-0">{fmt(s.disp + s.ret)} ({pct}%)</span>
@@ -126,6 +251,7 @@ function Page() {
               );
             })}
             {subs.length > 3 && <div className="text-[10px] text-muted-foreground pt-0.5">+{subs.length - 3} mas</div>}
+            {subs.length === 0 && <div className="text-[10px] text-muted-foreground pt-0.5">Sin subcuentas</div>}
           </div>
         </div>
       </div>
@@ -145,49 +271,56 @@ function Page() {
         </div>
       </Card>
 
-      <Card className="p-0 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
-                <th className="text-left px-4 py-2.5">Nombre</th>
-                <th className="text-left px-4 py-2.5">Apellido</th>
-                <th className="text-left px-4 py-2.5">Email</th>
-                <th className="text-left px-4 py-2.5">Estado</th>
-                <th className="text-right px-4 py-2.5">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map((s) => (
-                <tr key={s.n} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-4 py-3 font-semibold">{s.n}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{s.apellido}</td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{s.email}</td>
-                  <td className="px-4 py-3">
-                    <Badge tone={s.e === "Activa" ? "success" : "warn"}>{s.e}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex gap-1 justify-end">
-                      <button onClick={() => setDetailSub(s)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition" title="Ver detalle"><Eye size={14} /></button>
-                      <button onClick={() => { setEditSub(s); setNuevoOpen(true); }} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition" title="Editar"><Pencil size={14} /></button>
-                      <button onClick={() => setConfirmarBorrar(s)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 hover:text-red-600 transition" title="Borrar"><Trash2 size={14} /></button>
-                    </div>
-                  </td>
+      {loading ? (
+        <Card className="p-6 text-sm text-muted-foreground">Cargando subcuentas…</Card>
+      ) : (
+        <Card className="p-0 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
+                  <th className="text-left px-4 py-2.5">Nombre</th>
+                  <th className="text-left px-4 py-2.5">Apellido</th>
+                  <th className="text-left px-4 py-2.5">Email</th>
+                  <th className="text-left px-4 py-2.5">Estado</th>
+                  <th className="text-right px-4 py-2.5">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex items-center justify-between px-4 py-3 border-t text-xs text-muted-foreground">
-          <span>{filtradas.length === 0 ? "0 registros" : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, filtradas.length)} de ${filtradas.length}`}</span>
-          <div className="flex gap-1">
-            <BtnOutline className="h-7 px-2 text-[11px]" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Anterior</BtnOutline>
-            <BtnOutline className="h-7 px-2 text-[11px]" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Siguiente</BtnOutline>
+              </thead>
+              <tbody>
+                {paginated.map((s) => (
+                  <tr key={s.id ?? s.n} className="border-b last:border-0 hover:bg-muted/30">
+                    <td className="px-4 py-3 font-semibold">{s.n}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{s.apellido}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{s.email}</td>
+                    <td className="px-4 py-3">
+                      <Badge tone={s.e === "Activa" ? "success" : "warn"}>{s.e}</Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex gap-1 justify-end">
+                        <button onClick={() => setDetailSub(s)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition" title="Ver detalle"><Eye size={14} /></button>
+                        <button onClick={() => abrirEditar(s)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition" title="Editar"><Pencil size={14} /></button>
+                        <button onClick={() => setConfirmarBorrar(s)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 hover:text-red-600 transition" title="Borrar"><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {paginated.length === 0 && (
+                  <tr><td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">No hay subcuentas para mostrar.</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        </div>
-      </Card>
+          <div className="flex items-center justify-between px-4 py-3 border-t text-xs text-muted-foreground">
+            <span>{filtradas.length === 0 ? "0 registros" : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, filtradas.length)} de ${filtradas.length}`}</span>
+            <div className="flex gap-1">
+              <BtnOutline className="h-7 px-2 text-[11px]" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Anterior</BtnOutline>
+              <BtnOutline className="h-7 px-2 text-[11px]" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Siguiente</BtnOutline>
+            </div>
+          </div>
+        </Card>
+      )}
 
-      {detailSub && <SubDetailModal sub={detailSub} onClose={() => setDetailSub(null)} />}
+      {detailSub && <SubDetailModal sub={detailSub} onClose={() => setDetailSub(null)} onCambiarEstado={cambiarEstado} />}
 
       <FormDialog
         open={nuevoOpen}
@@ -195,23 +328,23 @@ function Page() {
         title={editSub ? "Editar subcuenta" : "Nueva subcuenta"}
         description={editSub ? "Modifica los datos de la subcuenta." : "Genera un CBU adicional asociado a tu cuenta madre."}
         submitLabel={editSub ? "Guardar cambios" : "Crear subcuenta"}
-        onSubmit={() => { setNuevoOpen(false); setEditSub(null); toast.success(editSub ? "Subcuenta actualizada" : "Subcuenta creada correctamente"); }}
+        onSubmit={onSubmitSub}
       >
-        <div><Label>Nombre de la subcuenta</Label><Input placeholder="Ej. Sucursal Sur" /></div>
+        <div><Label>Nombre de la subcuenta</Label><Input value={form.n} onChange={(e) => setForm((p) => ({ ...p, n: e.target.value }))} placeholder="Ej. Sucursal Sur" /></div>
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Tipo</Label>
-            <select className="w-full h-10 px-3 rounded-md border bg-card text-sm">
+            <select value={form.tipo} onChange={(e) => setForm((p) => ({ ...p, tipo: e.target.value as Sub["tipo"] }))} className="w-full h-10 px-3 rounded-md border bg-card text-sm">
               <option>Operativa</option><option>Recaudacion</option><option>Garantias</option><option>Sueldos</option>
             </select>
           </div>
-          <div><Label>Responsable</Label><Input placeholder="Usuario o area" /></div>
+          <div><Label>Responsable</Label><Input value={form.resp} onChange={(e) => setForm((p) => ({ ...p, resp: e.target.value }))} placeholder="Usuario o area" /></div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div><Label>Limite diario (ARS)</Label><Input placeholder="0,00" /></div>
-          <div><Label>Saldo inicial</Label><Input placeholder="$ 0,00" /></div>
+          <div><Label>Limite diario (ARS)</Label><Input value={form.lim} onChange={(e) => setForm((p) => ({ ...p, lim: e.target.value }))} placeholder="0,00" /></div>
+          <div><Label>Saldo inicial</Label><Input value={form.saldo} onChange={(e) => setForm((p) => ({ ...p, saldo: e.target.value }))} placeholder="$ 0,00" /></div>
         </div>
         <label className="flex items-center gap-2 text-xs">
-          <input type="checkbox" defaultChecked /> Activar inmediatamente al crear
+          <input type="checkbox" checked={form.activar} onChange={(e) => setForm((p) => ({ ...p, activar: e.target.checked }))} /> Activar inmediatamente al crear
         </label>
       </FormDialog>
 
@@ -221,17 +354,17 @@ function Page() {
         title="Transferir entre subcuentas"
         description="Movimiento interno · acreditacion inmediata, sin comision."
         submitLabel="Transferir"
-        onSubmit={() => { setTransfOpen(false); toast.success("Transferencia interna realizada"); }}
+        onSubmit={() => { setTransfOpen(false); toast.success("Transferencia interna realizada (demo)"); }}
       >
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Desde</Label>
             <select className="w-full h-10 px-3 rounded-md border bg-card text-sm">
-              {subs.map(s => <option key={s.n}>{s.n} — {fmt(s.disp)}</option>)}
+              {subs.map((s) => <option key={s.id ?? s.n}>{s.n} — {fmt(s.disp)}</option>)}
             </select>
           </div>
           <div><Label>Hacia</Label>
             <select className="w-full h-10 px-3 rounded-md border bg-card text-sm">
-              {subs.map(s => <option key={s.n}>{s.n}</option>)}
+              {subs.map((s) => <option key={s.id ?? s.n}>{s.n}</option>)}
             </select>
           </div>
         </div>
@@ -239,39 +372,66 @@ function Page() {
         <div><Label>Concepto</Label><Input placeholder="Barrido fin de dia, fondeo, etc." /></div>
       </FormDialog>
 
-      {detailSub && (
-        <SubDetailModal
-          sub={detailSub}
-          onClose={() => setDetailSub(null)}
-        />
-      )}
-
       <ConfirmDialog
         open={confirmarBorrar !== null}
-        title="¿Eliminar usuario de la subcuenta?"
-        description={`Se quitara a ${confirmarBorrar?.apellido} (${confirmarBorrar?.n}) de esta subcuenta. Esta accion no se puede deshacer.`}
+        title="¿Eliminar subcuenta?"
+        description={`Se quitara la subcuenta ${confirmarBorrar?.n} (${confirmarBorrar?.cbu}). Esta accion no se puede deshacer.`}
         onClose={() => setConfirmarBorrar(null)}
-        onConfirm={() => {
-          if (confirmarBorrar) {
-            setDeletedNames((prev) => { const next = new Set(prev); next.add(confirmarBorrar.n); return next; });
-            toast.success("Subcuenta eliminada");
-          }
-        }}
+        onConfirm={onBorrar}
       />
     </>
   );
 }
 
-function SubDetailModal({ sub, onClose }: { sub: Sub; onClose: () => void }) {
+function SubDetailModal({ sub, onClose, onCambiarEstado }: {
+  sub: Sub;
+  onClose: () => void;
+  onCambiarEstado: (id: string, estado: "Activa" | "Pausada") => void;
+}) {
   const [editEmail, setEditEmail] = useState(false);
   const [emailVal, setEmailVal] = useState(sub.email);
   const [moveOpen, setMoveOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterTipo, setFilterTipo] = useState<"todos" | "ingreso" | "egreso">("todos");
   const [filterSearch, setFilterSearch] = useState("");
+  const [moves, setMoves] = useState<Mov[]>([]);
+  const [loadingMoves, setLoadingMoves] = useState(true);
 
-  const allMoves = movimientosPorSub[sub.n] ?? [];
-  const moves = allMoves.filter((m) => {
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = requireSupabase();
+        const { data } = await s
+          .from("movimientos")
+          .select("tipo, monto_operacion, comision, cvu, id_txn, fecha")
+          .eq("cvu", sub.cbu)
+          .order("fecha", { ascending: false })
+          .limit(200);
+        setMoves(
+          (data ?? []).map((m: any) => {
+            const egreso = m.tipo === "retiro" || m.tipo === "pago_pct";
+            return {
+              tipo: egreso ? "egreso" : "ingreso",
+              titulo: TITULO_MOV[m.tipo] ?? m.tipo,
+              txid: m.id_txn,
+              cbu: m.cvu,
+              entidad: "MollyPay",
+              fecha: (m.fecha ?? "").slice(0, 10),
+              hora: (m.fecha ?? "").slice(11, 16),
+              monto: Math.abs(Number(m.monto_operacion ?? 0)),
+            } as Mov;
+          })
+        );
+      } catch {
+        setMoves([]);
+      } finally {
+        setLoadingMoves(false);
+      }
+    })();
+  }, [sub.cbu]);
+
+  const allMoves = moves;
+  const filtMoves = allMoves.filter((m) => {
     if (filterTipo !== "todos" && m.tipo !== filterTipo) return false;
     if (filterSearch) {
       const q = filterSearch.toLowerCase();
@@ -280,9 +440,8 @@ function SubDetailModal({ sub, onClose }: { sub: Sub; onClose: () => void }) {
     return true;
   });
 
-  const totalDepositos = allMoves.filter(m => m.tipo === "ingreso").reduce((a, m) => a + m.monto, 0);
-  const totalRetiros = allMoves.filter(m => m.tipo === "egreso").reduce((a, m) => a + m.monto, 0);
-  const totalComisiones = allMoves.filter(m => m.entidad === "Moli Financial S.A.").reduce((a, m) => a + m.monto, 0);
+  const totalDepositos = allMoves.filter((m) => m.tipo === "ingreso").reduce((a, m) => a + m.monto, 0);
+  const totalRetiros = allMoves.filter((m) => m.tipo === "egreso").reduce((a, m) => a + m.monto, 0);
 
   const confirmAction = (accion: string, detalle: string): boolean =>
     window.confirm(`¿Estas seguro de que queres ${accion}?\n\n${detalle}`);
@@ -294,41 +453,27 @@ function SubDetailModal({ sub, onClose }: { sub: Sub; onClose: () => void }) {
         className="relative bg-card w-full sm:max-w-2xl lg:max-w-3xl max-h-[90vh] flex flex-col shadow-xl rounded-t-xl sm:rounded-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ── Header ── */}
         <div className="sticky top-0 bg-card border-b px-5 sm:px-6 py-4 flex items-center justify-between z-10 shrink-0">
           <h2 className="text-base font-semibold">Detalles de Subcuenta</h2>
-          <button
-            onClick={onClose}
-            className="h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-muted transition text-muted-foreground hover:text-foreground"
-          >
+          <button onClick={onClose} className="h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-muted transition text-muted-foreground hover:text-foreground">
             <X size={18} />
           </button>
         </div>
 
-        {/* ── Scrollable body ── */}
         <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-7">
-
-          {/* ══════════ BLOQUE: Informacion general ══════════ */}
           <section>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold">Informacion general</h3>
               <div className="flex gap-1">
                 <button
-                  onClick={() => { if (confirmAction("cambiar la contrasena de esta subcuenta", "Se enviara un enlace de restablecimiento al email del responsable.")) toast.success("Enlace de restablecimiento enviado"); }}
-                  className="h-7 w-7 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition text-muted-foreground hover:text-foreground"
-                  title="Cambiar contrasena"
-                >
-                  <Key size={13} />
-                </button>
-                <button
-                  onClick={() => { if (confirmAction(sub.e === "Activa" ? "pausar esta subcuenta" : "reactivar esta subcuenta", "Los fondos quedaran " + (sub.e === "Activa" ? "congelados hasta que la reactives." : "disponibles nuevamente."))) toast.success(sub.e === "Activa" ? "Subcuenta pausada" : "Subcuenta reactivada"); }}
+                  onClick={() => { if (confirmAction(sub.e === "Activa" ? "pausar esta subcuenta" : "reactivar esta subcuenta", "Los fondos quedaran " + (sub.e === "Activa" ? "congelados hasta que la reactives." : "disponibles nuevamente."))) onCambiarEstado(sub.id!, sub.e === "Activa" ? "Pausada" : "Activa"); }}
                   className="h-7 w-7 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition text-muted-foreground hover:text-foreground"
                   title={sub.e === "Activa" ? "Deshabilitar cuenta" : "Reactivar cuenta"}
                 >
                   <Pause size={13} />
                 </button>
                 <button
-                  onClick={() => { if (confirmAction("eliminar esta subcuenta", "Esta accion es irreversible. Todos los fondos seran transferidos a la cuenta madre.")) toast.success("Subcuenta eliminada"); }}
+                  onClick={() => { if (confirmAction("eliminar esta subcuenta", "Esta accion es irreversible. Todos los fondos seran transferidos a la cuenta madre.")) toast.success("Subcuenta eliminada (demo)"); }}
                   className="h-7 w-7 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 hover:text-red-600 transition text-muted-foreground"
                   title="Eliminar subcuenta"
                 >
@@ -337,7 +482,6 @@ function SubDetailModal({ sub, onClose }: { sub: Sub; onClose: () => void }) {
               </div>
             </div>
             <div className="space-y-3 text-sm">
-              {/* Nombre + Email editable */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Nombre</span>
@@ -348,63 +492,32 @@ function SubDetailModal({ sub, onClose }: { sub: Sub; onClose: () => void }) {
                   <div className="flex items-center gap-1.5 mt-0.5">
                     {editEmail ? (
                       <div className="flex items-center gap-1 flex-1">
-                        <Input
-                          value={emailVal}
-                          onChange={(e) => setEmailVal(e.target.value)}
-                          className="h-8 text-sm flex-1 min-w-0"
-                        />
-                        <button
-                          onClick={() => { setEditEmail(false); toast.success("Email actualizado"); }}
-                          className="h-8 px-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded border"
-                        >
-                          OK
-                        </button>
-                        <button
-                          onClick={() => { setEditEmail(false); setEmailVal(sub.email); }}
-                          className="h-8 px-2 text-xs text-muted-foreground hover:bg-muted rounded border"
-                        >
-                          ✕
-                        </button>
+                        <Input value={emailVal} onChange={(e) => setEmailVal(e.target.value)} className="h-8 text-sm flex-1 min-w-0" />
+                        <button onClick={() => { setEditEmail(false); }} className="h-8 px-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded border">OK</button>
+                        <button onClick={() => { setEditEmail(false); setEmailVal(sub.email); }} className="h-8 px-2 text-xs text-muted-foreground hover:bg-muted rounded border">✕</button>
                       </div>
                     ) : (
                       <>
-                        <span className="text-muted-foreground">{emailVal}</span>
-                        <button
-                          onClick={() => setEditEmail(true)}
-                          className="text-muted-foreground hover:text-foreground transition"
-                          title="Editar email"
-                        >
-                          <Pencil size={12} />
-                        </button>
+                        <span className="text-muted-foreground">{emailVal || "—"}</span>
+                        <button onClick={() => setEditEmail(true)} className="text-muted-foreground hover:text-foreground transition" title="Editar email"><Pencil size={12} /></button>
                       </>
                     )}
                   </div>
                 </div>
               </div>
-              {/* Badges */}
               <div className="flex flex-wrap gap-2 pt-1">
-                <Badge tone={sub.e === "Activa" ? "success" : "warn"}>
-                  {sub.e === "Activa" ? "Activo" : "Desactivado"}
-                </Badge>
+                <Badge tone={sub.e === "Activa" ? "success" : "warn"}>{sub.e === "Activa" ? "Activo" : "Desactivado"}</Badge>
                 <Badge tone={sub.retirosHab ? "success" : "neutral"}>
-                  <Lock size={11} className="inline mr-0.5" />
-                  Retiros {sub.retirosHab ? "Habilitados" : "Deshabilitados"}
+                  <Lock size={11} className="inline mr-0.5" /> Retiros {sub.retirosHab ? "Habilitados" : "Deshabilitados"}
                 </Badge>
               </div>
             </div>
           </section>
 
-          {/* ══════════ BLOQUE: Informacion financiera ══════════ */}
           <section>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold">Informacion financiera</h3>
-              <button
-                onClick={() => setMoveOpen(true)}
-                className="h-7 w-7 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition text-muted-foreground hover:text-foreground"
-                title="Mover fondos"
-              >
-                <Building2 size={13} />
-              </button>
+              <button onClick={() => setMoveOpen(true)} className="h-7 w-7 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition text-muted-foreground hover:text-foreground" title="Mover fondos"><Building2 size={13} /></button>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-muted/30 rounded-lg p-3">
@@ -420,23 +533,18 @@ function SubDetailModal({ sub, onClose }: { sub: Sub; onClose: () => void }) {
                 <div className="font-display tabular-nums text-base font-semibold mt-1 text-red-700">{fmt(totalRetiros)}</div>
               </div>
               <div className="bg-muted/30 rounded-lg p-3">
-                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total comisiones</div>
-                <div className="font-display tabular-nums text-base font-semibold mt-1">{fmt(totalComisiones)}</div>
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">CBU</div>
+                <div className="font-display tabular-nums text-base font-semibold mt-1 font-mono text-xs truncate">{sub.cbu}</div>
               </div>
             </div>
           </section>
 
-          {/* ══════════ BLOQUE: Historial de movimientos ══════════ */}
           <section>
             <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
               <h3 className="text-sm font-semibold">Historial de movimientos</h3>
               <div className="flex gap-2">
-                <BtnOutline className="h-8 px-3 text-[11px]" onClick={() => toast.success("Reporte descargado (demo)")}>
-                  <Download size={12} /> DESCARGAR REPORTE
-                </BtnOutline>
-                <BtnOutline className="h-8 px-3 text-[11px]" onClick={() => setFilterOpen(!filterOpen)}>
-                  <Filter size={12} /> FILTRAR{filterOpen && <ChevronUp size={11} className="ml-1" />}
-                </BtnOutline>
+                <BtnOutline className="h-8 px-3 text-[11px]" onClick={() => toast.success("Reporte descargado (demo)")}><Download size={12} /> DESCARGAR REPORTE</BtnOutline>
+                <BtnOutline className="h-8 px-3 text-[11px]" onClick={() => setFilterOpen(!filterOpen)}><Filter size={12} /> FILTRAR{filterOpen && <ChevronUp size={11} className="ml-1" />}</BtnOutline>
               </div>
             </div>
 
@@ -445,48 +553,33 @@ function SubDetailModal({ sub, onClose }: { sub: Sub; onClose: () => void }) {
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
                   <div>
                     <label className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Buscar</label>
-                    <Input
-                      value={filterSearch}
-                      onChange={(e) => setFilterSearch(e.target.value)}
-                      placeholder="TXID, CBU o entidad..."
-                      className="h-9 text-sm w-full"
-                    />
+                    <Input value={filterSearch} onChange={(e) => setFilterSearch(e.target.value)} placeholder="TXID, CBU o entidad..." className="h-9 text-sm w-full" />
                   </div>
                   <div>
                     <label className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Tipo</label>
-                    <select
-                      value={filterTipo}
-                      onChange={(e) => setFilterTipo(e.target.value as "todos" | "ingreso" | "egreso")}
-                      className="h-9 px-3 rounded-md border bg-card text-sm w-full"
-                    >
+                    <select value={filterTipo} onChange={(e) => setFilterTipo(e.target.value as "todos" | "ingreso" | "egreso")} className="h-9 px-3 rounded-md border bg-card text-sm w-full">
                       <option value="todos">Todos</option>
                       <option value="ingreso">Ingresos</option>
                       <option value="egreso">Egresos</option>
                     </select>
                   </div>
                 </div>
-                {moves.length < allMoves.length && (
-                  <p className="text-[11px] text-muted-foreground">
-                    {moves.length} de {allMoves.length} movimientos
-                  </p>
+                {filtMoves.length < allMoves.length && (
+                  <p className="text-[11px] text-muted-foreground">{filtMoves.length} de {allMoves.length} movimientos</p>
                 )}
               </div>
             )}
 
             <div className="max-h-[280px] overflow-y-auto border rounded-lg divide-y">
-              {moves.length === 0 ? (
+              {loadingMoves ? (
+                <p className="p-4 text-sm text-muted-foreground text-center">Cargando movimientos…</p>
+              ) : filtMoves.length === 0 ? (
                 <p className="p-4 text-sm text-muted-foreground text-center">Sin movimientos registrados</p>
               ) : (
-                moves.map((m, i) => (
+                filtMoves.map((m, i) => (
                   <div key={i} className="flex items-start gap-3 p-3 hover:bg-muted/30 transition">
-                    <span
-                      className="mt-0.5 h-8 w-8 shrink-0 rounded-full inline-flex items-center justify-center text-xs"
-                      style={{ background: m.tipo === "ingreso" ? "rgba(5,150,105,0.12)" : "rgba(220,38,38,0.12)" }}
-                    >
-                      {m.tipo === "ingreso"
-                        ? <ArrowDownLeft size={15} className="text-emerald-700" />
-                        : <ArrowUpRight size={15} className="text-red-700" />
-                      }
+                    <span className="mt-0.5 h-8 w-8 shrink-0 rounded-full inline-flex items-center justify-center text-xs" style={{ background: m.tipo === "ingreso" ? "rgba(5,150,105,0.12)" : "rgba(220,38,38,0.12)" }}>
+                      {m.tipo === "ingreso" ? <ArrowDownLeft size={15} className="text-emerald-700" /> : <ArrowUpRight size={15} className="text-red-700" />}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex justify-between items-start gap-2">
@@ -511,16 +604,13 @@ function SubDetailModal({ sub, onClose }: { sub: Sub; onClose: () => void }) {
           </section>
         </div>
 
-        {/* ── Mover fondos sub-dialog ── */}
         {moveOpen && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/40" onClick={() => setMoveOpen(false)} />
             <div className="relative bg-card rounded-lg max-w-md w-full p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold">Mover fondos</h3>
-                <button onClick={() => setMoveOpen(false)} className="text-muted-foreground hover:text-foreground">
-                  <X size={16} />
-                </button>
+                <button onClick={() => setMoveOpen(false)} className="text-muted-foreground hover:text-foreground"><X size={16} /></button>
               </div>
               <div className="space-y-3">
                 <div>
@@ -530,20 +620,9 @@ function SubDetailModal({ sub, onClose }: { sub: Sub; onClose: () => void }) {
                     <option>{sub.n} → Cuenta madre</option>
                   </select>
                 </div>
-                <div>
-                  <Label>Monto (ARS)</Label>
-                  <Input placeholder="0,00" className="mt-1" />
-                </div>
-                <div>
-                  <Label>Concepto</Label>
-                  <Input placeholder="Fondeo, barrido, etc." className="mt-1" />
-                </div>
-                <BtnPrimary
-                  className="w-full mt-2"
-                  onClick={() => { setMoveOpen(false); toast.success("Movimiento interno realizado"); }}
-                >
-                  Transferir
-                </BtnPrimary>
+                <div><Label>Monto (ARS)</Label><Input placeholder="0,00" className="mt-1" /></div>
+                <div><Label>Concepto</Label><Input placeholder="Fondeo, barrido, etc." className="mt-1" /></div>
+                <BtnPrimary className="w-full mt-2" onClick={() => { setMoveOpen(false); toast.success("Movimiento interno realizado (demo)"); }}>Transferir</BtnPrimary>
               </div>
             </div>
           </div>

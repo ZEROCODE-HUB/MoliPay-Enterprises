@@ -1,5 +1,5 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+﻿import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState, useEffect } from "react";
 import {
   Wallet, ArrowDownLeft, ArrowUpRight, Users, Link2, QrCode,
   Smartphone, TrendingUp, Clock, Download, FileSpreadsheet, FileText,
@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { PageHeader, Card, BtnOutline } from "@/components/portal-shell";
 import { toast } from "sonner";
+import { requireSupabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
@@ -27,27 +28,18 @@ const QUICK: Array<{ k: PeriodKey; l: string; days: number }> = [
   { k: "90d", l: "90 días", days: 90 },
 ];
 
-function seriesFor(days: number): Array<{
-  date: string; depositos: number; cobrosQR: number; linkPago: number; total: number;
-}> {
-  const out: Array<any> = [];
-  const today = new Date();
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const seed = d.getDate() + d.getMonth() * 31;
-    const isZero = seed % 11 === 0;
-    const dep = isZero ? 0 : (((seed * 37) % 90) + 10) * 100_000;
-    const qr = isZero ? 0 : (((seed * 17) % 60) + 5) * 100_000;
-    const link = isZero ? 0 : ((seed * 23) % 40) * 100_000;
-    out.push({
-      date: `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`,
-      depositos: dep,
-      cobrosQR: qr,
-      linkPago: link,
-      total: dep + qr + link,
-    });
-  }
+function toKey(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+function fmtKey(d: Date) {
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+function eachDay(start: Date, end: Date): Date[] {
+  const out: Date[] = [];
+  const s = new Date(start); s.setHours(0, 0, 0, 0);
+  const e = new Date(end); e.setHours(0, 0, 0, 0);
+  let guard = 0;
+  while (s <= e && guard < 366) { out.push(new Date(s)); s.setDate(s.getDate() + 1); guard++; }
   return out;
 }
 
@@ -57,42 +49,107 @@ function Dashboard() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
 
-  const data = useMemo(() => {
-    if (period === "day") return seriesFor(1);
-    if (period === "range" && desde && hasta) {
-      const diff = Math.ceil(
-        (new Date(hasta + "T23:59:59").getTime() - new Date(desde + "T00:00:00").getTime())
-          / (1000 * 60 * 60 * 24)
-      );
-      return seriesFor(Math.max(1, diff));
+  const [movs, setMovs] = useState<any[]>([]);
+  const [saldoTotal, setSaldoTotal] = useState(0);
+  const [cuentas, setCuentas] = useState(1);
+  const [cbuLabel, setCbuLabel] = useState("");
+
+  const range = useMemo(() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    if (period === "day") {
+      const d = new Date(day + "T00:00:00");
+      return { start: d, end: new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999) };
+    }
+    if (period === "range") {
+      const s = desde ? new Date(desde + "T00:00:00") : today;
+      const e = hasta ? new Date(hasta + "T23:59:59") : new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+      return { start: s, end: e };
     }
     const days = QUICK.find((p) => p.k === period)?.days ?? 30;
-    return seriesFor(days);
+    const s = new Date(today); s.setDate(today.getDate() - (days - 1));
+    const e = new Date(today); e.setHours(23, 59, 59, 999);
+    return { start: s, end: e };
   }, [period, day, desde, hasta]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = requireSupabase();
+        const { data: u } = await s.auth.getUser();
+        const mail = u.user?.email;
+        if (!mail) return;
+        const { data: cli } = await s.from("clientes").select("legajo, cbu, alias").eq("correo", mail).maybeSingle();
+        if (!cli) return;
+        setCbuLabel(cli.alias ? `CVU ${cli.alias}` : cli.cbu ? `CBU ${cli.cbu}` : "");
+        const { data: m } = await s
+          .from("movimientos")
+          .select("tipo, monto_operacion, fecha")
+          .eq("legajo", cli.legajo)
+          .gte("fecha", range.start.toISOString())
+          .lte("fecha", range.end.toISOString());
+        if (cancelled) return;
+        setMovs(m ?? []);
+        const { data: subs } = await s.from("subcuentas").select("saldo_disponible, saldo_retenido");
+        if (cancelled) return;
+        const saldo = (subs ?? []).reduce(
+          (a: number, x: any) => a + Number(x.saldo_disponible ?? 0) + Number(x.saldo_retenido ?? 0),
+          0
+        );
+        setSaldoTotal(saldo);
+        setCuentas((subs ?? []).length + 1);
+      } catch {
+        // silencioso
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [range.start, range.end]);
+
+  const data = useMemo(() => {
+    const dias = eachDay(range.start, range.end);
+    const byDate = new Map<string, any>();
+    dias.forEach((d) => {
+      const key = toKey(d);
+      byDate.set(key, { date: fmtKey(d), depositos: 0, cobrosQR: 0, linkPago: 0, total: 0 });
+    });
+    movs.forEach((m) => {
+      const key = (m.fecha ?? "").slice(0, 10);
+      const row = byDate.get(key);
+      if (!row) return;
+      const amt = Math.abs(Number(m.monto_operacion ?? 0));
+      if (m.tipo === "deposito") row.depositos += amt;
+      else if (m.tipo === "cobro_pct") row.cobrosQR += amt;
+      else if (m.tipo === "tarjeta") row.linkPago += amt;
+      row.total = row.depositos + row.cobrosQR + row.linkPago;
+    });
+    return Array.from(byDate.values());
+  }, [movs, range.start, range.end]);
+
+  const kpis = useMemo(() => {
+    const sum = (t: string) =>
+      movs.filter((x) => x.tipo === t).reduce((a, x) => a + Math.abs(Number(x.monto_operacion ?? 0)), 0);
+    const count = (t: string) => movs.filter((x) => x.tipo === t).length;
+    return {
+      saldo: saldoTotal,
+      depositos: sum("deposito"),
+      opsDep: count("deposito"),
+      retiros: sum("retiro"),
+      opsRet: count("retiro"),
+      cuentas,
+      cobrosLink: sum("tarjeta"),
+      cobrosQR: sum("cobro_pct"),
+      pagosQR: sum("pago_pct"),
+    };
+  }, [movs, saldoTotal, cuentas]);
+
+  const doExport = (fmt: "xlsx" | "pdf") =>
+    toast.success(`Reporte exportado (${fmt.toUpperCase()})`);
 
   const periodLabel = useMemo(() => {
     if (period === "day") return day;
     if (period === "range") return `${desde || "?"} – ${hasta || "?"}`;
     return QUICK.find((p) => p.k === period)?.l ?? "30 días";
   }, [period, day, desde, hasta]);
-
-  const kpis = useMemo(() => {
-    const totalDep = data.reduce((s, d) => s + d.depositos, 0);
-    const totalQR = data.reduce((s, d) => s + d.cobrosQR, 0);
-    const totalLink = data.reduce((s, d) => s + d.linkPago, 0);
-    return {
-      saldo: 12_480_330.42,
-      depositos: totalDep,
-      retiros: totalDep * 0.52,
-      cuentas: 4,
-      cobrosLink: totalLink,
-      cobrosQR: totalQR,
-      pagosQR: totalQR * 0.35,
-    };
-  }, [data]);
-
-  const doExport = (fmt: "xlsx" | "pdf") =>
-    toast.success(`Reporte ${periodLabel} exportado (${fmt.toUpperCase()})`);
 
   return (
     <>
@@ -101,7 +158,7 @@ function Dashboard() {
         description="Panel ejecutivo — estado de tu operación financiera."
         action={
           <div className="hidden md:flex items-center gap-2 text-xs text-black-400">
-            <Clock size={14} /> Actualizado hace 2 min
+            <Clock size={14} /> Datos en vivo
           </div>
         }
       />
@@ -191,7 +248,7 @@ function Dashboard() {
             <div>
               <div className="text-xs text-black-400 mb-1">Saldo total de la cuenta</div>
               <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.saldo)}</div>
-              <div className="text-xs text-black-400 mt-0.5">CBU ···· 67890</div>
+              <div className="text-xs text-black-400 mt-0.5">{cbuLabel || "Sin CVU asignada"}</div>
             </div>
             <div className="w-9 h-9 rounded-sm bg-navy-50 flex items-center justify-center text-navy-500 shrink-0">
               <Wallet size={18} />
@@ -203,7 +260,7 @@ function Dashboard() {
             <div>
               <div className="text-xs text-black-400 mb-1">Depósitos del período</div>
               <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.depositos)}</div>
-              <div className="text-xs text-black-400 mt-0.5">{data.length} días</div>
+              <div className="text-xs text-black-400 mt-0.5">{kpis.opsDep} operaciones</div>
             </div>
             <div className="w-9 h-9 rounded-sm bg-success-bg flex items-center justify-center text-success shrink-0">
               <ArrowDownLeft size={18} />
@@ -215,7 +272,7 @@ function Dashboard() {
             <div>
               <div className="text-xs text-black-400 mb-1">Retiros del período</div>
               <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">{formatARS(kpis.retiros)}</div>
-              <div className="text-xs text-black-400 mt-0.5">48 operaciones</div>
+              <div className="text-xs text-black-400 mt-0.5">{kpis.opsRet} operaciones</div>
             </div>
             <div className="w-9 h-9 rounded-sm bg-error-bg flex items-center justify-center text-error shrink-0">
               <ArrowUpRight size={18} />
@@ -227,7 +284,7 @@ function Dashboard() {
             <div>
               <div className="text-xs text-black-400 mb-1">Total de cuentas</div>
               <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">{kpis.cuentas}</div>
-              <div className="text-xs text-black-400 mt-0.5">1 principal + 3 subcuentas</div>
+              <div className="text-xs text-black-400 mt-0.5">1 principal + {kpis.cuentas - 1} subcuentas</div>
             </div>
             <div className="w-9 h-9 rounded-sm bg-info-bg flex items-center justify-center text-info shrink-0">
               <Users size={18} />
@@ -280,9 +337,6 @@ function Dashboard() {
             <h3 className="font-semibold text-black-800 truncate">Movimientos diarios</h3>
             <p className="text-xs text-black-400 truncate">{periodLabel}</p>
           </div>
-          <span className="text-success font-semibold inline-flex items-center gap-1 text-xs shrink-0">
-            <TrendingUp size={14} /> +18,4%
-          </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs mb-4">
           <span className="flex items-center gap-1.5">
@@ -343,7 +397,7 @@ function Dashboard() {
             </ResponsiveContainer>
           ) : (
             <div className="flex items-center justify-center h-40 text-sm text-black-400">
-              No hay datos para el período seleccionado.
+              No hay movimientos para el período seleccionado.
             </div>
           )}
         </div>
