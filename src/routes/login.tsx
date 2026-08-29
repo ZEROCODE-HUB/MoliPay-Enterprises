@@ -25,6 +25,22 @@ function LoginForm({ onSuccess }: { onSuccess: (estado: "aprobado" | "pendiente"
   const [pw, setPw] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resendMsg, setResendMsg] = useState<string | null>(null);
+
+  const reenviarVerificacion = async () => {
+    const destino = email.trim();
+    if (!destino || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destino)) {
+      setResendMsg("Ingresá tu correo arriba para reenviar la verificación.");
+      return;
+    }
+    try {
+      const sb = requireSupabase();
+      await sb.auth.resend({ type: "signup", email: destino });
+    } catch {
+      // noop: el destino se muestra igual
+    }
+    setResendMsg(`Te enviamos el mail de verificación a ${destino}. Revisá tu bandeja y la carpeta de spam.`);
+  };
 
   return (
     <form
@@ -33,27 +49,30 @@ function LoginForm({ onSuccess }: { onSuccess: (estado: "aprobado" | "pendiente"
         e.preventDefault();
         setLoading(true);
         setError(null);
-        const sb = requireSupabase();
-        const { data, error: authErr } = await sb.auth.signInWithPassword({ email, password: pw });
-        if (authErr || !data.user) {
+        try {
+          const sb = requireSupabase();
+          const { data, error: authErr } = await sb.auth.signInWithPassword({ email, password: pw });
+          if (authErr || !data.user) {
+            setError(authErr?.message ?? "No se pudo iniciar sesión");
+            return;
+          }
+          let estado: "aprobado" | "pendiente" | "rechazado" = "pendiente";
+          try {
+            const { data: cli } = await sb
+              .from("clientes")
+              .select("estado_onboarding")
+              .eq("correo", data.user.email ?? email)
+              .maybeSingle();
+            estado = (cli?.estado_onboarding as "aprobado" | "pendiente" | "rechazado") ?? "pendiente";
+          } catch {
+            // si no se puede consultar el estado, seguimos igual con "pendiente"
+          }
+          onSuccess(estado, data.user.email ?? email);
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "No se pudo iniciar sesión");
+        } finally {
           setLoading(false);
-          setError(authErr?.message ?? "No se pudo iniciar sesión");
-          return;
         }
-        const { data: cli, error: cliErr } = await sb
-          .from("clientes")
-          .select("estado_onboarding")
-          .eq("correo", data.user.email ?? email)
-          .maybeSingle();
-        setLoading(false);
-        if (cliErr) {
-          setError("No se pudo consultar el estado de tu cuenta");
-          return;
-        }
-        onSuccess(
-          (cli?.estado_onboarding as "aprobado" | "pendiente" | "rechazado") ?? "pendiente",
-          data.user.email ?? email,
-        );
       }}
     >
       <Field label="Correo electrónico" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="hola@empresa.com" />
@@ -80,12 +99,15 @@ function LoginForm({ onSuccess }: { onSuccess: (estado: "aprobado" | "pendiente"
         <p>
           <button
             type="button"
-            onClick={() => alert("Correo reenviado (demo)")}
+            onClick={reenviarVerificacion}
             className="text-black-400 hover:text-red-500 underline underline-offset-2 transition-colors"
           >
             ¿No te llegó el email de verificación?
           </button>
         </p>
+        {resendMsg && (
+          <p className="text-xs text-muted-foreground">{resendMsg}</p>
+        )}
       </div>
     </form>
   );
@@ -213,15 +235,19 @@ function LoginPage() {
       navigate({ to: "/app" });
       return;
     }
-    const sb = requireSupabase();
-    const { data: cli } = await sb
-      .from("clientes")
-      .select("legajo")
-      .eq("correo", email)
-      .maybeSingle();
-    if (!cli) {
-      navigate({ to: "/onboarding/datos-personales" });
-    } else {
+    try {
+      const sb = requireSupabase();
+      const { data: cli } = await sb
+        .from("clientes")
+        .select("legajo")
+        .eq("correo", email)
+        .maybeSingle();
+      if (!cli) {
+        navigate({ to: "/onboarding/datos-personales" });
+      } else {
+        navigate({ to: "/onboarding/en-proceso" });
+      }
+    } catch {
       navigate({ to: "/onboarding/en-proceso" });
     }
   };
@@ -294,22 +320,6 @@ function LoginPage() {
         </div>
       </div>
 
-      {tab === "login" && (
-        <div className="mt-10">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-black-100" /></div>
-            <div className="relative flex justify-center">
-              <span className="bg-plata-50 px-3 text-xs text-black-400 uppercase tracking-wide">Acceso demo</span>
-            </div>
-          </div>
-          <button
-            onClick={() => { setRole("empresa"); navigate({ to: "/app" }); }}
-            className="w-full mt-5 h-11 rounded-sm text-sm font-semibold text-black-700 border border-black-200 bg-white hover:bg-black-50 transition-colors"
-          >
-            Demo empresa
-          </button>
-        </div>
-      )}
     </AuthShell>
   );
 }
