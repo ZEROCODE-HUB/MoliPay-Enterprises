@@ -16,12 +16,12 @@ import {
   Legend,
 } from "recharts";
 import { Download, FileSpreadsheet, TrendingUp, QrCode, DollarSign, Activity, Store } from "lucide-react";
-import { Card, BtnOutline } from "@/components/portal-shell";
+import { Card, BtnOutline, PageHeader } from "@/components/portal-shell";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
-export const Route = createFileRoute("/app/qr/")({ component: Dashboard });
+export const Route = createFileRoute("/app/qr/dashboard")({ component: Dashboard });
 
 const presets = [
   { label: "Hoy", days: 0 },
@@ -103,6 +103,10 @@ function Dashboard() {
 
   return (
     <div>
+      <PageHeader
+        title="Cobros con QR"
+        description="Cobra presencialmente con QR interoperables compatibles con cualquier billetera."
+      />
       {/* Period filter + export */}
       <div className="flex flex-wrap gap-2 mb-6">
         {presets.map((p) => (

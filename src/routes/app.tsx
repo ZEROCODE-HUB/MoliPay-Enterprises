@@ -45,7 +45,7 @@ const nav: NavItem[] = [
     label: "Cobros con QR",
     icon: QrCode,
     items: [
-      { to: "/app/qr", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/app/qr/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { to: "/app/qr/puntos-de-venta", label: "Puntos de Venta", icon: Store },
     ],
   },

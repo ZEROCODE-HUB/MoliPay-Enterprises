@@ -1,7 +1,7 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { Plus, Search, Eye, Edit3, Trash2, Info, X, Download, Printer } from "lucide-react";
-import { Card, Input, Label, BtnPrimary, BtnOutline, Badge } from "@/components/portal-shell";
+import { Card, Input, Label, BtnPrimary, BtnOutline, Badge, PageHeader } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
 import QRCode from "qrcode";
@@ -148,6 +148,10 @@ function Page() {
 
   return (
     <>
+      <PageHeader
+        title="Puntos de Venta"
+        description="Crea y gestiona los puntos de venta con cobro mediante QR."
+      />
       {/* Top bar */}
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
