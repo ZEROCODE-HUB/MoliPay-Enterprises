@@ -395,8 +395,8 @@ export function FileUpload({
             <FileText size={18} className="text-black-400 shrink-0" />
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-sm truncate text-black-700">{value.name}</p>
-            <p className="text-[11px] text-black-400">Archivo cargado</p>
+            <p className="text-sm truncate text-black-700">{isImage ? "Imagen cargada" : "Documento cargado"}</p>
+            <p className="text-[11px] text-black-400">Listo para enviar</p>
           </div>
           <button
             type="button"

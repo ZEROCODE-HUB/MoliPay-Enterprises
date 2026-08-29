@@ -10,6 +10,7 @@ import {
 } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { requireSupabase, getSignedDocUrl } from "@/lib/supabase";
+import { DocPreviewModal } from "@/components/doc-preview";
 
 export const Route = createFileRoute("/admin/clientes")({ component: Page });
 
@@ -246,44 +247,7 @@ function Page() {
       {detalle && <DetalleDrawer cliente={detalle} onClose={() => setDetalle(null)} onPreview={setDocPreview} />}
       {nuevo && <NuevoClienteDrawer onClose={() => setNuevo(false)} />}
 
-      {docPreview && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/80" onClick={() => setDocPreview(null)} />
-          <div className="relative max-w-3xl w-full">
-            <div className="bg-card rounded-lg overflow-hidden shadow-2xl">
-              <div className="border-b px-5 py-3 flex justify-between items-center">
-                <div>
-                  <div className="font-semibold">{docPreview.tipo}</div>
-                  <div className="text-xs text-muted-foreground">{docPreview.label}</div>
-                </div>
-                <div className="flex gap-1">
-                  {docPreview.signedUrl && (
-                    <BtnOutline className="h-9 px-3 text-xs" onClick={() => window.open(docPreview.signedUrl!, "_blank")}>
-                      <Download size={12} /> Descargar
-                    </BtnOutline>
-                  )}
-                  <BtnOutline className="h-9 w-9 px-0" onClick={() => setDocPreview(null)}><X size={14} /></BtnOutline>
-                </div>
-              </div>
-              <div className="h-[60vh] flex items-center justify-center bg-black/90 p-2">
-                {docPreview.signedUrl ? (
-                  docPreview.kind === "image" ? (
-                    <img src={docPreview.signedUrl} alt={docPreview.label} className="max-h-full max-w-full object-contain" />
-                  ) : docPreview.kind === "pdf" ? (
-                    <iframe src={docPreview.signedUrl} title={docPreview.label} className="w-full h-full border-0" />
-                  ) : (
-                    <a href={docPreview.signedUrl} target="_blank" rel="noreferrer" className="text-white underline">Abrir archivo</a>
-                  )
-                ) : (
-                  <p className="text-white/70 text-sm text-center px-6">
-                    No se pudo generar la vista previa. Asegurate de haber iniciado sesion como administrador.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <DocPreviewModal doc={docPreview} onClose={() => setDocPreview(null)} />
     </>
   );
 }

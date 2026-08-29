@@ -22,7 +22,7 @@ Deno.serve(async () => {
     const r = await fetch(`${url}/functions/v1/doc-url`, {
       method: "POST",
       headers: { "content-type": "application/json", apikey: anon, Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ path: "LPF-98622456312/id_frente.jfif" }),
+      body: JSON.stringify({ paths: ["LPF-98622456312/id_frente.jfif", "LPF-98622456312/selfie.png"] }),
     });
     const out = await r.json();
     out.status = r.status;

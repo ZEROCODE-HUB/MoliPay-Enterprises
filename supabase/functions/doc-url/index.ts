@@ -27,26 +27,31 @@ Deno.serve(async (req) => {
   } catch {
     /* ignore */
   }
-  const path = body?.path;
-  if (!path || typeof path !== "string") {
-    return new Response(JSON.stringify({ error: "missing path" }), { status: 400, headers });
+  const paths: unknown = Array.isArray(body?.paths) ? body.paths : body?.path ? [body.path] : null;
+  if (!Array.isArray(paths)) {
+    return new Response(JSON.stringify({ error: "missing paths" }), { status: 400, headers });
   }
 
   const admin = createClient(url, service, { auth: { autoRefreshToken: false, persistSession: false } });
   const isAdmin = email.endsWith("@mollypay.com");
 
-  const { data: doc } = await admin.from("documentos").select("cliente_legajo").eq("url", path).maybeSingle();
-  if (doc) {
-    const { data: cli } = await admin.from("clientes").select("correo").eq("legajo", doc.cliente_legajo).maybeSingle();
-    if (cli && cli.correo !== email && !isAdmin) {
-      return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers });
+  const out: Record<string, string | null> = {};
+  for (const p of paths as unknown[]) {
+    if (typeof p !== "string") continue;
+    const { data: doc } = await admin.from("documentos").select("cliente_legajo").eq("url", p).maybeSingle();
+    if (doc) {
+      const { data: cli } = await admin.from("clientes").select("correo").eq("legajo", doc.cliente_legajo).maybeSingle();
+      if (cli && cli.correo !== email && !isAdmin) {
+        out[p] = null;
+        continue;
+      }
+    } else if (!isAdmin) {
+      out[p] = null;
+      continue;
     }
-  } else if (!isAdmin) {
-    return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers });
+    const { data: s } = await admin.storage.from("kyc").createSignedUrl(p, 3600);
+    out[p] = s?.signedUrl ?? null;
   }
 
-  const { data: s, error } = await admin.storage.from("kyc").createSignedUrl(path, 3600);
-  if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400, headers });
-
-  return new Response(JSON.stringify({ signedUrl: s.signedUrl }), { headers });
+  return new Response(JSON.stringify({ urls: out }), { headers });
 });

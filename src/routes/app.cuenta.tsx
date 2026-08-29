@@ -8,7 +8,8 @@ import { PageHeader, Card, Input, Label, BtnPrimary, BtnOutline, Badge } from "@
 import { toast } from "sonner";
 import { MollyLogo } from "@/components/molly-logo";
 import { useOnboarding } from "@/lib/onboarding-store";
-import { requireSupabase, getSignedDocUrl } from "@/lib/supabase";
+import { requireSupabase, getSignedDocUrls } from "@/lib/supabase";
+import { DocPreviewModal } from "@/components/doc-preview";
 
 export const Route = createFileRoute("/app/cuenta")({ component: Page });
 
@@ -43,6 +44,11 @@ function fmtFechaDoc(iso?: string) {
   return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+function fmtArs(v: any) {
+  if (v == null || v === "") return "—";
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(Number(v));
+}
+
 const planEmpresa = {
   nombre: "Plan Empresa",
   precio: "$ 48.000 / mes",
@@ -64,6 +70,10 @@ function Page() {
   const [docPreview, setDocPreview] = useState<DocReal | null>(null);
   const [kycDocs, setKycDocs] = useState<DocReal[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(true);
+  const [cliente, setCliente] = useState<any | null>(null);
+  const [movCount, setMovCount] = useState(0);
+  const [form, setForm] = useState<any>({});
+  const [saving, setSaving] = useState(false);
   const {
     tipoCuenta,
     registro,
@@ -71,72 +81,149 @@ function Page() {
     datosEmpresa,
     kyc,
     emailValidado,
-    aprobado,
   } = useOnboarding();
 
-  const isPJ = tipoCuenta === "juridica";
+  const isPJ = cliente?.tipo_persona === "juridica" || tipoCuenta === "juridica";
   const plan = isPJ ? planEmpresa : planPersona;
+  const aprobado = cliente?.estado_onboarding === "aprobado";
 
-  const userNombre = registro.nombre || (isPJ ? "Carla" : "Lucia");
-  const userApellido = registro.apellido || (isPJ ? "Rivas" : "Mendez");
-  const userEmail = registro.email || (isPJ ? "carla@empresademo.com" : "lucia@example.com");
-  const userNac = registro.fechaNac || (isPJ ? "1985-06-15" : "1991-09-22");
+  const [userNombre, userApellido] = (cliente?.nombre ?? "").split(" ");
+  const userEmail = cliente?.correo ?? registro.email ?? "";
+  const userNac = cliente?.fecha_nacimiento ?? registro.fechaNac ?? "";
 
   const dp = {
-    genero: datosPersonales.genero || (isPJ ? "Femenino" : "Femenino"),
-    cuitCuil: datosPersonales.cuitCuil || (isPJ ? "27-30123456-7" : "27-32123456-6"),
-    ocupacion: datosPersonales.ocupacion || (isPJ ? "Directora Financiera" : "Autonomo / Monotributista"),
-    origenFondos: datosPersonales.origenFondos || "Actividad comercial",
-    esPEP: datosPersonales.esPEP || false,
+    genero: cliente?.genero ?? datosPersonales.genero ?? "Femenino",
+    cuitCuil: cliente?.cuit_cuil ?? datosPersonales.cuitCuil ?? "",
+    ocupacion: cliente?.ocupacion ?? datosPersonales.ocupacion ?? "",
+    origenFondos: cliente?.origen_fondos ?? datosPersonales.origenFondos ?? "Actividad comercial",
+    esPEP: cliente?.es_pep ?? datosPersonales.esPEP ?? false,
   };
 
   const empresaInfo = {
-    nombreLegal: datosEmpresa.nombreLegal || "Empresa Demo SA",
-    nombreFantasia: datosEmpresa.nombreFantasia || "Empresa Demo",
-    cuit: datosEmpresa.cuit || "30-12345678-9",
-    tipoId: datosEmpresa.tipoId || "Sociedad Anonima (SA)",
-    fechaInscripcion: datosEmpresa.fechaInscripcion || "2024-03-15",
+    nombreLegal: cliente?.nombre_legal ?? datosEmpresa.nombreLegal ?? "",
+    nombreFantasia: cliente?.nombre_fantasia ?? datosEmpresa.nombreFantasia ?? "",
+    cuit: cliente?.cuit ?? datosEmpresa.cuit ?? "",
+    tipoId: cliente?.tipo_sociedad ?? datosEmpresa.tipoId ?? "Sociedad Anonima (SA)",
+    fechaInscripcion: cliente?.fecha_inscripcion ?? datosEmpresa.fechaInscripcion ?? "",
   };
 
   const dir = {
-    direccion: kyc.direccion || "Av. Corrientes 1234",
-    ciudad: kyc.ciudad || "CABA",
-    provincia: kyc.provincia || "Buenos Aires",
-    cp: kyc.cp || (isPJ ? "C1043" : "C1425"),
+    direccion: cliente?.direccion ?? kyc.direccion ?? "",
+    ciudad: cliente?.ciudad ?? kyc.ciudad ?? "",
+    provincia: cliente?.provincia ?? kyc.provincia ?? "",
+    cp: cliente?.cp ?? (isPJ ? "C1043" : "C1425"),
   };
 
-  const cbu = isPJ
-    ? { cbu: "0000003 100012345678 90", alias: "molly.empresa.demo" }
-    : { cbu: "0000003 100098765432 10", alias: "molly.lucia.mendez" };
+  const cbu = {
+    cbu: cliente?.cbu ?? "—",
+    alias: cliente?.alias ?? "—",
+  };
+
+  const clienteToForm = (c: any) => {
+    const [n, ...rest] = (c.nombre ?? "").split(" ");
+    return {
+      nombre: n ?? "",
+      apellido: rest.join(" "),
+      nombreLegal: c.nombre_legal ?? "",
+      nombreFantasia: c.nombre_fantasia ?? "",
+      cuit: c.cuit ?? "",
+      tipo_sociedad: c.tipo_sociedad ?? "",
+      fecha_inscripcion: c.fecha_inscripcion ?? "",
+      direccion: c.direccion ?? "",
+      ciudad: c.ciudad ?? "",
+      provincia: c.provincia ?? "",
+      cp: c.cp ?? "",
+      telefono: c.telefono ?? "",
+      actividad: c.actividad ?? "",
+      genero: c.genero ?? "",
+      cuit_cuil: c.cuit_cuil ?? "",
+      fecha_nacimiento: c.fecha_nacimiento ?? "",
+      ocupacion: c.ocupacion ?? "",
+      origen_fondos: c.origen_fondos ?? "",
+      es_pep: c.es_pep ?? false,
+    };
+  };
+
+  const setF = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
+
+  useEffect(() => {
+    if (cliente) setForm(clienteToForm(cliente));
+  }, [cliente]);
+
+  const guardar = async () => {
+    if (!cliente) return;
+    setSaving(true);
+    try {
+      const s = requireSupabase();
+      const nombre = `${form.nombre ?? ""} ${form.apellido ?? ""}`.trim();
+      const patch = {
+        nombre,
+        nombre_legal: form.nombreLegal || null,
+        nombre_fantasia: form.nombreFantasia || null,
+        cuit: form.cuit || null,
+        tipo_sociedad: form.tipo_sociedad || null,
+        fecha_inscripcion: form.fecha_inscripcion || null,
+        direccion: form.direccion || null,
+        ciudad: form.ciudad || null,
+        provincia: form.provincia || null,
+        cp: form.cp || null,
+        telefono: form.telefono || null,
+        actividad: form.actividad || null,
+        genero: form.genero || null,
+        cuit_cuil: form.cuit_cuil || null,
+        fecha_nacimiento: form.fecha_nacimiento || null,
+        ocupacion: form.ocupacion || null,
+        origen_fondos: form.origen_fondos || null,
+        es_pep: !!form.es_pep,
+      };
+      const { error } = await s.from("clientes").update(patch).eq("legajo", cliente.legajo);
+      if (error) throw error;
+      setCliente({ ...cliente, ...patch });
+      toast.success("Cambios guardados");
+    } catch {
+      toast.error("No se pudieron guardar los cambios");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
       try {
-        const sb = requireSupabase();
-        const { data: u } = await sb.auth.getUser();
-        const email = u.user?.email;
-        if (!email) return;
-        const { data: cli } = await sb.from("clientes").select("legajo").eq("correo", email).maybeSingle();
-        if (!cli) return;
-        const { data: docs } = await sb
-          .from("documentos")
-          .select("tipo, url, label, created_at")
-          .eq("cliente_legajo", cli.legajo);
-        const list: DocReal[] = await Promise.all(
-          (docs ?? []).map(async (d: any) => {
-            const signedUrl = await getSignedDocUrl(d.url);
-            return {
+        const s = requireSupabase();
+        const { data: u } = await s.auth.getUser();
+        const mail = u.user?.email;
+        if (!mail) return;
+        const { data: cli } = await s.from("clientes").select("*").eq("correo", mail).maybeSingle();
+        setCliente(cli);
+        if (cli) {
+          const { data: docs } = await s
+            .from("documentos")
+            .select("tipo, url, label, created_at")
+            .eq("cliente_legajo", cli.legajo);
+          const rawDocs = (docs ?? []) as any[];
+          const urls = await getSignedDocUrls(rawDocs.map((d) => d.url));
+          setKycDocs(
+            rawDocs.map((d) => ({
               tipo: TIPO_LABEL[d.tipo] ?? d.tipo,
               rawTipo: d.tipo,
               label: d.label ?? d.url,
               url: d.url,
-              signedUrl,
+              signedUrl: urls[d.url] ?? null,
               kind: kindOf(d.label ?? d.url, d.url),
               date: d.created_at,
-            };
-          }),
-        );
-        setKycDocs(list);
+            })),
+          );
+          const start = new Date();
+          start.setDate(1);
+          start.setHours(0, 0, 0, 0);
+          const { count } = await s
+            .from("movimientos")
+            .select("*", { count: "exact", head: true })
+            .eq("legajo", cli.legajo)
+            .gte("fecha", start.toISOString());
+          setMovCount(count ?? 0);
+        }
       } catch {
         // silencioso
       } finally {
@@ -145,11 +232,33 @@ function Page() {
     })();
   }, []);
 
+  const antiguedad = (() => {
+    const base = cliente?.fecha_alta ? new Date(cliente.fecha_alta) : cliente?.created_at ? new Date(cliente.created_at) : null;
+    if (!base) return "—";
+    const now = new Date();
+    const months = (now.getFullYear() - base.getFullYear()) * 12 + (now.getMonth() - base.getMonth());
+    if (months < 1) return "Reciente";
+    if (months < 12) return `${months} meses`;
+    const years = Math.floor(months / 12);
+    const rem = months % 12;
+    return rem ? `${years} año${years > 1 ? "s" : ""} ${rem} mes${rem > 1 ? "es" : ""}` : `${years} año${years > 1 ? "s" : ""}`;
+  })();
+
+  const score = (() => {
+    if (!cliente) return 86;
+    let s = 55;
+    if (aprobado) s += 20;
+    if (cliente.direccion) s += 8;
+    if (cliente.telefono) s += 7;
+    s += Math.min(10, kycDocs.length * 2.5);
+    return Math.min(100, Math.round(s));
+  })();
+
   const stats = [
-    { icon: Shield, label: "Estado KYC", value: aprobado ? "Validado" : "Pendiente", sub: aprobado ? "Aprobado 20/02/2026" : "En revision" },
-    { icon: Activity, label: "Transacciones mes", value: plan.used.toLocaleString() + " / " + plan.total.toLocaleString() },
-    { icon: User, label: isPJ ? "Antiguedad" : "Antiguedad", value: "4 meses" },
-    { icon: TrendingUp, label: "Score de seguridad", value: "86 / 100", sub: "Recomendado: 80+" },
+    { icon: Shield, label: "Estado KYC", value: aprobado ? "Validado" : cliente?.estado_onboarding === "pendiente" ? "Pendiente" : cliente?.estado_onboarding === "rechazado" ? "Rechazado" : "Pendiente", sub: aprobado ? "Verificado" : "En revisión" },
+    { icon: Activity, label: "Transacciones mes", value: movCount.toLocaleString() },
+    { icon: User, label: "Antigüedad", value: antiguedad },
+    { icon: TrendingUp, label: "Score de seguridad", value: `${score} / 100`, sub: "Recomendado: 80+" },
   ];
 
   return (
@@ -183,9 +292,9 @@ function Page() {
               <User size={16} /> Informacion del Usuario
             </h3>
             <div className="grid sm:grid-cols-2 gap-4">
-              <div><Label>Nombre</Label><Input defaultValue={userNombre} /></div>
-              <div><Label>Apellido</Label><Input defaultValue={userApellido} /></div>
-              <div><Label>Email</Label><Input defaultValue={userEmail} /></div>
+              <div><Label>Nombre</Label><Input value={form.nombre ?? userNombre} onChange={(e) => setF("nombre", e.target.value)} /></div>
+              <div><Label>Apellido</Label><Input value={form.apellido ?? userApellido} onChange={(e) => setF("apellido", e.target.value)} /></div>
+              <div><Label>Email</Label><Input value={userEmail} readOnly /></div>
               <div>
                 <Label>Estado</Label>
                 <div className="pt-1.5"><Badge tone={emailValidado ? "success" : "warn"}>{emailValidado ? "Activo" : "Pendiente"}</Badge></div>
@@ -200,25 +309,25 @@ function Page() {
                 <Building2 size={16} /> Informacion de la Empresa
               </h3>
               <div className="grid sm:grid-cols-2 gap-4">
-                <div><Label>Nombre Legal</Label><Input defaultValue={empresaInfo.nombreLegal} /></div>
-                <div><Label>Nombre Comercial</Label><Input defaultValue={empresaInfo.nombreFantasia} /></div>
-                <div><Label>CUIT</Label><Input defaultValue={empresaInfo.cuit} /></div>
+                <div><Label>Nombre Legal</Label><Input value={form.nombreLegal ?? empresaInfo.nombreLegal} onChange={(e) => setF("nombreLegal", e.target.value)} /></div>
+                <div><Label>Nombre Comercial</Label><Input value={form.nombreFantasia ?? empresaInfo.nombreFantasia} onChange={(e) => setF("nombreFantasia", e.target.value)} /></div>
+                <div><Label>CUIT</Label><Input value={form.cuit ?? empresaInfo.cuit} onChange={(e) => setF("cuit", e.target.value)} /></div>
                 <div>
                   <Label>Tipo de sociedad</Label>
-                  <select className="w-full h-10 px-3 rounded-md border bg-card text-sm" defaultValue={empresaInfo.tipoId}>
-                    <option>{empresaInfo.tipoId}</option>
+                  <select className="w-full h-10 px-3 rounded-md border bg-card text-sm" value={form.tipo_sociedad ?? empresaInfo.tipoId} onChange={(e) => setF("tipo_sociedad", e.target.value)}>
+                    <option>{form.tipo_sociedad ?? empresaInfo.tipoId}</option>
                   </select>
                 </div>
-                <div><Label>Actividad principal</Label><Input defaultValue="Servicios financieros" /></div>
-                <div><Label>Fecha de inscripcion</Label><Input type="date" defaultValue={empresaInfo.fechaInscripcion} /></div>
-                <div><Label>Telefono</Label><Input defaultValue="+54 11 4555 0000" /></div>
-                <div><Label>Direccion</Label><Input defaultValue={dir.direccion} /></div>
-                <div><Label>Ciudad</Label><Input defaultValue={dir.ciudad} /></div>
-                <div><Label>Provincia</Label><Input defaultValue={dir.provincia} /></div>
-                <div><Label>Codigo Postal</Label><Input defaultValue={dir.cp} /></div>
+                <div><Label>Actividad principal</Label><Input value={form.actividad ?? "Servicios financieros"} onChange={(e) => setF("actividad", e.target.value)} /></div>
+                <div><Label>Fecha de inscripcion</Label><Input type="date" value={form.fecha_inscripcion ?? empresaInfo.fechaInscripcion} onChange={(e) => setF("fecha_inscripcion", e.target.value)} /></div>
+                <div><Label>Telefono</Label><Input value={form.telefono ?? ""} onChange={(e) => setF("telefono", e.target.value)} /></div>
+                <div><Label>Direccion</Label><Input value={form.direccion ?? dir.direccion} onChange={(e) => setF("direccion", e.target.value)} /></div>
+                <div><Label>Ciudad</Label><Input value={form.ciudad ?? dir.ciudad} onChange={(e) => setF("ciudad", e.target.value)} /></div>
+                <div><Label>Provincia</Label><Input value={form.provincia ?? dir.provincia} onChange={(e) => setF("provincia", e.target.value)} /></div>
+                <div><Label>Codigo Postal</Label><Input value={form.cp ?? dir.cp} onChange={(e) => setF("cp", e.target.value)} /></div>
                 <div className="sm:col-span-2 flex gap-2 justify-end">
-                  <BtnOutline>Cancelar</BtnOutline>
-                  <BtnPrimary>Guardar cambios</BtnPrimary>
+                  <BtnOutline disabled={saving} onClick={() => cliente && setForm(clienteToForm(cliente))}>Cancelar</BtnOutline>
+                  <BtnPrimary disabled={saving} onClick={guardar}>{saving ? "Guardando…" : "Guardar cambios"}</BtnPrimary>
                 </div>
               </div>
             </Card>
@@ -229,28 +338,31 @@ function Page() {
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <FileText size={16} /> Informacion de Perfil
             </h3>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div><Label>CUIL / CUIT</Label><Input defaultValue={dp.cuitCuil} /></div>
-              <div><Label>DNI</Label><Input defaultValue={isPJ ? "30.123.456" : "32.123.456"} /></div>
-              <div>
-                <Label>Genero</Label>
-                <select className="w-full h-10 px-3 rounded-md border bg-card text-sm" defaultValue={dp.genero}>
-                  <option>{dp.genero}</option>
-                </select>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div><Label>CUIL / CUIT</Label><Input value={form.cuit_cuil ?? dp.cuitCuil} onChange={(e) => setF("cuit_cuil", e.target.value)} /></div>
+                <div><Label>DNI</Label><Input defaultValue={isPJ ? "30.123.456" : "32.123.456"} /></div>
+                <div>
+                  <Label>Genero</Label>
+                  <select className="w-full h-10 px-3 rounded-md border bg-card text-sm" value={form.genero ?? dp.genero} onChange={(e) => setF("genero", e.target.value)}>
+                    <option>{form.genero ?? dp.genero}</option>
+                  </select>
+                </div>
+                <div><Label>Nacimiento</Label><Input type="date" value={form.fecha_nacimiento ?? userNac} onChange={(e) => setF("fecha_nacimiento", e.target.value)} /></div>
+                <div><Label>Ocupacion</Label><Input value={form.ocupacion ?? dp.ocupacion} onChange={(e) => setF("ocupacion", e.target.value)} /></div>
+                <div>
+                  <Label>Fuente de Fondos</Label>
+                  <select className="w-full h-10 px-3 rounded-md border bg-card text-sm" value={form.origen_fondos ?? dp.origenFondos} onChange={(e) => setF("origen_fondos", e.target.value)}>
+                    <option>{form.origen_fondos ?? dp.origenFondos}</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>PEP</Label>
+                  <div className="pt-1.5 text-sm">{dp.esPEP ? "Si" : "No"}</div>
+                </div>
+                <div className="sm:col-span-2 flex gap-2 justify-end">
+                  <BtnPrimary disabled={saving} onClick={guardar}>{saving ? "Guardando…" : "Guardar cambios"}</BtnPrimary>
+                </div>
               </div>
-              <div><Label>Nacimiento</Label><Input type="date" defaultValue={userNac} /></div>
-              <div><Label>Ocupacion</Label><Input defaultValue={dp.ocupacion} /></div>
-              <div>
-                <Label>Fuente de Fondos</Label>
-                <select className="w-full h-10 px-3 rounded-md border bg-card text-sm" defaultValue={dp.origenFondos}>
-                  <option>{dp.origenFondos}</option>
-                </select>
-              </div>
-              <div>
-                <Label>PEP</Label>
-                <div className="pt-1.5 text-sm">{dp.esPEP ? "Si" : "No"}</div>
-              </div>
-            </div>
           </Card>
 
           {/* DocumentaciOn KYC/KYB */}
@@ -394,15 +506,15 @@ function Page() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Monto max. por transferencia</span>
-                <span className="font-semibold">{isPJ ? "$ 5.000.000" : "$ 500.000"}</span>
+                <span className="font-semibold">{fmtArs(cliente?.limite_transferencia)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Operaciones diarias</span>
-                <span className="font-semibold">{isPJ ? "200" : "50"}</span>
+                <span className="font-semibold">{cliente?.limite_ops_diarias ?? "—"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Monto acumulado diario</span>
-                <span className="font-semibold">{isPJ ? "$ 20.000.000" : "$ 2.000.000"}</span>
+                <span className="font-semibold">{fmtArs(cliente?.limite_monto_diario)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Horario operativo</span>
@@ -473,41 +585,7 @@ function Page() {
         </div>
       )}
 
-      {/* Modal: Vista previa de documento */}
-      {docPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setDocPreview(null)} />
-          <div className="relative bg-card rounded-lg max-w-2xl w-full shadow-xl overflow-hidden">
-            <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-center z-10">
-              <div>
-                <div className="font-semibold">{docPreview.tipo}</div>
-                <div className="text-xs text-muted-foreground">{docPreview.label}</div>
-              </div>
-              <div className="flex gap-1">
-                {docPreview.signedUrl && (
-                  <BtnOutline className="h-9 px-3 text-xs" onClick={() => window.open(docPreview.signedUrl!, "_blank")}>
-                    <Download size={12} /> Descargar
-                  </BtnOutline>
-                )}
-                <button onClick={() => setDocPreview(null)} className="p-2 hover:bg-muted rounded-md"><X size={16} /></button>
-              </div>
-            </div>
-            <div className="h-[60vh] flex items-center justify-center bg-black/90 p-2">
-              {docPreview.signedUrl ? (
-                docPreview.kind === "image" ? (
-                  <img src={docPreview.signedUrl} alt={docPreview.label} className="max-h-full max-w-full object-contain" />
-                ) : docPreview.kind === "pdf" ? (
-                  <iframe src={docPreview.signedUrl} title={docPreview.label} className="w-full h-full border-0" />
-                ) : (
-                  <a href={docPreview.signedUrl} target="_blank" rel="noreferrer" className="text-white underline">Abrir archivo</a>
-                )
-              ) : (
-                <p className="text-white/70 text-sm text-center px-6">No se pudo generar la vista previa.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <DocPreviewModal doc={docPreview} onClose={() => setDocPreview(null)} />
     </>
   );
 }
