@@ -84,7 +84,7 @@ function Page() {
   const pageSize = 10;
   const [confirmarBorrar, setConfirmarBorrar] = useState<Sub | null>(null);
 
-  const [form, setForm] = useState({ n: "", tipo: "Operativa", resp: "", lim: "", saldo: "", activar: true });
+  const [form, setForm] = useState({ n: "", apellido: "", email: "", tipo: "Operativa", resp: "", lim: "", saldo: "", activar: true });
 
   const cargar = async () => {
     const s = requireSupabase();
@@ -125,12 +125,12 @@ function Page() {
 
   const abrirNuevo = () => {
     setEditSub(null);
-    setForm({ n: "", tipo: "Operativa", resp: "", lim: "", saldo: "", activar: true });
+    setForm({ n: "", apellido: "", email: "", tipo: "Operativa", resp: "", lim: "", saldo: "", activar: true });
     setNuevoOpen(true);
   };
   const abrirEditar = (s: Sub) => {
     setEditSub(s);
-    setForm({ n: s.n, tipo: s.tipo, resp: s.resp, lim: s.lim, saldo: "", activar: s.e === "Activa" });
+    setForm({ n: s.n, apellido: s.apellido, email: s.email, tipo: s.tipo, resp: s.resp, lim: s.lim, saldo: "", activar: s.e === "Activa" });
     setNuevoOpen(true);
   };
 
@@ -141,6 +141,8 @@ function Page() {
       if (editSub && editSub.id) {
         const { error } = await s.from("subcuentas").update({
           nombre: form.n,
+          apellido: form.apellido,
+          email: form.email,
           tipo: form.tipo,
           responsable: form.resp,
           limite: form.lim || null,
@@ -152,6 +154,8 @@ function Page() {
         const { error } = await s.from("subcuentas").insert({
           cliente_legajo: clienteLegajo,
           nombre: form.n,
+          apellido: form.apellido,
+          email: form.email,
           tipo: form.tipo,
           responsable: form.resp,
           limite: form.lim || null,
@@ -162,7 +166,6 @@ function Page() {
           saldo_conciliado: 0,
           ingresos: "",
           egresos: "",
-          email: "",
           retiros_habilitados: true,
         });
         if (error) throw error;
@@ -331,6 +334,10 @@ function Page() {
         onSubmit={onSubmitSub}
       >
         <div><Label>Nombre de la subcuenta</Label><Input value={form.n} onChange={(e) => setForm((p) => ({ ...p, n: e.target.value }))} placeholder="Ej. Sucursal Sur" /></div>
+        <div className="grid grid-cols-2 gap-3">
+          <div><Label>Apellido</Label><Input value={form.apellido} onChange={(e) => setForm((p) => ({ ...p, apellido: e.target.value }))} placeholder="Apellido del titular" /></div>
+          <div><Label>Email</Label><Input value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="titular@empresa.com" /></div>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Tipo</Label>
             <select value={form.tipo} onChange={(e) => setForm((p) => ({ ...p, tipo: e.target.value as Sub["tipo"] }))} className="w-full h-10 px-3 rounded-md border bg-card text-sm">
