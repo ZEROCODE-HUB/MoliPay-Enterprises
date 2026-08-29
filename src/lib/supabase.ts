@@ -63,6 +63,35 @@ export function isNotConfiguredError(err: unknown): boolean {
   return /Supabase no está configurado/i.test(toDataError(err).message);
 }
 
+/**
+ * Genera una URL firmada para un documento del bucket `kyc` usando una Edge
+ * Function con service role (la firma en el navegador puede fallar por CORS /
+ * scope del token de sesión). Verifica que el documento pertenezca al usuario
+ * autenticado (o sea admin).
+ */
+export async function getSignedDocUrl(path: string): Promise<string | null> {
+  if (!supabaseUrl || !supabaseAnonKey) return null;
+  const sb = requireSupabase();
+  const { data: sessionData } = await sb.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) return null;
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/doc-url`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        apikey: supabaseAnonKey,
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ path }),
+    });
+    const j = await res.json();
+    return j.signedUrl ?? null;
+  } catch {
+    return null;
+  }
+}
+
 const ERROR_MESSAGES: [RegExp, string][] = [
   [/invalid login credentials/i, "Usuario o contraseña incorrectos."],
   [/email not confirmed/i, "El correo aún no está confirmado. Revisá tu bandeja de entrada."],

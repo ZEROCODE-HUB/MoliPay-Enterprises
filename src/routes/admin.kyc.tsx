@@ -9,7 +9,7 @@ import {
   PageHeader, Card, BtnPrimary, BtnOutline, Badge, Input, Label, Stat,
 } from "@/components/portal-shell";
 import { toast } from "sonner";
-import { requireSupabase } from "@/lib/supabase";
+import { requireSupabase, getSignedDocUrl } from "@/lib/supabase";
 
 export const Route = createFileRoute("/admin/kyc")({ component: Page });
 
@@ -138,13 +138,7 @@ function Page() {
           const cDocs = (dRes.data ?? []).filter((d: any) => d.cliente_legajo === c.legajo);
           const docs: DocReal[] = await Promise.all(
             cDocs.map(async (d: any) => {
-              let signedUrl: string | null = null;
-              try {
-                const { data: s } = await sb.storage.from("kyc").createSignedUrl(d.url, 3600);
-                signedUrl = s?.signedUrl ?? null;
-              } catch {
-                signedUrl = null;
-              }
+               const signedUrl = await getSignedDocUrl(d.url);
               return {
                 tipo: TIPO_LABEL[d.tipo] ?? d.tipo,
                 rawTipo: d.tipo,
