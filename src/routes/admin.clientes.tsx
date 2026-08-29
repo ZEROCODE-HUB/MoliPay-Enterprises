@@ -3,57 +3,139 @@ import { useState, useEffect } from "react";
 import {
   Plus, Search, Filter, Building2, FileText, CheckCircle2, Clock,
   XCircle, AlertCircle, Upload, MessageSquare, ChevronRight, X,
-  User, ShieldCheck,
+  User, ShieldCheck, Eye, Download, Camera, Loader2, RefreshCw,
 } from "lucide-react";
 import {
   PageHeader, Card, BtnPrimary, BtnOutline, Badge, Input, Label, Stat,
 } from "@/components/portal-shell";
+import { toast } from "sonner";
+import { requireSupabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/admin/clientes")({ component: Page });
 
-type Estado = "Aprobado" | "En revision" | "Documentacion" | "Incompleto" | "Rechazado" | "Bloqueado";
+type EstadoOnb = "pendiente" | "aprobado" | "rechazado";
 
-const clientes: Array<{
-  n: string; c: string; e: Estado; f: string; rep: string; seg: string; vol: string;
-}> = [
-  { n: "Consorcio Larrea 1200", c: "30-71235678-2", e: "En revision", f: "12/05/2026", rep: "L. Fernandez", seg: "Consorcio", vol: "—" },
-  { n: "Microcreditos del Sur SA", c: "30-71239988-0", e: "Aprobado", f: "03/04/2026", rep: "M. Acosta", seg: "Microcredito", vol: "$ 8,4M" },
-  { n: "Administradora Plaza SRL", c: "30-71244455-1", e: "Documentacion", f: "01/05/2026", rep: "P. Suarez", seg: "Alquileres", vol: "—" },
-  { n: "Municipalidad de Chivilcoy", c: "30-99876543-2", e: "Aprobado", f: "20/02/2026", rep: "J. Roldan", seg: "Sector publico", vol: "$ 21,2M" },
-  { n: "Pagos Express SRL", c: "30-71300011-4", e: "Bloqueado", f: "15/03/2026", rep: "R. Vidal", seg: "Empresa", vol: "—" },
-  { n: "Cooperativa Norte", c: "30-71411223-7", e: "Incompleto", f: "28/05/2026", rep: "E. Pinto", seg: "Cooperativa", vol: "—" },
-  { n: "Comercializadora ABC", c: "30-70988877-5", e: "Rechazado", f: "10/04/2026", rep: "A. Vega", seg: "Empresa", vol: "—" },
-];
+type DocReal = {
+  tipo: string;
+  rawTipo: string;
+  label: string;
+  url: string;
+  signedUrl: string | null;
+  kind: "image" | "pdf" | "file";
+};
 
-const estados: Array<Estado | "Todos"> = ["Todos", "Aprobado", "En revision", "Documentacion", "Incompleto", "Rechazado", "Bloqueado"];
+type RealCliente = {
+  legajo: string;
+  n: string;
+  cuit: string;
+  correo: string;
+  tipoPersona: "fisica" | "juridica";
+  estado: EstadoOnb;
+  fecha: string;
+  docs: DocReal[];
+};
 
-const tono = (e: Estado): "success" | "warn" | "danger" | "neutral" => ({
-  "Aprobado": "success", "En revision": "warn", "Documentacion": "warn",
-  "Incompleto": "neutral", "Rechazado": "danger", "Bloqueado": "danger",
-}[e] as "success" | "warn" | "danger" | "neutral");
+const TIPO_LABEL: Record<string, string> = {
+  id_frente: "DNI Frente",
+  id_dorso: "DNI Dorso",
+  servicio: "Servicio",
+  selfie: "Selfie",
+};
 
-const detalleHistorial = [
-  { f: "12/05/2026 14:22", u: "L. Diaz (Compliance)", t: "Marco como 'En revision'. Falta acta de designacion." },
-  { f: "12/05/2026 10:08", u: "T. Vega (Operaciones)", t: "Valido CUIT contra AFIP. OK." },
-  { f: "10/05/2026 09:14", u: "Sistema", t: "Legajo iniciado por M. Solis." },
-];
+const TIPO_BG: Record<string, string> = {
+  id_frente: "linear-gradient(135deg,#1e3a8a,#3b82f6)",
+  id_dorso: "linear-gradient(135deg,#1e3a8a,#60a5fa)",
+  servicio: "linear-gradient(135deg,#7c2d12,#ea580c)",
+  selfie: "linear-gradient(135deg,#475569,#94a3b8)",
+};
 
-const documentos = [
-  { n: "Estatuto social", e: "Validado", f: "10/05/2026" },
-  { n: "Acta de designacion de autoridades", e: "Pendiente", f: "—" },
-  { n: "DNI representante legal", e: "Validado", f: "10/05/2026" },
-  { n: "DNI segundo firmante", e: "Validado", f: "11/05/2026" },
-  { n: "Constancia de inscripcion AFIP", e: "Validado", f: "10/05/2026" },
-];
+const IMG_EXT = ["png", "jpg", "jpeg", "jpe", "jfif", "jif", "webp", "gif", "bmp", "heic", "avif", "tiff", "tif"];
+
+function kindOf(label: string, url: string): DocReal["kind"] {
+  const ext = (label || url).split(".").pop()?.toLowerCase() ?? "";
+  if (IMG_EXT.includes(ext)) return "image";
+  if (ext === "pdf") return "pdf";
+  return "file";
+}
+
+function fmtFecha(iso?: string) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+const estados: Array<EstadoOnb | "Todos"> = ["Todos", "pendiente", "aprobado", "rechazado"];
+const tono = (e: EstadoOnb): "success" | "warn" | "danger" | "neutral" =>
+  e === "aprobado" ? "success" : e === "rechazado" ? "danger" : "warn";
+const estadoLabel = (e: EstadoOnb) =>
+  e === "pendiente" ? "En revision" : e === "aprobado" ? "Aprobado" : "Rechazado";
 
 function Page() {
-  const [detalle, setDetalle] = useState<typeof clientes[number] | null>(null);
+  const [clientes, setClientes] = useState<RealCliente[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [detalle, setDetalle] = useState<RealCliente | null>(null);
+  const [docPreview, setDocPreview] = useState<DocReal | null>(null);
   const [nuevo, setNuevo] = useState(false);
-  const [filtro, setFiltro] = useState<Estado | "Todos">("Todos");
+  const [filtro, setFiltro] = useState<EstadoOnb | "Todos">("Todos");
   const [page, setPage] = useState(1);
   const pageSize = 5;
 
-  const filtrados = filtro === "Todos" ? clientes : clientes.filter(c => c.e === filtro);
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const sb = requireSupabase();
+      const [cRes, dRes] = await Promise.all([
+        sb.from("clientes").select("legajo, nombre, correo, cuit, tipo_persona, estado_onboarding, fecha_alta, created_at"),
+        sb.from("documentos").select("cliente_legajo, tipo, url, label"),
+      ]);
+      if (cRes.error) throw cRes.error;
+
+      const list: RealCliente[] = await Promise.all(
+        (cRes.data ?? []).map(async (c: any) => {
+          const cDocs = (dRes.data ?? []).filter((d: any) => d.cliente_legajo === c.legajo);
+          const docs: DocReal[] = await Promise.all(
+            cDocs.map(async (d: any) => {
+              let signedUrl: string | null = null;
+              try {
+                const { data: s } = await sb.storage.from("kyc").createSignedUrl(d.url, 3600);
+                signedUrl = s?.signedUrl ?? null;
+              } catch {
+                signedUrl = null;
+              }
+              return {
+                tipo: TIPO_LABEL[d.tipo] ?? d.tipo,
+                rawTipo: d.tipo,
+                label: d.label ?? d.url,
+                url: d.url,
+                signedUrl,
+                kind: kindOf(d.label ?? d.url, d.url),
+              };
+            }),
+          );
+          return {
+            legajo: c.legajo,
+            n: c.nombre,
+            cuit: c.cuit,
+            correo: c.correo,
+            tipoPersona: c.tipo_persona,
+            estado: c.estado_onboarding,
+            fecha: c.fecha_alta ?? c.created_at,
+            docs,
+          };
+        }),
+      );
+      setClientes(list);
+    } catch (e: any) {
+      setError(e?.message ?? "No se pudo cargar los clientes");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  const filtrados = filtro === "Todos" ? clientes : clientes.filter((c) => c.estado === filtro);
   const totalPages = Math.max(1, Math.ceil(filtrados.length / pageSize));
   const paginated = filtrados.slice((page - 1) * pageSize, page * pageSize);
 
@@ -63,15 +145,15 @@ function Page() {
     <>
       <PageHeader
         title="Clientes"
-        description="Onboarding y gestion de personas juridicas operando en Molly."
+        description="Onboarding y gestion de clientes operando en Molly."
         action={<BtnPrimary onClick={() => setNuevo(true)}><Plus size={16} /> Nuevo cliente</BtnPrimary>}
       />
 
       <div className="grid md:grid-cols-4 gap-4 mb-6">
-        <Stat label="Clientes activos" value="312" sub="+8 esta semana" />
-        <Stat label="Legajos en revision" value="12" sub="3 con documentacion pendiente" />
-        <Stat label="Aprobados ultimos 30d" value="24" />
-        <Stat label="Rechazados ultimos 30d" value="3" />
+        <Stat label="Clientes" value={String(clientes.length)} sub="En la base de datos" />
+        <Stat label="Legajos en revision" value={String(clientes.filter((c) => c.estado === "pendiente").length)} sub="Pendientes de aprobacion" />
+        <Stat label="Aprobados" value={String(clientes.filter((c) => c.estado === "aprobado").length)} />
+        <Stat label="Rechazados" value={String(clientes.filter((c) => c.estado === "rechazado").length)} />
       </div>
 
       <Card className="p-0 overflow-hidden">
@@ -82,17 +164,14 @@ function Page() {
           </div>
           <select className="h-10 px-3 rounded-md border bg-card text-sm">
             <option>Segmento: todos</option>
-            <option>Consorcio</option>
-            <option>Alquileres</option>
-            <option>Microcredito</option>
-            <option>Empresa</option>
-            <option>Sector publico</option>
+            <option>Persona Fisica</option>
+            <option>Persona Juridica</option>
           </select>
-          <BtnOutline className="h-10"><Filter size={14} /> Mas filtros</BtnOutline>
+          <BtnOutline className="h-10" onClick={() => load()}><RefreshCw size={14} /> Refrescar</BtnOutline>
         </div>
 
         <div className="px-4 pt-3 flex flex-wrap gap-1.5">
-          {estados.map(e => (
+          {estados.map((e) => (
             <button
               key={e}
               onClick={() => setFiltro(e)}
@@ -102,7 +181,7 @@ function Page() {
                   : "bg-card hover:bg-muted"
               }`}
             >
-              {e}
+              {e === "Todos" ? "Todos" : estadoLabel(e)}
             </button>
           ))}
         </div>
@@ -113,35 +192,41 @@ function Page() {
               <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b">
                 <th className="text-left px-5 py-2.5">Razon social</th>
                 <th className="text-left px-5 py-2.5">CUIT</th>
-                <th className="text-left px-5 py-2.5">Segmento</th>
-                <th className="text-left px-5 py-2.5">Representante</th>
+                <th className="text-left px-5 py-2.5">Tipo</th>
+                <th className="text-left px-5 py-2.5">Correo</th>
                 <th className="text-left px-5 py-2.5">Estado del legajo</th>
                 <th className="text-left px-5 py-2.5">Alta</th>
-                <th className="text-right px-5 py-2.5">Vol. mes</th>
                 <th className="px-5 py-2.5"></th>
               </tr>
             </thead>
             <tbody>
-              {filtrados.length === 0 ? (
-                <tr><td colSpan={8}>
+              {loading ? (
+                <tr><td colSpan={7}>
+                  <div className="flex flex-col items-center text-center py-14 text-muted-foreground">
+                    <Loader2 size={22} className="animate-spin mb-3" />
+                    <div className="text-sm">Cargando clientes…</div>
+                  </div>
+                </td></tr>
+              ) : error ? (
+                <tr><td colSpan={7}><div className="p-6 text-sm text-red-600">{error}</div></td></tr>
+              ) : filtrados.length === 0 ? (
+                <tr><td colSpan={7}>
                   <div className="flex flex-col items-center text-center py-14">
                     <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
                       <Building2 size={22} className="text-muted-foreground" />
                     </div>
                     <div className="font-semibold">No hay clientes con este estado</div>
                     <div className="text-sm text-muted-foreground mt-1">Proba con otro filtro o inicia un nuevo onboarding.</div>
-                    <BtnPrimary onClick={() => setNuevo(true)} className="mt-4"><Plus size={16} /> Nuevo cliente</BtnPrimary>
                   </div>
                 </td></tr>
               ) : paginated.map((c) => (
-                <tr key={c.c} className="border-b last:border-0 hover:bg-muted/30">
+                <tr key={c.legajo} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="px-5 py-3 font-semibold">{c.n}</td>
-                  <td className="px-5 py-3 text-xs text-muted-foreground font-mono">{c.c}</td>
-                  <td className="px-5 py-3 text-xs">{c.seg}</td>
-                  <td className="px-5 py-3 text-xs text-muted-foreground">{c.rep}</td>
-                  <td className="px-5 py-3"><Badge tone={tono(c.e)}>{c.e}</Badge></td>
-                  <td className="px-5 py-3 text-xs text-muted-foreground">{c.f}</td>
-                  <td className="px-5 py-3 font-mono tabular-nums text-right text-sm font-semibold">{c.vol}</td>
+                  <td className="px-5 py-3 text-xs text-muted-foreground font-mono">{c.cuit}</td>
+                  <td className="px-5 py-3 text-xs">{c.tipoPersona === "juridica" ? "Persona Juridica" : "Persona Fisica"}</td>
+                  <td className="px-5 py-3 text-xs text-muted-foreground">{c.correo}</td>
+                  <td className="px-5 py-3"><Badge tone={tono(c.estado)}>{estadoLabel(c.estado)}</Badge></td>
+                  <td className="px-5 py-3 text-xs text-muted-foreground">{fmtFecha(c.fecha)}</td>
                   <td className="px-5 py-3 text-right">
                     <BtnOutline className="h-8 px-3 text-xs" onClick={() => setDetalle(c)}>
                       Ver legajo <ChevronRight size={12} />
@@ -153,22 +238,63 @@ function Page() {
           </table>
         </div>
 
-        <div className="px-5 py-3 border-t text-xs text-muted-foreground flex justify-between items-center">
-          <span>{filtrados.length === 0 ? "0 registros" : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, filtrados.length)} de ${filtrados.length}`}</span>
-          <div className="flex gap-1">
-            <BtnOutline className="h-8 px-3 text-xs" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Anterior</BtnOutline>
-            <BtnOutline className="h-8 px-3 text-xs" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Siguiente</BtnOutline>
+        {!loading && !error && filtrados.length > 0 && (
+          <div className="px-5 py-3 border-t text-xs text-muted-foreground flex justify-between items-center">
+            <span>{`${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, filtrados.length)} de ${filtrados.length}`}</span>
+            <div className="flex gap-1">
+              <BtnOutline className="h-8 px-3 text-xs" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Anterior</BtnOutline>
+              <BtnOutline className="h-8 px-3 text-xs" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Siguiente</BtnOutline>
+            </div>
           </div>
-        </div>
+        )}
       </Card>
 
-      {detalle && <DetalleDrawer cliente={detalle} onClose={() => setDetalle(null)} />}
+      {detalle && <DetalleDrawer cliente={detalle} onClose={() => setDetalle(null)} onPreview={setDocPreview} />}
       {nuevo && <NuevoClienteDrawer onClose={() => setNuevo(false)} />}
+
+      {docPreview && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setDocPreview(null)} />
+          <div className="relative max-w-3xl w-full">
+            <div className="bg-card rounded-lg overflow-hidden shadow-2xl">
+              <div className="border-b px-5 py-3 flex justify-between items-center">
+                <div>
+                  <div className="font-semibold">{docPreview.tipo}</div>
+                  <div className="text-xs text-muted-foreground">{docPreview.label}</div>
+                </div>
+                <div className="flex gap-1">
+                  {docPreview.signedUrl && (
+                    <BtnOutline className="h-9 px-3 text-xs" onClick={() => window.open(docPreview.signedUrl!, "_blank")}>
+                      <Download size={12} /> Descargar
+                    </BtnOutline>
+                  )}
+                  <BtnOutline className="h-9 w-9 px-0" onClick={() => setDocPreview(null)}><X size={14} /></BtnOutline>
+                </div>
+              </div>
+              <div className="h-[60vh] flex items-center justify-center bg-black/90 p-2">
+                {docPreview.signedUrl ? (
+                  docPreview.kind === "image" ? (
+                    <img src={docPreview.signedUrl} alt={docPreview.label} className="max-h-full max-w-full object-contain" />
+                  ) : docPreview.kind === "pdf" ? (
+                    <iframe src={docPreview.signedUrl} title={docPreview.label} className="w-full h-full border-0" />
+                  ) : (
+                    <a href={docPreview.signedUrl} target="_blank" rel="noreferrer" className="text-white underline">Abrir archivo</a>
+                  )
+                ) : (
+                  <p className="text-white/70 text-sm text-center px-6">
+                    No se pudo generar la vista previa. Asegurate de haber iniciado sesion como administrador.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
 
-function DetalleDrawer({ cliente, onClose }: { cliente: typeof clientes[number]; onClose: () => void }) {
+function DetalleDrawer({ cliente, onClose, onPreview }: { cliente: RealCliente; onClose: () => void; onPreview: (d: DocReal) => void }) {
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
@@ -183,74 +309,61 @@ function DetalleDrawer({ cliente, onClose }: { cliente: typeof clientes[number];
 
         <div className="p-6 space-y-5">
           <div className="flex items-center gap-3">
-            <Badge tone={tono(cliente.e)}>{cliente.e}</Badge>
-            <span className="text-xs text-muted-foreground">CUIT {cliente.c} · Alta {cliente.f}</span>
+            <Badge tone={tono(cliente.estado)}>{estadoLabel(cliente.estado)}</Badge>
+            <span className="text-xs text-muted-foreground">Legajo {cliente.legajo} · Alta {fmtFecha(cliente.fecha)}</span>
           </div>
 
           <Card>
-            <h4 className="font-semibold text-sm mb-3 flex items-center gap-2"><Building2 size={14} /> Datos societarios</h4>
+            <h4 className="font-semibold text-sm mb-3 flex items-center gap-2"><Building2 size={14} /> Datos del cliente</h4>
             <dl className="grid grid-cols-2 gap-y-2.5 text-sm">
-              <dt className="text-muted-foreground text-xs">Razon social</dt><dd className="font-semibold">{cliente.n}</dd>
-              <dt className="text-muted-foreground text-xs">CUIT</dt><dd className="font-mono text-xs">{cliente.c}</dd>
-              <dt className="text-muted-foreground text-xs">Segmento</dt><dd>{cliente.seg}</dd>
-              <dt className="text-muted-foreground text-xs">Actividad</dt><dd className="text-xs">Servicios financieros</dd>
-              <dt className="text-muted-foreground text-xs">Domicilio fiscal</dt><dd className="text-xs">Av. Corrientes 1234, CABA</dd>
-              <dt className="text-muted-foreground text-xs">Inicio actividades</dt><dd className="text-xs">15/03/2020</dd>
+              <dt className="text-muted-foreground text-xs">Razon social / nombre</dt><dd className="font-semibold">{cliente.n}</dd>
+              <dt className="text-muted-foreground text-xs">CUIT</dt><dd className="font-mono text-xs">{cliente.cuit}</dd>
+              <dt className="text-muted-foreground text-xs">Tipo</dt><dd>{cliente.tipoPersona === "juridica" ? "Persona Juridica" : "Persona Fisica"}</dd>
+              <dt className="text-muted-foreground text-xs">Correo</dt><dd className="text-xs">{cliente.correo}</dd>
             </dl>
-          </Card>
-
-          <Card>
-            <h4 className="font-semibold text-sm mb-3 flex items-center gap-2"><User size={14} /> Representantes</h4>
-            <div className="space-y-3">
-              <div className="flex justify-between text-sm">
-                <div>
-                  <div className="font-semibold">{cliente.rep}</div>
-                  <div className="text-xs text-muted-foreground font-mono">DNI 30.123.456 · Presidente</div>
-                </div>
-                <Badge tone="success">Validado</Badge>
-              </div>
-              <div className="flex justify-between text-sm">
-                <div>
-                  <div className="font-semibold">Diego Mendez</div>
-                  <div className="text-xs text-muted-foreground font-mono">DNI 29.888.777 · Apoderado</div>
-                </div>
-                <Badge tone="success">Validado</Badge>
-              </div>
-            </div>
           </Card>
 
           <Card>
             <div className="flex justify-between items-center mb-3">
               <h4 className="font-semibold text-sm flex items-center gap-2"><FileText size={14} /> Documentacion</h4>
-              <BtnOutline className="h-8 px-3 text-xs"><Upload size={12} /> Adjuntar</BtnOutline>
+              <span className="text-[11px] text-muted-foreground">{cliente.docs.length} archivos</span>
             </div>
-            <div className="divide-y">
-              {documentos.map(d => (
-                <div key={d.n} className="flex justify-between items-center py-2.5 text-sm">
-                  <div className="flex items-center gap-2.5">
-                    {d.e === "Validado"
-                      ? <CheckCircle2 size={14} className="text-emerald-600" />
-                      : <Clock size={14} className="text-amber-600" />}
-                    <div>
-                      <div className="font-semibold">{d.n}</div>
-                      <div className="text-xs text-muted-foreground">{d.f}</div>
-                    </div>
-                  </div>
-                  <Badge tone={d.e === "Validado" ? "success" : "warn"}>{d.e}</Badge>
-                </div>
-              ))}
-            </div>
+            {cliente.docs.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Este legajo no tiene documentos cargados.</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {cliente.docs.map((d) => {
+                  const Icon = d.rawTipo === "selfie" ? Camera : FileText;
+                  return (
+                    <button key={d.rawTipo + d.label} onClick={() => onPreview(d)} className="group rounded-md overflow-hidden border bg-card hover:border-primary text-left">
+                      <div className="h-32 flex items-center justify-center relative bg-muted" style={d.kind === "image" && d.signedUrl ? undefined : { background: TIPO_BG[d.rawTipo] ?? "linear-gradient(135deg,#475569,#94a3b8)" }}>
+                        {d.kind === "image" && d.signedUrl ? (
+                          <img src={d.signedUrl} alt={d.label} className="h-full w-full object-cover" />
+                        ) : (
+                          <Icon size={42} className="text-white/90" />
+                        )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                          <Eye size={20} className="text-white" />
+                        </div>
+                      </div>
+                      <div className="px-3 py-2 text-xs">
+                        <div className="font-semibold">{d.tipo}</div>
+                        <div className="text-muted-foreground truncate">{d.label}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </Card>
 
           <Card>
             <h4 className="font-semibold text-sm mb-3 flex items-center gap-2"><MessageSquare size={14} /> Historial y comentarios internos</h4>
             <div className="space-y-3">
-              {detalleHistorial.map((h, i) => (
-                <div key={i} className="border-l-2 border-primary/30 pl-3">
-                  <div className="text-sm">{h.t}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">{h.u} · {h.f}</div>
-                </div>
-              ))}
+              <div className="border-l-2 border-primary/30 pl-3">
+                <div className="text-sm">Legajo iniciado por el cliente.</div>
+                <div className="text-xs text-muted-foreground mt-0.5">Sistema · {fmtFecha(cliente.fecha)}</div>
+              </div>
             </div>
             <div className="mt-4 flex gap-2">
               <Input placeholder="Agregar comentario interno..." />
@@ -259,9 +372,15 @@ function DetalleDrawer({ cliente, onClose }: { cliente: typeof clientes[number];
           </Card>
 
           <div className="flex gap-2 sticky bottom-0 bg-background py-3 border-t">
-            <BtnOutline className="flex-1"><XCircle size={14} /> Rechazar</BtnOutline>
-            <BtnOutline className="flex-1"><AlertCircle size={14} /> Pedir documentacion</BtnOutline>
-            <BtnPrimary className="flex-1"><ShieldCheck size={14} /> Aprobar legajo</BtnPrimary>
+            <BtnOutline className="flex-1" onClick={() => { onClose(); toast.error(`Legajo de ${cliente.n} rechazado`); }}>
+              <XCircle size={14} /> Rechazar
+            </BtnOutline>
+            <BtnOutline className="flex-1" onClick={() => { onClose(); toast.success(`Legajo de ${cliente.n} aprobado`); }}>
+              <AlertCircle size={14} /> Pedir documentacion
+            </BtnOutline>
+            <BtnPrimary className="flex-1" onClick={() => { onClose(); toast.success(`Legajo de ${cliente.n} aprobado`); }}>
+              <ShieldCheck size={14} /> Aprobar legajo
+            </BtnPrimary>
           </div>
         </div>
       </div>
@@ -306,13 +425,6 @@ function NuevoClienteDrawer({ onClose }: { onClose: () => void }) {
             </div>
           </Card>
           <Card>
-            <h4 className="font-semibold text-sm mb-3">Segundo firmante (opcional)</h4>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <div><Label>Nombre completo</Label><Input /></div>
-              <div><Label>DNI</Label><Input /></div>
-            </div>
-          </Card>
-          <Card className="border-dashed">
             <h4 className="font-semibold text-sm mb-2">Documentacion inicial</h4>
             <p className="text-xs text-muted-foreground mb-3">Estatuto, acta de designacion, DNI de representantes. Podes subirlos luego.</p>
             <BtnOutline><Upload size={14} /> Adjuntar archivos</BtnOutline>

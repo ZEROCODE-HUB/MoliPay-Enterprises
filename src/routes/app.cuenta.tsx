@@ -1,29 +1,47 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
-  Building2, Upload, FileText, CheckCircle2, AlertCircle, CreditCard, SlidersHorizontal,
+  Building2, Upload, FileText, CheckCircle2, CreditCard, SlidersHorizontal,
   Download, Landmark, User, Shield, Activity, TrendingUp, Eye, X,
 } from "lucide-react";
 import { PageHeader, Card, Input, Label, BtnPrimary, BtnOutline, Badge } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { MollyLogo } from "@/components/molly-logo";
 import { useOnboarding } from "@/lib/onboarding-store";
+import { requireSupabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/app/cuenta")({ component: Page });
 
-const docsPJ = [
-  { n: "Estatuto social", e: "Validado", f: "15/02/2026" },
-  { n: "Constancia de CUIT", e: "Validado", f: "15/02/2026" },
-  { n: "Acta de designacion de autoridades", e: "Validado", f: "20/02/2026" },
-  { n: "Balance ultimo ejercicio", e: "Pendiente", f: "-" },
-];
+type DocReal = {
+  tipo: string;
+  rawTipo: string;
+  label: string;
+  url: string;
+  signedUrl: string | null;
+  kind: "image" | "pdf" | "file";
+  date?: string;
+};
 
-const docsPF = [
-  { n: "DNI (frente y dorso)", e: "Validado", f: "15/02/2026" },
-  { n: "Comprobante de servicio", e: "Validado", f: "15/02/2026" },
-  { n: "Selfie con DNI", e: "Validado", f: "20/02/2026" },
-  { n: "Constancia de CUIT/CUIL", e: "Pendiente", f: "-" },
-];
+const TIPO_LABEL: Record<string, string> = {
+  id_frente: "DNI Frente",
+  id_dorso: "DNI Dorso",
+  servicio: "Comprobante de servicio",
+  selfie: "Selfie con DNI",
+};
+
+const IMG_EXT = ["png", "jpg", "jpeg", "jpe", "jfif", "jif", "webp", "gif", "bmp", "heic", "avif", "tiff", "tif"];
+
+function kindOf(label: string, url: string): DocReal["kind"] {
+  const ext = (label || url).split(".").pop()?.toLowerCase() ?? "";
+  if (IMG_EXT.includes(ext)) return "image";
+  if (ext === "pdf") return "pdf";
+  return "file";
+}
+
+function fmtFechaDoc(iso?: string) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
 
 const planEmpresa = {
   nombre: "Plan Empresa",
@@ -43,7 +61,9 @@ const planPersona = {
 
 function Page() {
   const [cbuPreview, setCbuPreview] = useState(false);
-  const [docPreview, setDocPreview] = useState<{ name: string; date: string; status: string } | null>(null);
+  const [docPreview, setDocPreview] = useState<DocReal | null>(null);
+  const [kycDocs, setKycDocs] = useState<DocReal[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(true);
   const {
     tipoCuenta,
     registro,
@@ -88,6 +108,48 @@ function Page() {
   const cbu = isPJ
     ? { cbu: "0000003 100012345678 90", alias: "molly.empresa.demo" }
     : { cbu: "0000003 100098765432 10", alias: "molly.lucia.mendez" };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const sb = requireSupabase();
+        const { data: u } = await sb.auth.getUser();
+        const email = u.user?.email;
+        if (!email) return;
+        const { data: cli } = await sb.from("clientes").select("legajo").eq("correo", email).maybeSingle();
+        if (!cli) return;
+        const { data: docs } = await sb
+          .from("documentos")
+          .select("tipo, url, label, created_at")
+          .eq("cliente_legajo", cli.legajo);
+        const list: DocReal[] = await Promise.all(
+          (docs ?? []).map(async (d: any) => {
+            let signedUrl: string | null = null;
+            try {
+              const { data: s } = await sb.storage.from("kyc").createSignedUrl(d.url, 3600);
+              signedUrl = s?.signedUrl ?? null;
+            } catch {
+              signedUrl = null;
+            }
+            return {
+              tipo: TIPO_LABEL[d.tipo] ?? d.tipo,
+              rawTipo: d.tipo,
+              label: d.label ?? d.url,
+              url: d.url,
+              signedUrl,
+              kind: kindOf(d.label ?? d.url, d.url),
+              date: d.created_at,
+            };
+          }),
+        );
+        setKycDocs(list);
+      } catch {
+        // silencioso
+      } finally {
+        setLoadingDocs(false);
+      }
+    })();
+  }, []);
 
   const stats = [
     { icon: Shield, label: "Estado KYC", value: aprobado ? "Validado" : "Pendiente", sub: aprobado ? "Aprobado 20/02/2026" : "En revision" },
@@ -202,26 +264,29 @@ function Page() {
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <FileText size={16} /> Documentacion {isPJ ? "KYC / KYB" : "KYC"}
             </h3>
-            <div className="divide-y">
-              {(isPJ ? docsPJ : docsPF).map((d) => (
-                <div key={d.n} className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    {d.e === "Validado"
-                      ? <CheckCircle2 size={16} className="text-emerald-600" />
-                      : <AlertCircle size={16} className="text-amber-600" />}
-                    <div>
-                      <div className="text-sm font-semibold">{d.n}</div>
-                      <div className="text-xs text-muted-foreground">Subido el {d.f}</div>
+            {loadingDocs ? (
+              <p className="text-sm text-muted-foreground">Cargando documentos…</p>
+            ) : kycDocs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Aun no cargaste documentos en tu onboarding.</p>
+            ) : (
+              <div className="divide-y">
+                {kycDocs.map((d) => (
+                  <div key={d.rawTipo + d.label} className="flex items-center justify-between py-3">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 size={16} className="text-emerald-600" />
+                      <div>
+                        <div className="text-sm font-semibold">{d.tipo}</div>
+                        <div className="text-xs text-muted-foreground">Subido el {fmtFechaDoc(d.date)}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <BtnOutline className="h-9 px-2.5 text-xs" onClick={() => setDocPreview(d)}><Eye size={13} /></BtnOutline>
+                      <BtnOutline className="h-9 px-3 text-xs"><Upload size={12} /> Reemplazar</BtnOutline>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge tone={d.e === "Validado" ? "success" : "warn"}>{d.e}</Badge>
-                    <BtnOutline className="h-9 px-2.5 text-xs" onClick={() => setDocPreview({ name: d.n, date: d.f, status: d.e })}><Eye size={13} /></BtnOutline>
-                    <BtnOutline className="h-9 px-3 text-xs"><Upload size={12} /> Reemplazar</BtnOutline>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
 
@@ -418,32 +483,33 @@ function Page() {
       {docPreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setDocPreview(null)} />
-          <div className="relative bg-card rounded-lg max-w-lg w-full p-6 shadow-xl">
-            <button
-              onClick={() => setDocPreview(null)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
-            >
-              <X size={16} />
-            </button>
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
-                <FileText size={24} className="text-muted-foreground" />
-              </div>
+          <div className="relative bg-card rounded-lg max-w-2xl w-full shadow-xl overflow-hidden">
+            <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-center z-10">
               <div>
-                <h3 className="font-semibold">{docPreview.name}</h3>
-                <p className="text-xs text-muted-foreground">Subido el {docPreview.date}</p>
+                <div className="font-semibold">{docPreview.tipo}</div>
+                <div className="text-xs text-muted-foreground">{docPreview.label}</div>
+              </div>
+              <div className="flex gap-1">
+                {docPreview.signedUrl && (
+                  <BtnOutline className="h-9 px-3 text-xs" onClick={() => window.open(docPreview.signedUrl!, "_blank")}>
+                    <Download size={12} /> Descargar
+                  </BtnOutline>
+                )}
+                <button onClick={() => setDocPreview(null)} className="p-2 hover:bg-muted rounded-md"><X size={16} /></button>
               </div>
             </div>
-            <div className="bg-muted/40 rounded-lg border-2 border-dashed p-8 flex flex-col items-center justify-center gap-3 text-muted-foreground">
-              <FileText size={40} className="opacity-40" />
-              <p className="text-sm font-medium">{docPreview.name}.pdf</p>
-              <p className="text-xs">256 KB &middot; Documento {docPreview.status.toLowerCase()}</p>
-            </div>
-            <div className="flex gap-2 mt-5">
-              <BtnPrimary className="flex-1" onClick={() => { toast.success("Documento descargado: " + docPreview.name); }}>
-                <Download size={14} /> Descargar
-              </BtnPrimary>
-              <BtnOutline onClick={() => setDocPreview(null)}>Cerrar</BtnOutline>
+            <div className="h-[60vh] flex items-center justify-center bg-black/90 p-2">
+              {docPreview.signedUrl ? (
+                docPreview.kind === "image" ? (
+                  <img src={docPreview.signedUrl} alt={docPreview.label} className="max-h-full max-w-full object-contain" />
+                ) : docPreview.kind === "pdf" ? (
+                  <iframe src={docPreview.signedUrl} title={docPreview.label} className="w-full h-full border-0" />
+                ) : (
+                  <a href={docPreview.signedUrl} target="_blank" rel="noreferrer" className="text-white underline">Abrir archivo</a>
+                )
+              ) : (
+                <p className="text-white/70 text-sm text-center px-6">No se pudo generar la vista previa.</p>
+              )}
             </div>
           </div>
         </div>
