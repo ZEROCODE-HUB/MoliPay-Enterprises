@@ -36,7 +36,7 @@ const nav: NavItem[] = [
     label: "Link de pago",
     icon: Link2,
     items: [
-      { to: "/app/link-pago", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/app/link-pago/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { to: "/app/link-pago/productos", label: "Productos", icon: Package },
       { to: "/app/link-pago/e-commerce", label: "E-commerce", icon: ShoppingCart },
     ],

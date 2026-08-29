@@ -4,7 +4,7 @@ import {
   RefreshCw, Pause, Key, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Server, Webhook, ShieldCheck, Globe, X,
 } from "lucide-react";
-import { Card, Badge, BtnOutline, Input, Label } from "@/components/portal-shell";
+import { Card, Badge, BtnOutline, Input, Label, PageHeader } from "@/components/portal-shell";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/link-pago/e-commerce")({ component: Page });
@@ -79,15 +79,12 @@ function Page() {
     <>
 
 
-      {/* Title */}
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold">E-commerce</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Gestiona las integraciones de pago para tu tienda online.
-        </p>
-      </div>
+      <PageHeader
+        title="E-commerce"
+        description="Gestiona las integraciones de pago para tu tienda online."
+      />
 
-      {/* Resumen de capacidades (movido arriba) */}
+      {/* Resumen de capacidades */}
       <Card className="mb-6">
         <h2 className="text-sm font-semibold mb-4">Capacidades de integracion</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -43,11 +43,11 @@ import { Route as AppCobrosRouteImport } from './routes/app.cobros'
 import { Route as AppApiConfigRouteImport } from './routes/app.api-config'
 import { Route as AppApiRouteImport } from './routes/app.api'
 import { Route as AppQrIndexRouteImport } from './routes/app.qr.index'
-import { Route as AppLinkPagoIndexRouteImport } from './routes/app.link-pago.index'
 import { Route as AppCobrosIndexRouteImport } from './routes/app.cobros.index'
 import { Route as AppQrPuntosDeVentaRouteImport } from './routes/app.qr.puntos-de-venta'
 import { Route as AppLinkPagoProductosRouteImport } from './routes/app.link-pago.productos'
 import { Route as AppLinkPagoECommerceRouteImport } from './routes/app.link-pago.e-commerce'
+import { Route as AppLinkPagoDashboardRouteImport } from './routes/app.link-pago.dashboard'
 import { Route as AppCobrosNuevoRouteImport } from './routes/app.cobros.nuevo'
 import { Route as AppCobrosGestionRouteImport } from './routes/app.cobros.gestion'
 import { Route as AppCobrosGestionIdRouteImport } from './routes/app.cobros.gestion.$id'
@@ -224,11 +224,6 @@ const AppQrIndexRoute = AppQrIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppQrRoute,
 } as any)
-const AppLinkPagoIndexRoute = AppLinkPagoIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppLinkPagoRoute,
-} as any)
 const AppCobrosIndexRoute = AppCobrosIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -247,6 +242,11 @@ const AppLinkPagoProductosRoute = AppLinkPagoProductosRouteImport.update({
 const AppLinkPagoECommerceRoute = AppLinkPagoECommerceRouteImport.update({
   id: '/e-commerce',
   path: '/e-commerce',
+  getParentRoute: () => AppLinkPagoRoute,
+} as any)
+const AppLinkPagoDashboardRoute = AppLinkPagoDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => AppLinkPagoRoute,
 } as any)
 const AppCobrosNuevoRoute = AppCobrosNuevoRouteImport.update({
@@ -301,11 +301,11 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/app/cobros/gestion': typeof AppCobrosGestionRouteWithChildren
   '/app/cobros/nuevo': typeof AppCobrosNuevoRoute
+  '/app/link-pago/dashboard': typeof AppLinkPagoDashboardRoute
   '/app/link-pago/e-commerce': typeof AppLinkPagoECommerceRoute
   '/app/link-pago/productos': typeof AppLinkPagoProductosRoute
   '/app/qr/puntos-de-venta': typeof AppQrPuntosDeVentaRoute
   '/app/cobros/': typeof AppCobrosIndexRoute
-  '/app/link-pago/': typeof AppLinkPagoIndexRoute
   '/app/qr/': typeof AppQrIndexRoute
   '/app/cobros/gestion/$id': typeof AppCobrosGestionIdRoute
 }
@@ -322,6 +322,7 @@ export interface FileRoutesByTo {
   '/app/destinatarios': typeof AppDestinatariosRoute
   '/app/ecommerce': typeof AppEcommerceRoute
   '/app/historial': typeof AppHistorialRoute
+  '/app/link-pago': typeof AppLinkPagoRouteWithChildren
   '/app/seguridad': typeof AppSeguridadRoute
   '/app/servicios': typeof AppServiciosRoute
   '/app/subcuentas': typeof AppSubcuentasRoute
@@ -341,11 +342,11 @@ export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/app/cobros/gestion': typeof AppCobrosGestionRouteWithChildren
   '/app/cobros/nuevo': typeof AppCobrosNuevoRoute
+  '/app/link-pago/dashboard': typeof AppLinkPagoDashboardRoute
   '/app/link-pago/e-commerce': typeof AppLinkPagoECommerceRoute
   '/app/link-pago/productos': typeof AppLinkPagoProductosRoute
   '/app/qr/puntos-de-venta': typeof AppQrPuntosDeVentaRoute
   '/app/cobros': typeof AppCobrosIndexRoute
-  '/app/link-pago': typeof AppLinkPagoIndexRoute
   '/app/qr': typeof AppQrIndexRoute
   '/app/cobros/gestion/$id': typeof AppCobrosGestionIdRoute
 }
@@ -386,11 +387,11 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/app/cobros/gestion': typeof AppCobrosGestionRouteWithChildren
   '/app/cobros/nuevo': typeof AppCobrosNuevoRoute
+  '/app/link-pago/dashboard': typeof AppLinkPagoDashboardRoute
   '/app/link-pago/e-commerce': typeof AppLinkPagoECommerceRoute
   '/app/link-pago/productos': typeof AppLinkPagoProductosRoute
   '/app/qr/puntos-de-venta': typeof AppQrPuntosDeVentaRoute
   '/app/cobros/': typeof AppCobrosIndexRoute
-  '/app/link-pago/': typeof AppLinkPagoIndexRoute
   '/app/qr/': typeof AppQrIndexRoute
   '/app/cobros/gestion/$id': typeof AppCobrosGestionIdRoute
 }
@@ -432,11 +433,11 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/cobros/gestion'
     | '/app/cobros/nuevo'
+    | '/app/link-pago/dashboard'
     | '/app/link-pago/e-commerce'
     | '/app/link-pago/productos'
     | '/app/qr/puntos-de-venta'
     | '/app/cobros/'
-    | '/app/link-pago/'
     | '/app/qr/'
     | '/app/cobros/gestion/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -453,6 +454,7 @@ export interface FileRouteTypes {
     | '/app/destinatarios'
     | '/app/ecommerce'
     | '/app/historial'
+    | '/app/link-pago'
     | '/app/seguridad'
     | '/app/servicios'
     | '/app/subcuentas'
@@ -472,11 +474,11 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/cobros/gestion'
     | '/app/cobros/nuevo'
+    | '/app/link-pago/dashboard'
     | '/app/link-pago/e-commerce'
     | '/app/link-pago/productos'
     | '/app/qr/puntos-de-venta'
     | '/app/cobros'
-    | '/app/link-pago'
     | '/app/qr'
     | '/app/cobros/gestion/$id'
   id:
@@ -516,11 +518,11 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/cobros/gestion'
     | '/app/cobros/nuevo'
+    | '/app/link-pago/dashboard'
     | '/app/link-pago/e-commerce'
     | '/app/link-pago/productos'
     | '/app/qr/puntos-de-venta'
     | '/app/cobros/'
-    | '/app/link-pago/'
     | '/app/qr/'
     | '/app/cobros/gestion/$id'
   fileRoutesById: FileRoutesById
@@ -783,13 +785,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQrIndexRouteImport
       parentRoute: typeof AppQrRoute
     }
-    '/app/link-pago/': {
-      id: '/app/link-pago/'
-      path: '/'
-      fullPath: '/app/link-pago/'
-      preLoaderRoute: typeof AppLinkPagoIndexRouteImport
-      parentRoute: typeof AppLinkPagoRoute
-    }
     '/app/cobros/': {
       id: '/app/cobros/'
       path: '/'
@@ -816,6 +811,13 @@ declare module '@tanstack/react-router' {
       path: '/e-commerce'
       fullPath: '/app/link-pago/e-commerce'
       preLoaderRoute: typeof AppLinkPagoECommerceRouteImport
+      parentRoute: typeof AppLinkPagoRoute
+    }
+    '/app/link-pago/dashboard': {
+      id: '/app/link-pago/dashboard'
+      path: '/dashboard'
+      fullPath: '/app/link-pago/dashboard'
+      preLoaderRoute: typeof AppLinkPagoDashboardRouteImport
       parentRoute: typeof AppLinkPagoRoute
     }
     '/app/cobros/nuevo': {
@@ -870,15 +872,15 @@ const AppCobrosRouteWithChildren = AppCobrosRoute._addFileChildren(
 )
 
 interface AppLinkPagoRouteChildren {
+  AppLinkPagoDashboardRoute: typeof AppLinkPagoDashboardRoute
   AppLinkPagoECommerceRoute: typeof AppLinkPagoECommerceRoute
   AppLinkPagoProductosRoute: typeof AppLinkPagoProductosRoute
-  AppLinkPagoIndexRoute: typeof AppLinkPagoIndexRoute
 }
 
 const AppLinkPagoRouteChildren: AppLinkPagoRouteChildren = {
+  AppLinkPagoDashboardRoute: AppLinkPagoDashboardRoute,
   AppLinkPagoECommerceRoute: AppLinkPagoECommerceRoute,
   AppLinkPagoProductosRoute: AppLinkPagoProductosRoute,
-  AppLinkPagoIndexRoute: AppLinkPagoIndexRoute,
 }
 
 const AppLinkPagoRouteWithChildren = AppLinkPagoRoute._addFileChildren(

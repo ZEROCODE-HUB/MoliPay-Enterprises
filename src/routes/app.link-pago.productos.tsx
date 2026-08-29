@@ -8,6 +8,7 @@ import {
   BtnPrimary,
   BtnOutline,
   Badge,
+  PageHeader,
 } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
@@ -104,6 +105,10 @@ function Page() {
 
   return (
     <>
+      <PageHeader
+        title="Productos"
+        description="Crea productos y genera links de cobro para compartir con tus clientes."
+      />
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
           <Search

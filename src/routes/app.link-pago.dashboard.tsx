@@ -13,7 +13,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Download, FileSpreadsheet } from "lucide-react";
-import { Card, BtnOutline } from "@/components/portal-shell";
+import { Card, BtnOutline, PageHeader } from "@/components/portal-shell";
 import {
   periodFilter,
   computeMetrics,
@@ -26,7 +26,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
-export const Route = createFileRoute("/app/link-pago/")({ component: Dashboard });
+export const Route = createFileRoute("/app/link-pago/dashboard")({ component: Dashboard });
 
 const presets = [
   { label: "Hoy", days: 0 },
@@ -102,6 +102,10 @@ function Dashboard() {
 
   return (
     <div>
+      <PageHeader
+        title="Links de Pago"
+        description="Genera y administra links de cobro, productos e integraciones con tu tienda."
+      />
       <div className="flex flex-wrap gap-2 mb-6">
         {presets.map((p) => (
           <button
