@@ -158,80 +158,100 @@ function NuevoLote() {
     setCsvFileName(file.name);
     setSubiendo(true);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      try {
-        const lines = text.split("\n").filter((l) => l.trim());
-        if (lines.length < 2) {
-          toast.error("El archivo debe contener al menos un encabezado y una fila de datos");
+    const isXlsx = file.name.endsWith(".xlsx") || file.name.endsWith(".xls");
+
+    const parseRows = (rawRows: Record<string, string>[]) => {
+      const rows: CSVRow[] = [];
+      for (let i = 0; i < rawRows.length; i++) {
+        const row = rawRows[i];
+        const monto = parseFloat(row["monto"] || "0");
+        if (isNaN(monto) || monto <= 0) {
+          toast.error(`Fila ${i + 1}: el monto debe ser un numero positivo`);
           setSubiendo(false);
           return;
         }
-
-        const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
-        const rows: CSVRow[] = [];
-
-        for (let i = 1; i < lines.length; i++) {
-          const values = lines[i].split(",").map((v) => v.trim());
-          const row: Record<string, string> = {};
-          headers.forEach((h, idx) => {
-            row[h] = values[idx] ?? "";
-          });
-
-          const monto = parseFloat(row["monto"] || "0");
-          if (isNaN(monto) || monto <= 0) {
-            toast.error(`Fila ${i}: el monto debe ser un numero positivo`);
-            setSubiendo(false);
-            return;
-          }
-
-          if (!row["tipo_entidad"] || !row["id_entidad"] || !row["sub_entidad"]) {
-            toast.error(`Fila ${i}: tipo_entidad, id_entidad y sub_entidad son obligatorios`);
-            setSubiendo(false);
-            return;
-          }
-
-          if (!row["identificacion_usuario"]) {
-            toast.error(`Fila ${i}: identificacion_usuario es obligatorio`);
-            setSubiendo(false);
-            return;
-          }
-
-          rows.push({
-            tipo_entidad: row["tipo_entidad"],
-            id_entidad: row["id_entidad"],
-            sub_entidad: row["sub_entidad"],
-            identificacion_usuario: row["identificacion_usuario"],
-            monto,
-            descripcion: row["descripcion"] || row["descripcion"] || "",
-            email: row["email"] || undefined,
-            periodo_facturacion: row["periodo_facturacion"] || undefined,
-            id_unico_beneficiario:
-              row["id_unico_beneficiario"] || row["id_unico_beneficiario"] || undefined,
-            fecha_vencimiento_1: row["fecha_vencimiento_1"] || undefined,
-            fecha_vencimiento_2: row["fecha_vencimiento_2"] || undefined,
-            fecha_vencimiento_3: row["fecha_vencimiento_3"] || undefined,
-            tasa_interes: row["tasa_interes"] ? parseFloat(row["tasa_interes"]) : undefined,
-            medios_de_pago: row["medios_de_pago"] || undefined,
-            pagos_parciales_habilitado: row["pagos_parciales_habilitado"] || undefined,
-          });
+        if (!row["tipo_entidad"] || !row["id_entidad"] || !row["sub_entidad"]) {
+          toast.error(`Fila ${i + 1}: tipo_entidad, id_entidad y sub_entidad son obligatorios`);
+          setSubiendo(false);
+          return;
         }
-
-        setCsvData(rows);
-        toast.success(`${rows.length} registros validos cargados`);
-      } catch {
-        toast.error("Error al procesar el archivo. Verifica el formato CSV.");
+        if (!row["identificacion_usuario"]) {
+          toast.error(`Fila ${i + 1}: identificacion_usuario es obligatorio`);
+          setSubiendo(false);
+          return;
+        }
+        rows.push({
+          tipo_entidad: row["tipo_entidad"],
+          id_entidad: row["id_entidad"],
+          sub_entidad: row["sub_entidad"],
+          identificacion_usuario: row["identificacion_usuario"],
+          monto,
+          descripcion: row["descripcion"] || "",
+          email: row["email"] || undefined,
+          periodo_facturacion: row["periodo_facturacion"] || undefined,
+          id_unico_beneficiario: row["id_unico_beneficiario"] || undefined,
+          fecha_vencimiento_1: row["fecha_vencimiento_1"] || undefined,
+          fecha_vencimiento_2: row["fecha_vencimiento_2"] || undefined,
+          fecha_vencimiento_3: row["fecha_vencimiento_3"] || undefined,
+          tasa_interes: row["tasa_interes"] ? parseFloat(row["tasa_interes"]) : undefined,
+          medios_de_pago: row["medios_de_pago"] || undefined,
+          pagos_parciales_habilitado: row["pagos_parciales_habilitado"] || undefined,
+        });
       }
+      return rows;
+    };
+
+    const onSuccess = (rows: CSVRow[]) => {
+      setCsvData(rows);
+      toast.success(`${rows.length} registros validos cargados`);
       setSubiendo(false);
     };
 
-    reader.onerror = () => {
-      toast.error("Error al leer el archivo");
+    const onError = (msg: string) => {
+      toast.error(msg);
       setSubiendo(false);
     };
 
-    reader.readAsText(file);
+    if (isXlsx) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const wb = XLSX.read(e.target?.result, { type: "array" });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const json = XLSX.utils.sheet_to_json<Record<string, string>>(ws);
+          if (json.length === 0) { onError("El archivo no contiene datos"); return; }
+          const rows = parseRows(json);
+          if (rows) onSuccess(rows);
+        } catch {
+          onError("Error al procesar el archivo XLSX");
+        }
+      };
+      reader.onerror = () => onError("Error al leer el archivo");
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const text = e.target?.result as string;
+          const lines = text.split("\n").filter((l) => l.trim());
+          if (lines.length < 2) { onError("El archivo debe contener al menos un encabezado y una fila de datos"); return; }
+          const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+          const rawRows: Record<string, string>[] = [];
+          for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(",").map((v) => v.trim());
+            const row: Record<string, string> = {};
+            headers.forEach((h, idx) => { row[h] = values[idx] ?? ""; });
+            rawRows.push(row);
+          }
+          const rows = parseRows(rawRows);
+          if (rows) onSuccess(rows);
+        } catch {
+          onError("Error al procesar el archivo CSV");
+        }
+      };
+      reader.onerror = () => onError("Error al leer el archivo");
+      reader.readAsText(file);
+    }
   };
 
   const handleSubmit = () => {
@@ -501,7 +521,7 @@ function NuevoLote() {
             <input
               ref={fileRef}
               type="file"
-              accept=".csv"
+              accept=".csv,.xlsx,.xls"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
