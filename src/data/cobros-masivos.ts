@@ -250,13 +250,13 @@ export async function crearLoteDB(
         fecha_venc_2: r.fechaVencimiento2 || null,
         fecha_venc_3: r.fechaVencimiento3 || null,
         tasa_interes: r.tasaInteres,
-        medios_pago: r.mediosPago ? JSON.stringify(r.mediosPago) : null,
+        medios_pago: r.mediosPago ?? null,
         pagos_parciales: r.pagosParcialesHabilitado,
       }));
 
       const { error: regErr } = await s.rpc("agregar_registros_lote", {
         p_lote_id: lote.id,
-        p_registros: JSON.stringify(batch),
+        p_registros: batch,
       });
       if (regErr) return { ok: false, error: regErr.message };
     }
