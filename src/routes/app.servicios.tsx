@@ -31,6 +31,7 @@ import {
 import { toast } from "sonner";
 import type { LucideIcon } from "lucide-react";
 import { FormDialog } from "@/components/form-dialog";
+import { formatARS } from "@/data/cobros-masivos";
 
 export const Route = createFileRoute("/app/servicios")({ component: Page });
 
@@ -42,25 +43,27 @@ type Item = {
   icon: LucideIcon;
   cat: string;
   e: "Pendiente" | "Proximo" | "Vencido";
-  debito?: boolean;
   suscrito: boolean;
 };
 
 const servicios: Item[] = [
-  { n: "Edesur", c: "Cuenta 8821-039 · Belgrano", v: "$ 64.320,00", venc: "05/06/2026", icon: Zap, cat: "Energia", e: "Pendiente", debito: true, suscrito: true },
-  { n: "Metrogas", c: "Cuenta 4421-128 · Belgrano", v: "$ 22.180,00", venc: "08/06/2026", icon: Flame, cat: "Gas", e: "Pendiente", debito: true, suscrito: true },
-  { n: "AySA", c: "Cuenta 9990-2211", v: "$ 18.450,00", venc: "12/06/2026", icon: Droplet, cat: "Agua", e: "Proximo", debito: true, suscrito: true },
-  { n: "ABL CABA", c: "Partida 12.345.678", v: "$ 45.900,00", venc: "15/06/2026", icon: Building2, cat: "Impuesto", e: "Proximo", suscrito: true },
-  { n: "ARBA", c: "Cuenta 88.123-4", v: "$ 88.230,00", venc: "20/06/2026", icon: FileText, cat: "Impuesto", e: "Proximo", suscrito: true },
-  { n: "Cablevision", c: "Cuenta 7728-339", v: "$ 32.100,00", venc: "03/06/2026", icon: Tv, cat: "Internet", e: "Vencido", debito: true, suscrito: true },
-  { n: "Telecom", c: "Linea 011-4444-5555", v: "$ 14.800,00", venc: "10/06/2026", icon: Phone, cat: "Telefonia", e: "Proximo", debito: true, suscrito: true },
-  { n: "Fibertel Empresas", c: "Cuenta 4488-1102", v: "$ 88.500,00", venc: "14/06/2026", icon: Wifi, cat: "Internet", e: "Proximo", debito: true, suscrito: true },
-  { n: "Claro Empresas", c: "Linea corporativa", v: "$ 0", venc: "-", icon: Phone, cat: "Telefonia", e: "Proximo", suscrito: false },
-  { n: "OSDE", c: "Plan corporativo", v: "$ 0", venc: "-", icon: Building2, cat: "Salud", e: "Proximo", suscrito: false },
-  { n: "Mercado Pago", c: "Cuenta merchant", v: "$ 0", venc: "-", icon: Globe, cat: "Servicios", e: "Proximo", suscrito: false },
+  { n: "Edesur", c: "Cuenta 8821-039", v: "$ 64.320,00", venc: "05/07/2026", icon: Zap, cat: "Servicios publicos", e: "Pendiente", suscrito: false },
+  { n: "Metrogas", c: "Cuenta 4421-128", v: "$ 22.180,00", venc: "08/07/2026", icon: Flame, cat: "Servicios publicos", e: "Pendiente", suscrito: false },
+  { n: "AySA", c: "Cuenta 9990-2211", v: "$ 18.450,00", venc: "12/07/2026", icon: Droplet, cat: "Servicios publicos", e: "Proximo", suscrito: false },
+  { n: "Telecom", c: "Linea 011-4444-5555", v: "$ 14.800,00", venc: "10/07/2026", icon: Phone, cat: "Telefonia e internet", e: "Proximo", suscrito: false },
+  { n: "Fibertel", c: "Cuenta 4488-1102", v: "$ 32.500,00", venc: "14/07/2026", icon: Wifi, cat: "Telefonia e internet", e: "Proximo", suscrito: false },
+  { n: "Claro", c: "Linea 011-5555-6666", v: "$ 11.200,00", venc: "18/07/2026", icon: Phone, cat: "Telefonia e internet", e: "Proximo", suscrito: false },
+  { n: "ARBA", c: "Cuenta 88.123-4", v: "$ 88.230,00", venc: "20/07/2026", icon: FileText, cat: "Impuestos", e: "Proximo", suscrito: false },
+  { n: "AFIP", c: "CUIT 30-71234567-9", v: "$ 125.000,00", venc: "22/07/2026", icon: FileText, cat: "Impuestos", e: "Proximo", suscrito: false },
+  { n: "ABL CABA", c: "Partida 12.345.678", v: "$ 45.900,00", venc: "15/07/2026", icon: Building2, cat: "Impuestos", e: "Proximo", suscrito: false },
+  { n: "Naranja", c: "Tarjeta **** 4521", v: "$ 78.500,00", venc: "25/07/2026", icon: CreditCard, cat: "Tarjetas de credito", e: "Proximo", suscrito: false },
+  { n: "Visa Premium", c: "Tarjeta **** 8832", v: "$ 142.000,00", venc: "28/07/2026", icon: CreditCard, cat: "Tarjetas de credito", e: "Proximo", suscrito: false },
+  { n: "Mastercard Gold", c: "Tarjeta **** 6677", v: "$ 96.300,00", venc: "30/07/2026", icon: CreditCard, cat: "Tarjetas de credito", e: "Proximo", suscrito: false },
+  { n: "Cuota24 - Club Atletico", c: "Socio Nro 4521", v: "$ 8.500,00", venc: "05/07/2026", icon: GraduationCap, cat: "Cuotas escolares", e: "Pendiente", suscrito: false },
+  { n: "Mutual San Martin", c: "Legajo 11234", v: "$ 12.000,00", venc: "15/07/2026", icon: GraduationCap, cat: "Cuotas escolares", e: "Proximo", suscrito: false },
 ];
 
-const cats = ["Todos", "Energia", "Gas", "Agua", "Impuesto", "Internet", "Telefonia"];
+const cats = ["Todos", "Servicios publicos", "Telefonia e internet", "Impuestos", "Tarjetas de credito", "Cuotas escolares"];
 
 type TxHist = {
   f: string;
@@ -163,26 +166,20 @@ function Page() {
   const [suscAll, setSuscAll] = useState(false);
   const [dispAll, setDispAll] = useState(false);
   const [histAll, setHistAll] = useState(false);
-  const [debitoSet, setDebitoSet] = useState<Set<string>>(new Set());
   const [editarServicio, setEditarServicio] = useState<Item | null>(null);
   const [nuevos, setNuevos] = useState<Item[]>([]);
   const [nombreNuevo, setNombreNuevo] = useState("");
-  const [catNueva, setCatNueva] = useState("Energia");
+  const [catNueva, setCatNueva] = useState("Servicios publicos");
   const [numeroNuevo, setNumeroNuevo] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
 
   const addSuscripcion = () => {
     if (!numeroNuevo.trim()) return;
     const catIcon: Record<string, LucideIcon> = {
-      Energia: Zap,
-      Gas: Flame,
-      Agua: Droplet,
-      Impuesto: FileText,
-      Internet: Wifi,
-      Telefonia: Phone,
-      Salud: Building2,
-      Servicios: Globe,
-      Tarjetas: CreditCard,
+      "Servicios publicos": Zap,
+      "Telefonia e internet": Wifi,
+      Impuestos: FileText,
+      "Tarjetas de credito": CreditCard,
       "Cuotas escolares": GraduationCap,
     };
     const nuevo: Item = {
@@ -221,6 +218,13 @@ function Page() {
   const suscritos = useMemo(() => filtrados.filter((s) => s.suscrito), [filtrados]);
   const disponibles = useMemo(() => todos.filter((s) => !s.suscrito), [todos]);
 
+  const totalAdheridos = todos.filter((s) => s.suscrito).length;
+  const totalPagarMes = prox.reduce((acc, s) => {
+    const num = parseFloat(s.v.replace(/[^0-9]/g, "").replace(",", "."));
+    return acc + (isNaN(num) ? 0 : num);
+  }, 0);
+  const totalVencidos = prox.filter((s) => daysUntil(s.venc) < 0).length;
+
   const hFiltrados = historial.filter((t) => {
     if (hCat !== "Todas" && t.cat !== hCat) return false;
     if (hStatus !== "Todos" && t.e !== hStatus) return false;
@@ -240,25 +244,24 @@ function Page() {
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Servicios adheridos
           </div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">14</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">{totalAdheridos}</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
             A pagar este mes
           </div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">$ 384.480</div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">8 facturas</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">{formatARS(totalPagarMes)}</div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">{prox.length} factura(s)</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Vencidos</div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">1</div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">Cablevision - $ 32.100</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">{totalVencidos}</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Pagado este mes
+            Disponibles para suscribir
           </div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">$ 1.240.300</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">{disponibles.length}</div>
         </div>
       </div>
 
@@ -341,32 +344,6 @@ function Page() {
                         <Badge tone={isVencido ? "danger" : s.e === "Pendiente" ? "warn" : "neutral"}>
                           {isVencido ? "Vencido" : s.e}
                         </Badge>
-                        {s.debito && (
-                          <button
-                            onClick={() => {
-                              setDebitoSet((prev) => {
-                                const next = new Set(prev);
-                                const k = s.n + s.c;
-                                if (next.has(k)) next.delete(k);
-                                else next.add(k);
-                                return next;
-                              });
-                              toast.success(
-                                debitoSet.has(s.n + s.c)
-                                  ? "Debito directo desactivado de " + s.n
-                                  : "Debito directo activado para " + s.n,
-                              );
-                            }}
-                            className={`h-9 px-2.5 rounded-md text-[11px] font-semibold border transition ${
-                              debitoSet.has(s.n + s.c)
-                                ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] border-transparent"
-                                : "bg-card text-muted-foreground border-border hover:bg-muted"
-                            }`}
-                            title="Debito directo"
-                          >
-                            DD
-                          </button>
-                        )}
                         <BtnPrimary className="h-9 px-4" onClick={() => setPagar(s)}>
                           Pagar
                         </BtnPrimary>
@@ -427,9 +404,6 @@ function Page() {
                           <div className="text-[11px] text-muted-foreground flex items-center gap-1 justify-end"><Clock size={10} /> Vence {s.venc}</div>
                         </div>
                         <Badge tone={s.e === "Vencido" ? "danger" : s.e === "Pendiente" ? "warn" : "neutral"}>{s.e}</Badge>
-                        {s.debito && (
-                          <button onClick={() => { setDebitoSet((prev) => { const next = new Set(prev); const k = s.n + s.c; if (next.has(k)) next.delete(k); else next.add(k); return next; }); toast.success(debitoSet.has(s.n + s.c) ? "Debito directo desactivado de " + s.n : "Debito directo activado para " + s.n); }} className={`h-9 px-2.5 rounded-md text-[11px] font-semibold border transition ${debitoSet.has(s.n + s.c) ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] border-transparent" : "bg-card text-muted-foreground border-border hover:bg-muted"}`} title="Debito directo">DD</button>
-                        )}
                         <BtnOutline className="h-9 px-2.5 text-xs" onClick={() => setEditarServicio(s)}>Editar</BtnOutline>
                         <BtnPrimary className="h-9 px-4" onClick={() => setPagar(s)}>Pagar</BtnPrimary>
                       </div>
@@ -466,15 +440,10 @@ function Page() {
                       onChange={(e) => setCatNueva(e.target.value)}
                     >
                       {[
-                        "Energia",
-                        "Gas",
-                        "Agua",
-                        "Impuesto",
-                        "Internet",
-                        "Telefonia",
-                        "Salud",
-                        "Servicios",
-                        "Tarjetas",
+                        "Servicios publicos",
+                        "Telefonia e internet",
+                        "Impuestos",
+                        "Tarjetas de credito",
                         "Cuotas escolares",
                       ].map((c) => (
                         <option key={c} value={c}>
@@ -750,7 +719,6 @@ function Page() {
                 {cats.filter((c) => c !== "Todos").map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <label className="flex items-center gap-2 text-xs"><input type="checkbox" defaultChecked={editarServicio.debito} /> Debito automatico habilitado</label>
           </>
         )}
       </FormDialog>
@@ -783,9 +751,6 @@ function Page() {
           <Label>Fecha de pago</Label>
           <Input type="date" />
         </div>
-        <label className="flex items-center gap-2 text-xs">
-          <input type="checkbox" /> Adherir al debito automatico mensual
-        </label>
       </FormDialog>
 
       <FormDialog

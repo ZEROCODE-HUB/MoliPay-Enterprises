@@ -3,7 +3,15 @@ import { useState, useRef, useEffect } from "react";
 import { ArrowLeft, ArrowRight, Check, Upload, FileSpreadsheet, Download, X } from "lucide-react";
 import { Card, BtnPrimary, BtnOutline, Input, Label } from "@/components/portal-shell";
 import { toast } from "sonner";
-import { generateId, medioPagoLabels, type MedioPago } from "@/data/cobros-masivos";
+import {
+  generateId,
+  medioPagoLabels,
+  crearLote,
+  agregarRegistroAlLote,
+  type MedioPago,
+  type Lote,
+  type RegistroDeLote,
+} from "@/data/cobros-masivos";
 import { format } from "date-fns";
 
 export const Route = createFileRoute("/app/cobros/nuevo")({ component: NuevoLote });
@@ -226,6 +234,56 @@ function NuevoLote() {
   };
 
   const handleSubmit = () => {
+    const loteId = generateId("LOT");
+    const now = format(new Date(), "yyyy-MM-dd HH:mm:ss");
+
+    const lote: Lote = {
+      id: loteId,
+      nombre,
+      periodo,
+      diaProcesamiento: String(diaProcesamiento),
+      estado: "cargado",
+      tasaInteres,
+      fechaVencimiento1: fechaVenc1,
+      fechaVencimiento2: fechaVenc2 || null,
+      fechaVencimiento3: fechaVenc3 || null,
+      mediosPago,
+      pagosParcialesHabilitado: pagosParciales,
+      notificacionesHabilitado: notificaciones,
+      createdAt: now,
+      fechaInicio: null,
+      fechaFinalizacion: null,
+    };
+    crearLote(lote);
+
+    const registros: RegistroDeLote[] = csvData.map((row) => ({
+      id: generateId("REG"),
+      loteId,
+      tipoEntidad: row.tipo_entidad,
+      idEntidad: row.id_entidad,
+      subEntidad: row.sub_entidad,
+      identificacionUsuario: row.identificacion_usuario,
+      monto: row.monto,
+      descripcion: row.descripcion,
+      email: row.email ?? null,
+      periodoFacturacion: row.periodo_facturacion ?? null,
+      idUnicoBeneficiario: row.id_unico_beneficiario ?? null,
+      fechaVencimiento1: row.fecha_vencimiento_1 ?? null,
+      fechaVencimiento2: row.fecha_vencimiento_2 ?? null,
+      fechaVencimiento3: row.fecha_vencimiento_3 ?? null,
+      tasaInteres: row.tasa_interes ?? null,
+      mediosPago,
+      pagosParcialesHabilitado: pagosParciales,
+      cbuId: null,
+      linkDePago: null,
+      estado: "pendiente",
+      montoPagado: 0,
+      fechaPago: null,
+      createdAt: now,
+      emailEnviado: false,
+    }));
+    registros.forEach((r) => agregarRegistroAlLote(r));
+
     toast.success(`Lote "${nombre}" creado con ${csvData.length} registros`, {
       description: "El lote quedo en estado Pendiente de procesamiento",
     });

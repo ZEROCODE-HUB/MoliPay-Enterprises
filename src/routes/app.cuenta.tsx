@@ -286,7 +286,7 @@ function Page() {
 
       <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
         <div className="space-y-6">
-          {/* InformaciOn del Usuario */}
+          {/* Informacion del Usuario */}
           <Card>
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <User size={16} /> Informacion del Usuario
@@ -300,12 +300,42 @@ function Page() {
                 <div className="pt-1.5"><Badge tone={emailValidado ? "success" : "warn"}>{emailValidado ? "Activo" : "Pendiente"}</Badge></div>
               </div>
             </div>
-           </Card>
+            <hr className="my-4 border-border" />
+            <h4 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+              <FileText size={14} /> Datos personales
+            </h4>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div><Label>CUIL / CUIT</Label><Input value={form.cuit_cuil ?? dp.cuitCuil} onChange={(e) => setF("cuit_cuil", e.target.value)} /></div>
+              <div><Label>DNI</Label><Input defaultValue={isPJ ? "30.123.456" : "32.123.456"} /></div>
+              <div>
+                <Label>Genero</Label>
+                <select className="w-full h-10 px-3 rounded-md border bg-card text-sm" value={form.genero ?? dp.genero} onChange={(e) => setF("genero", e.target.value)}>
+                  <option>{form.genero ?? dp.genero}</option>
+                </select>
+              </div>
+              <div><Label>Nacimiento</Label><Input type="date" value={form.fecha_nacimiento ?? userNac} onChange={(e) => setF("fecha_nacimiento", e.target.value)} /></div>
+              <div><Label>Ocupacion</Label><Input value={form.ocupacion ?? dp.ocupacion} onChange={(e) => setF("ocupacion", e.target.value)} /></div>
+              <div>
+                <Label>Fuente de Fondos</Label>
+                <select className="w-full h-10 px-3 rounded-md border bg-card text-sm" value={form.origen_fondos ?? dp.origenFondos} onChange={(e) => setF("origen_fondos", e.target.value)}>
+                  <option>{form.origen_fondos ?? dp.origenFondos}</option>
+                </select>
+              </div>
+              <div>
+                <Label>PEP</Label>
+                <div className="pt-1.5 text-sm">{dp.esPEP ? "Si" : "No"}</div>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end mt-4">
+              <BtnOutline disabled={saving} onClick={() => cliente && setForm(clienteToForm(cliente))}>Cancelar</BtnOutline>
+              <BtnPrimary disabled={saving} onClick={guardar}>{saving ? "Guardando…" : "Guardar cambios"}</BtnPrimary>
+            </div>
+          </Card>
 
-          {/* Direccion adicional (PF y PJ) */}
+          {/* Informacion adicional (PF y PJ) */}
           <Card>
             <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <Landmark size={16} /> Direccion adicional
+              <Landmark size={16} /> Informacion adicional
             </h3>
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
@@ -322,7 +352,7 @@ function Page() {
             </div>
           </Card>
 
-          {/* InformaciOn de la Empresa (solo PJ) */}
+          {/* Informacion de la Empresa (solo PJ) */}
           {isPJ && (
             <Card>
               <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -349,39 +379,7 @@ function Page() {
             </Card>
           )}
 
-          {/* InformaciOn de Perfil (PF y PJ) */}
-          <Card>
-            <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <FileText size={16} /> Informacion de Perfil
-            </h3>
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div><Label>CUIL / CUIT</Label><Input value={form.cuit_cuil ?? dp.cuitCuil} onChange={(e) => setF("cuit_cuil", e.target.value)} /></div>
-                <div><Label>DNI</Label><Input defaultValue={isPJ ? "30.123.456" : "32.123.456"} /></div>
-                <div>
-                  <Label>Genero</Label>
-                  <select className="w-full h-10 px-3 rounded-md border bg-card text-sm" value={form.genero ?? dp.genero} onChange={(e) => setF("genero", e.target.value)}>
-                    <option>{form.genero ?? dp.genero}</option>
-                  </select>
-                </div>
-                <div><Label>Nacimiento</Label><Input type="date" value={form.fecha_nacimiento ?? userNac} onChange={(e) => setF("fecha_nacimiento", e.target.value)} /></div>
-                <div><Label>Ocupacion</Label><Input value={form.ocupacion ?? dp.ocupacion} onChange={(e) => setF("ocupacion", e.target.value)} /></div>
-                <div>
-                  <Label>Fuente de Fondos</Label>
-                  <select className="w-full h-10 px-3 rounded-md border bg-card text-sm" value={form.origen_fondos ?? dp.origenFondos} onChange={(e) => setF("origen_fondos", e.target.value)}>
-                    <option>{form.origen_fondos ?? dp.origenFondos}</option>
-                  </select>
-                </div>
-                <div>
-                  <Label>PEP</Label>
-                  <div className="pt-1.5 text-sm">{dp.esPEP ? "Si" : "No"}</div>
-                </div>
-                <div className="sm:col-span-2 flex gap-2 justify-end">
-                  <BtnPrimary disabled={saving} onClick={guardar}>{saving ? "Guardando…" : "Guardar cambios"}</BtnPrimary>
-                </div>
-              </div>
-          </Card>
-
-          {/* DocumentaciOn KYC/KYB */}
+          {/* Documentacion KYC/KYB */}
           <Card>
             <h3 className="font-semibold mb-4 flex items-center gap-2">
               <FileText size={16} /> Documentacion {isPJ ? "KYC / KYB" : "KYC"}

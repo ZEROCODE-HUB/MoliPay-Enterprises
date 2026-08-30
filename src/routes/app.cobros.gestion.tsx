@@ -1,7 +1,7 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo, useEffect, type ReactNode } from "react";
 import {
-  Eye, FileSpreadsheet, Download, Search, Filter, X,
+  Plus, Eye, FileSpreadsheet, Download, Search, Filter, X,
   Play, Pause, PlayIcon, Trash2, Copy, ExternalLink,
 } from "lucide-react";
 import { Card, BtnPrimary, BtnOutline, Input, Label } from "@/components/portal-shell";
@@ -49,6 +49,7 @@ const ESTADO_LABEL: Record<LoteEstado, string> = {
 const estados = Object.keys(estadoCatalogo) as LoteEstado[];
 
 function GestionLotes() {
+  const navigate = useNavigate();
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<LoteEstado | "todos">("todos");
   const [fechaDesde, setFechaDesde] = useState("");
@@ -220,6 +221,9 @@ function GestionLotes() {
     <>
       {/* Acciones globales */}
       <div className="flex flex-wrap gap-3 mb-6 items-center">
+        <BtnPrimary className="h-9 px-3 text-xs" onClick={() => navigate({ to: "/app/cobros/nuevo" })}>
+          <Plus size={14} /> Nuevo lote
+        </BtnPrimary>
         <BtnOutline className="h-9 px-3 text-xs" onClick={descargarPlantilla}>
           <Download size={14} /> Descargar plantilla
         </BtnOutline>

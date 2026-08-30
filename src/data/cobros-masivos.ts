@@ -490,8 +490,16 @@ export function reanudarLote(loteId: string): boolean {
 }
 
 export function eliminarLote(loteId: string): boolean {
-  const lote = lotesMock.find((l) => l.id === loteId);
-  if (!lote) return false;
-  lote.estado = "eliminado";
+  const idx = lotesMock.findIndex((l) => l.id === loteId);
+  if (idx === -1) return false;
+  lotesMock[idx] = { ...lotesMock[idx], estado: "eliminado" };
   return true;
+}
+
+export function crearLote(lote: Lote): void {
+  lotesMock.unshift(lote);
+}
+
+export function agregarRegistroAlLote(registro: RegistroDeLote): void {
+  registrosMock.push(registro);
 }
