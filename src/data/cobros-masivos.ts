@@ -1,4 +1,4 @@
-import { subDays, format, parseISO } from "date-fns";
+import { requireSupabase } from "@/lib/supabase";
 
 // ===== Tipos principales =====
 export type LoteEstado =
@@ -14,6 +14,7 @@ export type TipoOperacion = "TRANSFERENCIA_BANCARIA" | "QR" | "TARJETA_DEBITO_CR
 
 export interface Lote {
   id: string;
+  cliente_legajo?: string;
   nombre: string;
   periodo: string;
   diaProcesamiento: string;
@@ -81,16 +82,18 @@ export interface CBURecord {
 }
 
 // ===== Helpers =====
-const now = new Date();
-
-function fmtFull(d: Date): string {
-  return format(d, "yyyy-MM-dd HH:mm:ss");
+function generateId(prefix: string): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let r = "";
+  for (let i = 0; i < 6; i++) r += chars[Math.floor(Math.random() * chars.length)];
+  return `${prefix}-${r}`;
 }
 
-function rand(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+function parseDate(s: string): Date {
+  try { return new Date(s); } catch { return new Date(); }
 }
 
+// ===== Formateo =====
 export function formatARS(n: number) {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
@@ -99,263 +102,322 @@ export function formatARS(n: number) {
   }).format(n);
 }
 
-export function generateId(prefix: string): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let r = "";
-  for (let i = 0; i < 6; i++) r += chars[rand(0, chars.length - 1)];
-  return `${prefix}-${r}`;
+// ===== Catálogo de estados =====
+export const estadoCatalogo: Record<LoteEstado, { label: string; desc: string }> = {
+  cargado: {
+    label: "Cargado / Pendiente",
+    desc: "El lote fue creado y validado, pero aun no llego la fecha de procesamiento; no se generaron links de pago todavia.",
+  },
+  en_proceso: {
+    label: "En proceso",
+    desc: "El lote ya se ejecuto (se generaron los links) pero no todos los pagos fueron efectuados.",
+  },
+  finalizado: {
+    label: "Finalizado",
+    desc: "Todos los pagos del lote fueron efectuados en su totalidad.",
+  },
+  pausado: {
+    label: "Pausado",
+    desc: "El lote fue pausado manualmente; detiene el avance del procesamiento.",
+  },
+  eliminado: {
+    label: "Eliminado",
+    desc: "El lote fue eliminado (soft delete).",
+  },
+  error: {
+    label: "Con error / requiere atencion",
+    desc: "Ocurrio un fallo tecnico durante el procesamiento que impide completar la generacion de links o el cobro.",
+  },
+};
+
+export const medioPagoLabels: Record<MedioPago, string> = {
+  TRANSFERENCIA: "Transferencia",
+  TARJETA_CREDITO: "Tarjeta de credito",
+  TARJETA_DEBITO: "Tarjeta de debito",
+  QR: "Codigo QR",
+};
+
+// ===== Helper: mapear row de Supabase a Lote =====
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToLote(row: any): Lote {
+  return {
+    id: row.id,
+    cliente_legajo: row.cliente_legajo,
+    nombre: row.nombre,
+    periodo: row.periodo,
+    diaProcesamiento: String(row.dia_pago),
+    estado: row.estado as LoteEstado,
+    tasaInteres: Number(row.tasa_interes),
+    fechaVencimiento1: row.fecha_venc_1,
+    fechaVencimiento2: row.fecha_venc_2,
+    fechaVencimiento3: row.fecha_venc_3,
+    mediosPago: (row.medios_pago ?? []) as MedioPago[],
+    pagosParcialesHabilitado: row.pagos_parciales ?? true,
+    notificacionesHabilitado: row.notificaciones ?? false,
+    createdAt: row.created_at,
+    fechaInicio: row.fecha_inicio,
+    fechaFinalizacion: row.fecha_finalizacion,
+  };
 }
 
-// ===== Datos =====
-// Los lotes, registros y pagos se cargan desde la API. El arranque de la
-// plataforma comienza vacio y se completa con datos reales de las entidades.
-const cbuPool: CBURecord[] = [];
-
-export const lotesMock: Lote[] = [];
-export const registrosMock: RegistroDeLote[] = [];
-export const pagosMock: Pago[] = [];
-export const cbusMock: CBURecord[] = cbuPool;
-
-export const lotes = lotesMock;
-export const registros = registrosMock;
-export const pagos = pagosMock;
-export const cbus = cbusMock;
-
-// ===== Helpers de filtrado y cálculo =====
-export interface PeriodFilter {
-  label: string;
-  from: Date;
-  to: Date;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToRegistro(row: any): RegistroDeLote {
+  return {
+    id: row.id,
+    loteId: row.lote_id,
+    tipoEntidad: row.tipo_entidad,
+    idEntidad: row.id_entidad,
+    subEntidad: row.sub_entidad,
+    identificacionUsuario: row.identificacion_usuario,
+    monto: Number(row.monto),
+    descripcion: row.descripcion ?? "",
+    email: row.email ?? null,
+    periodoFacturacion: row.periodo_facturacion ?? null,
+    idUnicoBeneficiario: row.id_unico_beneficiario ?? null,
+    fechaVencimiento1: row.fecha_venc_1 ?? null,
+    fechaVencimiento2: row.fecha_venc_2 ?? null,
+    fechaVencimiento3: row.fecha_venc_3 ?? null,
+    tasaInteres: row.tasa_interes != null ? Number(row.tasa_interes) : null,
+    mediosPago: (row.medios_pago ?? null) as MedioPago[] | null,
+    pagosParcialesHabilitado: row.pagos_parciales ?? null,
+    cbuId: row.cbu_id ?? null,
+    linkDePago: row.link_de_pago ?? null,
+    estado: row.estado as RegistroEstado,
+    montoPagado: Number(row.monto_pagado ?? 0),
+    fechaPago: row.fecha_pago ?? null,
+    createdAt: row.created_at,
+    emailEnviado: row.email_enviado ?? false,
+  };
 }
 
-export function periodFilter(label: string, days?: number, from?: Date, to?: Date): PeriodFilter {
-  if (days !== undefined) return { label, from: subDays(now, days), to: now };
-  return { label, from: from!, to: to! };
-}
-
-function parseDate(s: string): Date {
+// ===== Obtener legajo del usuario logueado =====
+export async function getLegajoUsuario(): Promise<string | null> {
   try {
-    return parseISO(s);
+    const s = requireSupabase();
+    const { data: u } = await s.auth.getUser();
+    const mail = u.user?.email;
+    if (!mail) return null;
+    const { data: cli } = await s
+      .from("clientes")
+      .select("legajo")
+      .eq("correo", mail)
+      .maybeSingle();
+    return cli?.legajo ?? null;
   } catch {
-    return new Date();
+    return null;
   }
 }
 
-function filterLotes(filter: PeriodFilter): Lote[] {
-  return lotesMock.filter((l) => {
-    const d = parseDate(l.createdAt);
-    return d >= filter.from && d <= filter.to;
-  });
-}
+// ===== CRUD de lotes (Supabase) =====
 
-// ===== Dashboard KPIs =====
-export interface DashboardKPI {
-  totalLotes: number;
-  enProceso: number;
-  finalizados: number;
-  conError: number;
-  montoTotal: number;
-  montoCobrado: number;
-  montoPendiente: number;
-}
+export async function crearLoteDB(
+  lote: Lote,
+  registros: Omit<RegistroDeLote, "createdAt">[],
+  legajo: string,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const s = requireSupabase();
 
-export function computeDashboardKPI(filter: PeriodFilter): DashboardKPI {
-  const lotesFiltrados = filterLotes(filter);
-  const lotesValidos = lotesFiltrados.filter((l) => l.estado !== "eliminado");
+    const { error: loteErr } = await s.rpc("crear_lote", {
+      p_id: lote.id,
+      p_cliente_legajo: legajo,
+      p_nombre: lote.nombre,
+      p_periodo: lote.periodo,
+      p_dia_pago: parseInt(lote.diaProcesamiento),
+      p_tasa_interes: lote.tasaInteres,
+      p_fecha_venc_1: lote.fechaVencimiento1,
+      p_fecha_venc_2: lote.fechaVencimiento2 || null,
+      p_fecha_venc_3: lote.fechaVencimiento3 || null,
+      p_medios_pago: JSON.stringify(lote.mediosPago),
+      p_pagos_parciales: lote.pagosParcialesHabilitado,
+      p_notificaciones: lote.notificacionesHabilitado,
+    });
+    if (loteErr) return { ok: false, error: loteErr.message };
 
-  return {
-    totalLotes: lotesValidos.length,
-    enProceso: lotesValidos.filter((l) => l.estado === "en_proceso").length,
-    finalizados: lotesValidos.filter((l) => l.estado === "finalizado").length,
-    conError: lotesValidos.filter((l) => l.estado === "error").length,
-    montoTotal: lotesValidos.reduce((sum, l) => {
-      const regs = registrosMock.filter((r) => r.loteId === l.id);
-      return sum + regs.reduce((s, r) => s + r.monto, 0);
-    }, 0),
-    montoCobrado: lotesValidos.reduce((sum, l) => {
-      const regs = registrosMock.filter((r) => r.loteId === l.id);
-      return sum + regs.reduce((s, r) => s + r.montoPagado, 0);
-    }, 0),
-    montoPendiente: lotesValidos.reduce((sum, l) => {
-      const regs = registrosMock.filter((r) => r.loteId === l.id);
-      return sum + regs.reduce((s, r) => s + (r.monto - r.montoPagado), 0);
-    }, 0),
-  };
-}
+    if (registros.length > 0) {
+      const batch = registros.map((r) => ({
+        id: r.id,
+        tipo_entidad: r.tipoEntidad,
+        id_entidad: r.idEntidad,
+        sub_entidad: r.subEntidad,
+        identificacion_usuario: r.identificacionUsuario,
+        monto: r.monto,
+        descripcion: r.descripcion,
+        email: r.email,
+        periodo_facturacion: r.periodoFacturacion,
+        id_unico_beneficiario: r.idUnicoBeneficiario,
+        fecha_venc_1: r.fechaVencimiento1 || null,
+        fecha_venc_2: r.fechaVencimiento2 || null,
+        fecha_venc_3: r.fechaVencimiento3 || null,
+        tasa_interes: r.tasaInteres,
+        medios_pago: r.mediosPago ? JSON.stringify(r.mediosPago) : null,
+        pagos_parciales: r.pagosParcialesHabilitado,
+      }));
 
-// ===== Cobros por medio de pago =====
-export interface MedioPagoData {
-  medio: string;
-  monto: number;
-  cantidad: number;
-  porcentaje: number;
-}
-
-export function computePorMedio(filter: PeriodFilter): MedioPagoData[] {
-  const lotesFiltrados = filterLotes(filter);
-  const loteIds = new Set(lotesFiltrados.map((l) => l.id));
-  const pagosFiltrados = pagosMock.filter((p) => loteIds.has(p.loteId) && p.estado === "aprobado");
-
-  const grouped: Record<string, { monto: number; cantidad: number }> = {};
-  for (const p of pagosFiltrados) {
-    if (!grouped[p.medioPago]) grouped[p.medioPago] = { monto: 0, cantidad: 0 };
-    grouped[p.medioPago].monto += p.monto;
-    grouped[p.medioPago].cantidad += 1;
-  }
-
-  const total = Object.values(grouped).reduce((s, g) => s + g.monto, 0);
-  return Object.entries(grouped).map(([medio, data]) => ({
-    medio,
-    monto: data.monto,
-    cantidad: data.cantidad,
-    porcentaje: total > 0 ? Math.round((data.monto / total) * 100) : 0,
-  }));
-}
-
-// ===== Cobros por vencimiento =====
-export interface VencimientoData {
-  label: string;
-  cantidad: number;
-  monto: number;
-}
-
-export function computePorVencimiento(filter: PeriodFilter): VencimientoData[] {
-  const lotesFiltrados = filterLotes(filter);
-  const loteIds = new Set(lotesFiltrados.map((l) => l.id));
-  const regs = registrosMock.filter((r) => loteIds.has(r.loteId) && r.montoPagado > 0);
-
-  const result: VencimientoData[] = [
-    { label: "1er vencimiento", cantidad: 0, monto: 0 },
-    { label: "2do vencimiento", cantidad: 0, monto: 0 },
-    { label: "3er vencimiento", cantidad: 0, monto: 0 },
-  ];
-
-  for (const r of regs) {
-    if (!r.fechaPago) continue;
-    const fp = parseDate(r.fechaPago);
-    const v1 = r.fechaVencimiento1 ? parseDate(r.fechaVencimiento1) : null;
-    const v2 = r.fechaVencimiento2 ? parseDate(r.fechaVencimiento2) : null;
-    const v3 = r.fechaVencimiento3 ? parseDate(r.fechaVencimiento3) : null;
-
-    if (v1 && fp <= v1) {
-      result[0].cantidad += 1;
-      result[0].monto += r.montoPagado;
-    } else if (v2 && fp <= v2) {
-      result[1].cantidad += 1;
-      result[1].monto += r.montoPagado;
-    } else if (v3 && fp <= v3) {
-      result[2].cantidad += 1;
-      result[2].monto += r.montoPagado;
-    } else if (v1 && !v2) {
-      result[0].cantidad += 1;
-      result[0].monto += r.montoPagado;
+      const { error: regErr } = await s.rpc("agregar_registros_lote", {
+        p_lote_id: lote.id,
+        p_registros: JSON.stringify(batch),
+      });
+      if (regErr) return { ok: false, error: regErr.message };
     }
+
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
   }
-
-  return result;
 }
 
-// ===== Operaciones no cobradas =====
-export interface NoCobradasData {
-  totalOperaciones: number;
-  vencidas: number;
-  vigentes: number;
-  montoNoCobrado: number;
-  porcentajeNoCobrado: number;
-}
+export async function getLotesGestionDB(): Promise<LoteGestionRow[]> {
+  try {
+    const s = requireSupabase();
+    const { data: lotes } = await s
+      .from("lotes")
+      .select("*")
+      .neq("estado", "eliminado")
+      .order("created_at", { ascending: false });
+    if (!lotes) return [];
 
-export function computeNoCobradas(filter: PeriodFilter): NoCobradasData {
-  const lotesFiltrados = filterLotes(filter);
-  const loteIds = new Set(lotesFiltrados.map((l) => l.id));
-  const regs = registrosMock.filter((r) => loteIds.has(r.loteId));
+    const { data: allRegs } = await s
+      .from("lote_registros")
+      .select("lote_id, estado, monto, monto_pagado");
+    const regs = allRegs ?? [];
 
-  const noCobradas = regs.filter((r) => r.estado !== "pagado_total");
-  const vencidas = noCobradas.filter((r) => r.estado === "vencido");
-  const vigentes = noCobradas.filter((r) => r.estado !== "vencido");
-
-  const montoTotal = regs.reduce((s, r) => s + r.monto, 0);
-  const montoNoCobrado = noCobradas.reduce((s, r) => s + (r.monto - r.montoPagado), 0);
-
-  return {
-    totalOperaciones: regs.length,
-    vencidas: vencidas.length,
-    vigentes: vigentes.length,
-    montoNoCobrado,
-    porcentajeNoCobrado: montoTotal > 0 ? Math.round((montoNoCobrado / montoTotal) * 100) : 0,
-  };
-}
-
-// ===== Evolución de pagos =====
-export interface EvolucionData {
-  fecha: string;
-  monto: number;
-  cantidad: number;
-}
-
-export function computeEvolucion(filter: PeriodFilter): EvolucionData[] {
-  const pagosFiltrados = pagosMock.filter((p) => {
-    const d = parseDate(p.timestamp);
-    return d >= filter.from && d <= filter.to;
-  });
-
-  const grouped: Record<string, { monto: number; cantidad: number }> = {};
-  for (const p of pagosFiltrados) {
-    const day = format(parseDate(p.timestamp), "dd/MM");
-    if (!grouped[day]) grouped[day] = { monto: 0, cantidad: 0 };
-    grouped[day].monto += p.monto;
-    grouped[day].cantidad += 1;
-  }
-
-  return Object.entries(grouped)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([fecha, data]) => ({ fecha, ...data }));
-}
-
-// ===== Lotes recientes para dashboard =====
-export interface LoteResumen {
-  id: string;
-  nombre: string;
-  estado: LoteEstado;
-  progreso: number;
-  montoTotal: number;
-  montoCobrado: number;
-  cantidadPagos: number;
-  cantidadParciales: number;
-  cantidadPendientes: number;
-  createdAt: string;
-}
-
-export function computeLotesRecientes(filter: PeriodFilter): LoteResumen[] {
-  return filterLotes(filter)
-    .filter((l) => l.estado !== "eliminado")
-    .map((l) => {
-      const regs = registrosMock.filter((r) => r.loteId === l.id);
-      const total = regs.length;
-      const cobrados = regs.filter((r) => r.estado === "pagado_total").length;
-      const parciales = regs.filter((r) => r.estado === "pagado_parcial").length;
-      const pendientes = regs.filter(
-        (r) => r.estado === "pendiente" || r.estado === "vencido",
-      ).length;
-      const montoTotal = regs.reduce((s, r) => s + r.monto, 0);
-      const montoCobrado = regs.reduce((s, r) => s + r.montoPagado, 0);
-
+    return lotes.map((l) => {
+      const lr = regs.filter((r) => r.lote_id === l.id);
+      const cobrados = lr.filter((r) => r.estado === "pagado_total").length;
+      const parciales = lr.filter((r) => r.estado === "pagado_parcial").length;
+      const pendientes = lr.filter((r) => r.estado === "pendiente" || r.estado === "vencido").length;
+      const montoTotal = lr.reduce((s, r) => s + Number(r.monto), 0);
+      const montoCobrado = lr.reduce((s, r) => s + Number(r.monto_pagado), 0);
       return {
         id: l.id,
         nombre: l.nombre,
-        estado: l.estado,
-        progreso: total > 0 ? Math.round((montoCobrado / montoTotal) * 100) : 0,
-        montoTotal,
-        montoCobrado,
+        periodo: l.periodo,
+        createdAt: l.created_at,
+        fechaFinalizacion: l.fecha_finalizacion,
+        estado: l.estado as LoteEstado,
+        progreso: montoTotal > 0 ? Math.round((montoCobrado / montoTotal) * 100) : 0,
         cantidadPagos: cobrados,
         cantidadParciales: parciales,
         cantidadPendientes: pendientes,
-        createdAt: l.createdAt,
+        montoTotal,
+        montoCobrado,
+        montoPorCobrar: montoTotal - montoCobrado,
       };
-    })
-    .sort((a, b) => parseDate(b.createdAt).getTime() - parseDate(a.createdAt).getTime());
+    });
+  } catch {
+    return [];
+  }
 }
 
-// ===== Gestión de lotes (listado completo) =====
+export async function getLoteByIdDB(id: string): Promise<Lote | null> {
+  try {
+    const s = requireSupabase();
+    const { data } = await s.from("lotes").select("*").eq("id", id).maybeSingle();
+    return data ? rowToLote(data) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getRegistrosByLoteIdDB(loteId: string): Promise<RegistroDeLote[]> {
+  try {
+    const s = requireSupabase();
+    const { data } = await s
+      .from("lote_registros")
+      .select("*")
+      .eq("lote_id", loteId)
+      .order("created_at", { ascending: true });
+    return (data ?? []).map(rowToRegistro);
+  } catch {
+    return [];
+  }
+}
+
+export async function iniciarLoteDB(
+  loteId: string,
+  legajo: string,
+): Promise<{ ok: boolean; error?: string; linksCount: number }> {
+  try {
+    const s = requireSupabase();
+
+    const { error: e1 } = await s.rpc("actualizar_estado_lote", {
+      p_lote_id: loteId,
+      p_estado: "en_proceso",
+    });
+    if (e1) return { ok: false, error: e1.message, linksCount: 0 };
+
+    const { data: regs } = await s
+      .from("lote_registros")
+      .select("id, monto, descripcion, identificacion_usuario")
+      .eq("lote_id", loteId)
+      .eq("estado", "pendiente");
+    if (!regs || regs.length === 0) return { ok: true, linksCount: 0 };
+
+    const linkRows = regs.map((r) => ({
+      cliente_legajo: legajo,
+      comercio_nombre: r.descripcion || r.identificacion_usuario,
+      url: `https://pay.molly.com.ar/l/${generateId("LNK").toLowerCase()}`,
+      monto: Number(r.monto),
+      estado: "Activo",
+    }));
+
+    const { data: inserted, error: e2 } = await s
+      .from("cliente_links_pago")
+      .insert(linkRows)
+      .select("id, url");
+    if (e2) return { ok: false, error: e2.message, linksCount: 0 };
+
+    for (let i = 0; i < inserted.length; i++) {
+      await s.rpc("actualizar_link_registro", {
+        p_registro_id: regs[i].id,
+        p_link: inserted[i].url,
+      });
+    }
+
+    return { ok: true, linksCount: inserted.length };
+  } catch (e) {
+    return { ok: false, error: String(e), linksCount: 0 };
+  }
+}
+
+export async function pausarLoteDB(loteId: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const s = requireSupabase();
+    const { error } = await s.rpc("actualizar_estado_lote", {
+      p_lote_id: loteId,
+      p_estado: "pausado",
+    });
+    return error ? { ok: false, error: error.message } : { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+export async function reanudarLoteDB(loteId: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const s = requireSupabase();
+    const { error } = await s.rpc("actualizar_estado_lote", {
+      p_lote_id: loteId,
+      p_estado: "en_proceso",
+    });
+    return error ? { ok: false, error: error.message } : { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+export async function eliminarLoteDB(loteId: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const s = requireSupabase();
+    const { error } = await s.rpc("eliminar_lote", { p_lote_id: loteId });
+    return error ? { ok: false, error: error.message } : { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e) };
+  }
+}
+
+// ===== Tipos de consulta =====
 export interface LoteGestionRow {
   id: string;
   nombre: string;
@@ -372,134 +434,141 @@ export interface LoteGestionRow {
   montoPorCobrar: number;
 }
 
-export function getLotesGestion(): LoteGestionRow[] {
-  return lotesMock
-    .filter((l) => l.estado !== "eliminado")
-    .map((l) => {
-      const regs = registrosMock.filter((r) => r.loteId === l.id);
-      const total = regs.length;
-      const cobrados = regs.filter((r) => r.estado === "pagado_total").length;
-      const parciales = regs.filter((r) => r.estado === "pagado_parcial").length;
-      const pendientes = regs.filter(
-        (r) => r.estado === "pendiente" || r.estado === "vencido",
-      ).length;
-      const montoTotal = regs.reduce((s, r) => s + r.monto, 0);
-      const montoCobrado = regs.reduce((s, r) => s + r.montoPagado, 0);
+// ===== Export helpers (re-export for backward compat) =====
+export { generateId };
 
+// ===== Dashboard helpers =====
+export interface PeriodFilter {
+  label: string;
+  from: Date;
+  to: Date;
+}
+
+export function periodFilter(label: string, days?: number, from?: Date, to?: Date): PeriodFilter {
+  const now = new Date();
+  if (days !== undefined) {
+    const f = new Date(now);
+    f.setDate(f.getDate() - days);
+    return { label, from: f, to: now };
+  }
+  return { label, from: from!, to: to! };
+}
+
+export interface DashboardKPI {
+  totalLotes: number;
+  enProceso: number;
+  finalizados: number;
+  conError: number;
+  montoTotal: number;
+  montoCobrado: number;
+  montoPendiente: number;
+}
+
+export async function computeDashboardKPI(filter: PeriodFilter): Promise<DashboardKPI> {
+  try {
+    const s = requireSupabase();
+    const fromIso = filter.from.toISOString();
+    const toIso = filter.to.toISOString();
+    const { data: lotes } = await s.from("lotes").select("id, estado").neq("estado", "eliminado").gte("created_at", fromIso).lte("created_at", toIso);
+    const lotesArr = lotes ?? [];
+    const loteIds = lotesArr.map((l) => l.id);
+    if (loteIds.length === 0) return { totalLotes: 0, enProceso: 0, finalizados: 0, conError: 0, montoTotal: 0, montoCobrado: 0, montoPendiente: 0 };
+    const { data: regs } = await s.from("lote_registros").select("lote_id, monto, monto_pagado").in("lote_id", loteIds);
+    const regsArr = regs ?? [];
+    const montoTotal = regsArr.reduce((s, r) => s + Number(r.monto), 0);
+    const montoCobrado = regsArr.reduce((s, r) => s + Number(r.monto_pagado), 0);
+    return {
+      totalLotes: lotesArr.length,
+      enProceso: lotesArr.filter((l) => l.estado === "en_proceso").length,
+      finalizados: lotesArr.filter((l) => l.estado === "finalizado").length,
+      conError: lotesArr.filter((l) => l.estado === "error").length,
+      montoTotal,
+      montoCobrado,
+      montoPendiente: montoTotal - montoCobrado,
+    };
+  } catch {
+    return { totalLotes: 0, enProceso: 0, finalizados: 0, conError: 0, montoTotal: 0, montoCobrado: 0, montoPendiente: 0 };
+  }
+}
+
+export interface MedioPagoData { medio: string; monto: number; cantidad: number; porcentaje: number; }
+
+export async function computePorMedio(_filter: PeriodFilter): Promise<MedioPagoData[]> {
+  // Placeholder: requires pagos table or payment data. Return empty for now.
+  return [];
+}
+
+export interface VencimientoData { label: string; cantidad: number; monto: number; }
+
+export async function computePorVencimiento(_filter: PeriodFilter): Promise<VencimientoData[]> {
+  return [{ label: "1er vencimiento", cantidad: 0, monto: 0 }, { label: "2do vencimiento", cantidad: 0, monto: 0 }, { label: "3er vencimiento", cantidad: 0, monto: 0 }];
+}
+
+export interface NoCobradasData { totalOperaciones: number; vencidas: number; vigentes: number; montoNoCobrado: number; porcentajeNoCobrado: number; }
+
+export async function computeNoCobradas(filter: PeriodFilter): Promise<NoCobradasData> {
+  try {
+    const s = requireSupabase();
+    const fromIso = filter.from.toISOString();
+    const toIso = filter.to.toISOString();
+    const { data: lotes } = await s.from("lotes").select("id").neq("estado", "eliminado").gte("created_at", fromIso).lte("created_at", toIso);
+    const loteIds = (lotes ?? []).map((l) => l.id);
+    if (loteIds.length === 0) return { totalOperaciones: 0, vencidas: 0, vigentes: 0, montoNoCobrado: 0, porcentajeNoCobrado: 0 };
+    const { data: regs } = await s.from("lote_registros").select("estado, monto, monto_pagado").in("lote_id", loteIds);
+    const regsArr = regs ?? [];
+    const noCobradas = regsArr.filter((r) => r.estado !== "pagado_total");
+    const montoTotal = regsArr.reduce((s, r) => s + Number(r.monto), 0);
+    const montoNoCobrado = noCobradas.reduce((s, r) => s + (Number(r.monto) - Number(r.monto_pagado)), 0);
+    return {
+      totalOperaciones: regsArr.length,
+      vencidas: noCobradas.filter((r) => r.estado === "vencido").length,
+      vigentes: noCobradas.filter((r) => r.estado !== "vencido").length,
+      montoNoCobrado,
+      porcentajeNoCobrado: montoTotal > 0 ? Math.round((montoNoCobrado / montoTotal) * 100) : 0,
+    };
+  } catch {
+    return { totalOperaciones: 0, vencidas: 0, vigentes: 0, montoNoCobrado: 0, porcentajeNoCobrado: 0 };
+  }
+}
+
+export interface EvolucionData { fecha: string; monto: number; cantidad: number; }
+
+export async function computeEvolucion(_filter: PeriodFilter): Promise<EvolucionData[]> {
+  // Placeholder: requires pagos table with timestamps. Return empty for now.
+  return [];
+}
+
+export interface LoteResumen { id: string; nombre: string; estado: LoteEstado; progreso: number; montoTotal: number; montoCobrado: number; cantidadPagos: number; cantidadParciales: number; cantidadPendientes: number; createdAt: string; }
+
+export async function computeLotesRecientes(filter: PeriodFilter): Promise<LoteResumen[]> {
+  try {
+    const s = requireSupabase();
+    const fromIso = filter.from.toISOString();
+    const toIso = filter.to.toISOString();
+    const { data: lotes } = await s.from("lotes").select("*").neq("estado", "eliminado").gte("created_at", fromIso).lte("created_at", toIso).order("created_at", { ascending: false });
+    const lotesArr = lotes ?? [];
+    if (lotesArr.length === 0) return [];
+    const loteIds = lotesArr.map((l) => l.id);
+    const { data: regs } = await s.from("lote_registros").select("lote_id, estado, monto, monto_pagado").in("lote_id", loteIds);
+    const regsArr = regs ?? [];
+    return lotesArr.map((l) => {
+      const lr = regsArr.filter((r) => r.lote_id === l.id);
+      const montoTotal = lr.reduce((s, r) => s + Number(r.monto), 0);
+      const montoCobrado = lr.reduce((s, r) => s + Number(r.monto_pagado), 0);
       return {
         id: l.id,
         nombre: l.nombre,
-        periodo: l.periodo,
-        createdAt: l.createdAt,
-        fechaFinalizacion: l.fechaFinalizacion,
-        estado: l.estado,
+        estado: l.estado as LoteEstado,
         progreso: montoTotal > 0 ? Math.round((montoCobrado / montoTotal) * 100) : 0,
-        cantidadPagos: cobrados,
-        cantidadParciales: parciales,
-        cantidadPendientes: pendientes,
         montoTotal,
         montoCobrado,
-        montoPorCobrar: montoTotal - montoCobrado,
+        cantidadPagos: lr.filter((r) => r.estado === "pagado_total").length,
+        cantidadParciales: lr.filter((r) => r.estado === "pagado_parcial").length,
+        cantidadPendientes: lr.filter((r) => r.estado === "pendiente" || r.estado === "vencido").length,
+        createdAt: l.created_at,
       };
-    })
-    .sort((a, b) => parseDate(b.createdAt).getTime() - parseDate(a.createdAt).getTime());
-}
-
-export function getLoteById(id: string): Lote | undefined {
-  return lotesMock.find((l) => l.id === id);
-}
-
-export function getRegistrosByLoteId(loteId: string): RegistroDeLote[] {
-  return registrosMock.filter((r) => r.loteId === loteId);
-}
-
-export function getPagosByRegistroId(registroId: string): Pago[] {
-  return pagosMock.filter((p) => p.registroId === registroId);
-}
-
-export function getCBUById(id: string): CBURecord | undefined {
-  return cbuPool.find((c) => c.id === id);
-}
-
-export function getCBUByEntidad(tipo: string, id: string, sub: string): CBURecord | undefined {
-  return cbuPool.find((c) => c.tipoEntidad === tipo && c.idEntidad === id && c.subEntidad === sub);
-}
-
-// ===== Catálogo de estados =====
-export const estadoCatalogo: Record<LoteEstado, { label: string; desc: string }> = {
-  cargado: {
-    label: "Cargado / Pendiente",
-    desc: "El lote fue creado y validado, pero aún no llegó la fecha de procesamiento automático; no se generaron links de pago todavía.",
-  },
-  en_proceso: {
-    label: "En proceso",
-    desc: "El lote ya se ejecutó (se generaron los links) pero no todos los pagos fueron efectuados.",
-  },
-  finalizado: {
-    label: "Finalizado",
-    desc: "Todos los pagos del lote fueron efectuados en su totalidad.",
-  },
-  pausado: {
-    label: "Pausado",
-    desc: "El lote fue pausado manualmente; detiene el avance del procesamiento.",
-  },
-  eliminado: {
-    label: "Eliminado",
-    desc: "El lote fue eliminado (soft delete).",
-  },
-  error: {
-    label: "Con error / requiere atención",
-    desc: "Ocurrió un fallo técnico durante el procesamiento que impide completar la generación de links o el cobro.",
-  },
-};
-
-export const medioPagoLabels: Record<MedioPago, string> = {
-  TRANSFERENCIA: "Transferencia",
-  TARJETA_CREDITO: "Tarjeta de crédito",
-  TARJETA_DEBITO: "Tarjeta de débito",
-  QR: "Código QR",
-};
-
-// ===== Función para iniciar lote manualmente =====
-export function iniciarLote(loteId: string): boolean {
-  const lote = lotesMock.find((l) => l.id === loteId);
-  if (!lote || lote.estado !== "cargado") return false;
-  lote.estado = "en_proceso";
-  lote.fechaInicio = fmtFull(now);
-  const regs = registrosMock.filter((r) => r.loteId === loteId);
-  for (const r of regs) {
-    if (r.estado === "pendiente") {
-      r.linkDePago = `https://pay.molly.com.ar/l/${generateId("LNK").toLowerCase()}`;
-    }
+    });
+  } catch {
+    return [];
   }
-  return true;
-}
-
-export function pausarLote(loteId: string): boolean {
-  const lote = lotesMock.find((l) => l.id === loteId);
-  if (!lote || lote.estado !== "en_proceso") return false;
-  lote.estado = "pausado";
-  return true;
-}
-
-export function reanudarLote(loteId: string): boolean {
-  const lote = lotesMock.find((l) => l.id === loteId);
-  if (!lote || lote.estado !== "pausado") return false;
-  lote.estado = "en_proceso";
-  return true;
-}
-
-export function eliminarLote(loteId: string): boolean {
-  const idx = lotesMock.findIndex((l) => l.id === loteId);
-  if (idx === -1) return false;
-  lotesMock[idx] = { ...lotesMock[idx], estado: "eliminado" };
-  return true;
-}
-
-export function crearLote(lote: Lote): void {
-  lotesMock.unshift(lote);
-}
-
-export function agregarRegistroAlLote(registro: RegistroDeLote): void {
-  registrosMock.push(registro);
 }

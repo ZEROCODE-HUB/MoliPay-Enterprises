@@ -1,5 +1,5 @@
 ﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   PieChart,
   Pie,
@@ -30,6 +30,12 @@ import {
   estadoCatalogo,
   type PeriodFilter,
   type LoteEstado,
+  type DashboardKPI,
+  type MedioPagoData,
+  type VencimientoData,
+  type NoCobradasData,
+  type EvolucionData,
+  type LoteResumen,
 } from "@/data/cobros-masivos";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -79,12 +85,24 @@ function Dashboard() {
   const [customDesde, setCustomDesde] = useState("");
   const [customHasta, setCustomHasta] = useState("");
 
-  const kpi = useMemo(() => computeDashboardKPI(filter), [filter]);
-  const porMedio = useMemo(() => computePorMedio(filter), [filter]);
-  const porVencimiento = useMemo(() => computePorVencimiento(filter), [filter]);
-  const noCobradas = useMemo(() => computeNoCobradas(filter), [filter]);
-  const evolucion = useMemo(() => computeEvolucion(filter), [filter]);
-  const lotesRecientes = useMemo(() => computeLotesRecientes(filter), [filter]);
+  const [kpi, setKpi] = useState<DashboardKPI>({ totalLotes: 0, enProceso: 0, finalizados: 0, conError: 0, montoTotal: 0, montoCobrado: 0, montoPendiente: 0 });
+  const [porMedio, setPorMedio] = useState<MedioPagoData[]>([]);
+  const [porVencimiento, setPorVencimiento] = useState<VencimientoData[]>([]);
+  const [noCobradas, setNoCobradas] = useState<NoCobradasData>({ totalOperaciones: 0, vencidas: 0, vigentes: 0, montoNoCobrado: 0, porcentajeNoCobrado: 0 });
+  const [evolucion, setEvolucion] = useState<EvolucionData[]>([]);
+  const [lotesRecientes, setLotesRecientes] = useState<LoteResumen[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [k, pm, pv, nc, ev, lr] = await Promise.all([
+        computeDashboardKPI(filter), computePorMedio(filter), computePorVencimiento(filter),
+        computeNoCobradas(filter), computeEvolucion(filter), computeLotesRecientes(filter),
+      ]);
+      if (!cancelled) { setKpi(k); setPorMedio(pm); setPorVencimiento(pv); setNoCobradas(nc); setEvolucion(ev); setLotesRecientes(lr); }
+    })();
+    return () => { cancelled = true; };
+  }, [filter]);
 
   const exportExcel = () => {
     const ws = XLSX.utils.json_to_sheet([

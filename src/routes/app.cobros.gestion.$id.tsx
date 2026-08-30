@@ -1,5 +1,5 @@
 ﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useMemo, useEffect, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import {
   ArrowLeft,
   Play,
@@ -19,17 +19,16 @@ import { Card, BtnPrimary, BtnOutline, Badge } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "sonner";
 import {
-  getLoteById,
-  getRegistrosByLoteId,
-  getPagosByRegistroId,
-  getCBUById,
+  getLoteByIdDB,
+  getRegistrosByLoteIdDB,
   formatARS,
   estadoCatalogo,
   medioPagoLabels,
-  iniciarLote,
-  pausarLote,
-  reanudarLote,
-  eliminarLote,
+  iniciarLoteDB,
+  pausarLoteDB,
+  reanudarLoteDB,
+  eliminarLoteDB,
+  getLegajoUsuario,
   type Lote,
   type RegistroDeLote,
   type MedioPago,
@@ -79,17 +78,35 @@ function DetalleLote() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [confirmarEliminar, setConfirmarEliminar] = useState(false);
+  const [lote, setLote] = useState<Lote | null>(null);
+  const [registros, setRegistros] = useState<RegistroDeLote[]>([]);
+  const [cargando, setCargando] = useState(true);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const lote = useMemo(() => getLoteById(id), [id, refresh]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const registros = useMemo(() => getRegistrosByLoteId(id), [id, refresh]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setCargando(true);
+      const [l, r] = await Promise.all([getLoteByIdDB(id), getRegistrosByLoteIdDB(id)]);
+      if (!cancelled) { setLote(l); setRegistros(r); setCargando(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [id, refresh]);
+
   const registrosPaginados = registros.slice((page - 1) * pageSize, page * pageSize);
   const totalPages = Math.max(1, Math.ceil(registros.length / pageSize));
 
   useEffect(() => { setPage(1); }, [registros.length]);
 
   const trigger = () => setRefresh((r) => r + 1);
+
+  if (cargando) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground">Cargando lote...</p>
+      </div>
+    );
+  }
 
   if (!lote) {
     return (
@@ -116,38 +133,33 @@ function DetalleLote() {
   const montoCobrado = registros.reduce((s, r) => s + r.montoPagado, 0);
   const pctCobrado = montoTotal > 0 ? Math.round((montoCobrado / montoTotal) * 100) : 0;
 
-  const handleIniciar = () => {
-    if (iniciarLote(id)) {
-      toast.success("Lote iniciado - se generaron los links de pago");
+  const handleIniciar = async () => {
+    const legajo = await getLegajoUsuario();
+    if (!legajo) { toast.error("No se pudo identificar el usuario"); return; }
+    const result = await iniciarLoteDB(id, legajo);
+    if (result.ok) {
+      toast.success(`Lote iniciado - ${result.linksCount} links de pago creados`);
       trigger();
     } else {
-      toast.error("El lote no esta en estado pendiente");
+      toast.error(result.error ?? "El lote no esta en estado pendiente");
     }
   };
 
-  const handlePausar = () => {
-    if (pausarLote(id)) {
-      toast.success("Lote pausado");
-      trigger();
-    } else {
-      toast.error("No se pudo pausar el lote");
-    }
+  const handlePausar = async () => {
+    const result = await pausarLoteDB(id);
+    if (result.ok) { toast.success("Lote pausado"); trigger(); }
+    else toast.error(result.error ?? "No se pudo pausar el lote");
   };
 
-  const handleReanudar = () => {
-    if (reanudarLote(id)) {
-      toast.success("Lote reanudado");
-      trigger();
-    } else {
-      toast.error("No se pudo reanudar el lote");
-    }
+  const handleReanudar = async () => {
+    const result = await reanudarLoteDB(id);
+    if (result.ok) { toast.success("Lote reanudado"); trigger(); }
+    else toast.error(result.error ?? "No se pudo reanudar el lote");
   };
 
-  const handleEliminar = () => {
-    if (eliminarLote(id)) {
-      toast.success("Lote eliminado");
-      navigate({ to: "/app/cobros/gestion" });
-    }
+  const handleEliminar = async () => {
+    const result = await eliminarLoteDB(id);
+    if (result.ok) { toast.success("Lote eliminado"); navigate({ to: "/app/cobros/gestion" }); }
   };
 
   const copyLink = (url: string) => {
@@ -439,7 +451,6 @@ function DetalleLote() {
             </thead>
             <tbody className="divide-y">
               {registrosPaginados.map((r) => {
-                const cb = r.cbuId ? getCBUById(r.cbuId) : null;
                 return (
                   <tr key={r.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-3 py-3 max-w-[180px]">

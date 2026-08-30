@@ -7,21 +7,22 @@ import {
 import { Card, BtnPrimary, BtnOutline, Input, Label } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "sonner";
-import { requireSupabase } from "@/lib/supabase";
 import {
-  getLotesGestion,
-  getLoteById,
-  getRegistrosByLoteId,
-  getCBUById,
+  getLotesGestionDB,
+  getLoteByIdDB,
+  getRegistrosByLoteIdDB,
   formatARS,
   estadoCatalogo,
   medioPagoLabels,
-  iniciarLote,
-  pausarLote,
-  reanudarLote,
-  eliminarLote,
+  iniciarLoteDB,
+  pausarLoteDB,
+  reanudarLoteDB,
+  eliminarLoteDB,
+  getLegajoUsuario,
+  generateId,
   type LoteEstado,
   type Lote,
+  type RegistroDeLote,
 } from "@/data/cobros-masivos";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
@@ -61,18 +62,35 @@ function GestionLotes() {
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [confirmarEliminarId, setConfirmarEliminarId] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const [lotesData, setLotesData] = useState<Awaited<ReturnType<typeof getLotesGestionDB>>>([]);
+  const [cargando, setCargando] = useState(true);
+  const [registrosDetalle, setRegistrosDetalle] = useState<RegistroDeLote[]>([]);
 
-  const ejecutarEliminar = () => {
-    if (confirmarEliminarId !== null && eliminarLote(confirmarEliminarId)) {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setCargando(true);
+      const data = await getLotesGestionDB();
+      if (!cancelled) { setLotesData(data); setCargando(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [tick]);
+
+  const ejecutarEliminar = async () => {
+    if (confirmarEliminarId === null) return;
+    const result = await eliminarLoteDB(confirmarEliminarId);
+    if (result.ok) {
       toast.success("Lote eliminado");
       setDetalleOpen(false);
       setDetalleLote(null);
       setTick((t) => t + 1);
+    } else {
+      toast.error(result.error ?? "No se pudo eliminar");
     }
   };
 
   const lotes = useMemo(() => {
-    let data = getLotesGestion();
+    let data = lotesData;
     if (busqueda) {
       const q = busqueda.toLowerCase();
       data = data.filter(
@@ -92,17 +110,19 @@ function GestionLotes() {
       data = data.filter((l) => l.createdAt.slice(0, 10) <= fechaHasta);
     }
     return data;
-  }, [busqueda, filtroEstado, fechaDesde, fechaHasta, tick]);
+  }, [lotesData, busqueda, filtroEstado, fechaDesde, fechaHasta]);
 
   useEffect(() => { setPage(1); }, [busqueda, filtroEstado, fechaDesde, fechaHasta]);
 
   const totalPages = Math.max(1, Math.ceil(lotes.length / pageSize));
   const paginated = lotes.slice((page - 1) * pageSize, page * pageSize);
 
-  const abrirDetalle = (id: string) => {
-    const lote = getLoteById(id);
+  const abrirDetalle = async (id: string) => {
+    const lote = await getLoteByIdDB(id);
     if (lote) {
       setDetalleLote(lote);
+      const regs = await getRegistrosByLoteIdDB(id);
+      setRegistrosDetalle(regs);
       setDetalleOpen(true);
     }
   };
@@ -440,7 +460,7 @@ function GestionLotes() {
       {detalleOpen && detalleLote && (() => {
         const lote = detalleLote;
         const id = lote.id;
-        const registros = getRegistrosByLoteId(id);
+        const registros = registrosDetalle;
         const totalRegistros = registros.length;
         const cobrados = registros.filter((r) => r.estado === "pagado_total").length;
         const parciales = registros.filter((r) => r.estado === "pagado_parcial").length;
@@ -452,53 +472,38 @@ function GestionLotes() {
         const pctCobrado = montoTotal > 0 ? Math.round((montoCobrado / montoTotal) * 100) : 0;
 
         const handleIniciar = async () => {
-          if (!iniciarLote(id)) {
-            toast.error("El lote no esta en estado pendiente");
+          const legajo = await getLegajoUsuario();
+          if (!legajo) { toast.error("No se pudo identificar el usuario"); return; }
+          const result = await iniciarLoteDB(id, legajo);
+          if (!result.ok) {
+            toast.error(result.error ?? "No se pudo iniciar el lote");
             return;
           }
-          const regs = getRegistrosByLoteId(id);
-          try {
-            const s = requireSupabase();
-            const { data: u } = await s.auth.getUser();
-            const mail = u.user?.email;
-            if (!mail) { toast.success("Lote iniciado (sin persistir links)"); setDetalleLote({ ...getLoteById(id)! }); setTick((t) => t + 1); return; }
-            const { data: cli } = await s.from("clientes").select("legajo").eq("correo", mail).maybeSingle();
-            if (!cli) { toast.success("Lote iniciado (sin persistir links)"); setDetalleLote({ ...getLoteById(id)! }); setTick((t) => t + 1); return; }
-            const linkRows = regs.filter((r) => r.linkDePago).map((r) => ({
-              cliente_legajo: cli.legajo,
-              comercio_nombre: r.descripcion || r.identificacionUsuario,
-              url: r.linkDePago,
-              monto: r.monto,
-              estado: "Activo",
-            }));
-            if (linkRows.length > 0) {
-              const { error } = await s.from("cliente_links_pago").insert(linkRows);
-              if (error) toast.error("Links generados pero no se pudieron guardar en la DB");
-              else toast.success(`Lote iniciado - ${linkRows.length} links de pago creados`);
-            } else {
-              toast.success("Lote iniciado");
-            }
-          } catch {
-            toast.success("Lote iniciado (sin persistir links)");
-          }
-          const fresh = getLoteById(id);
-          if (fresh) setDetalleLote({ ...fresh });
+          toast.success(`Lote iniciado - ${result.linksCount} links de pago creados`);
+          const fresh = await getLoteByIdDB(id);
+          if (fresh) setDetalleLote(fresh);
+          const freshRegs = await getRegistrosByLoteIdDB(id);
+          setRegistrosDetalle(freshRegs);
           setTick((t) => t + 1);
         };
-        const handlePausar = () => {
-          if (pausarLote(id)) {
+        const handlePausar = async () => {
+          const result = await pausarLoteDB(id);
+          if (result.ok) {
             toast.success("Lote pausado");
-            setDetalleLote(getLoteById(id) ?? null);
+            const fresh = await getLoteByIdDB(id);
+            if (fresh) setDetalleLote(fresh);
           } else {
-            toast.error("No se pudo pausar el lote");
+            toast.error(result.error ?? "No se pudo pausar el lote");
           }
         };
-        const handleReanudar = () => {
-          if (reanudarLote(id)) {
+        const handleReanudar = async () => {
+          const result = await reanudarLoteDB(id);
+          if (result.ok) {
             toast.success("Lote reanudado");
-            setDetalleLote(getLoteById(id) ?? null);
+            const fresh = await getLoteByIdDB(id);
+            if (fresh) setDetalleLote(fresh);
           } else {
-            toast.error("No se pudo reanudar el lote");
+            toast.error(result.error ?? "No se pudo reanudar el lote");
           }
         };
         const copyLink = async (url: string) => {
@@ -697,7 +702,6 @@ function GestionLotes() {
                       </thead>
                       <tbody className="divide-y">
                         {registros.map((r) => {
-                          const cb = r.cbuId ? getCBUById(r.cbuId) : null;
                           return (
                             <tr key={r.id} className="hover:bg-muted/30 transition-colors">
                               <td className="px-3 py-3 max-w-[180px]">
