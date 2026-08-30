@@ -21,6 +21,7 @@ import { Route as RegistroValidarEmailRouteImport } from './routes/registro.vali
 import { Route as RegistroValidacionExitosaRouteImport } from './routes/registro.validacion-exitosa'
 import { Route as RegistroExitoRouteImport } from './routes/registro.exito'
 import { Route as RegistroEmpresaRouteImport } from './routes/registro.empresa'
+import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as OnboardingKycRouteImport } from './routes/onboarding.kyc'
 import { Route as OnboardingEnProcesoRouteImport } from './routes/onboarding.en-proceso'
 import { Route as OnboardingDatosPersonalesRouteImport } from './routes/onboarding.datos-personales'
@@ -112,6 +113,11 @@ const RegistroEmpresaRoute = RegistroEmpresaRouteImport.update({
   id: '/empresa',
   path: '/empresa',
   getParentRoute: () => RegistroRoute,
+} as any)
+const PCodeRoute = PCodeRouteImport.update({
+  id: '/p/$code',
+  path: '/p/$code',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingKycRoute = OnboardingKycRouteImport.update({
   id: '/onboarding/kyc',
@@ -294,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/datos-personales': typeof OnboardingDatosPersonalesRoute
   '/onboarding/en-proceso': typeof OnboardingEnProcesoRoute
   '/onboarding/kyc': typeof OnboardingKycRoute
+  '/p/$code': typeof PCodeRoute
   '/registro/empresa': typeof RegistroEmpresaRoute
   '/registro/exito': typeof RegistroExitoRoute
   '/registro/validacion-exitosa': typeof RegistroValidacionExitosaRoute
@@ -336,6 +343,7 @@ export interface FileRoutesByTo {
   '/onboarding/datos-personales': typeof OnboardingDatosPersonalesRoute
   '/onboarding/en-proceso': typeof OnboardingEnProcesoRoute
   '/onboarding/kyc': typeof OnboardingKycRoute
+  '/p/$code': typeof PCodeRoute
   '/registro/empresa': typeof RegistroEmpresaRoute
   '/registro/exito': typeof RegistroExitoRoute
   '/registro/validacion-exitosa': typeof RegistroValidacionExitosaRoute
@@ -381,6 +389,7 @@ export interface FileRoutesById {
   '/onboarding/datos-personales': typeof OnboardingDatosPersonalesRoute
   '/onboarding/en-proceso': typeof OnboardingEnProcesoRoute
   '/onboarding/kyc': typeof OnboardingKycRoute
+  '/p/$code': typeof PCodeRoute
   '/registro/empresa': typeof RegistroEmpresaRoute
   '/registro/exito': typeof RegistroExitoRoute
   '/registro/validacion-exitosa': typeof RegistroValidacionExitosaRoute
@@ -427,6 +436,7 @@ export interface FileRouteTypes {
     | '/onboarding/datos-personales'
     | '/onboarding/en-proceso'
     | '/onboarding/kyc'
+    | '/p/$code'
     | '/registro/empresa'
     | '/registro/exito'
     | '/registro/validacion-exitosa'
@@ -469,6 +479,7 @@ export interface FileRouteTypes {
     | '/onboarding/datos-personales'
     | '/onboarding/en-proceso'
     | '/onboarding/kyc'
+    | '/p/$code'
     | '/registro/empresa'
     | '/registro/exito'
     | '/registro/validacion-exitosa'
@@ -513,6 +524,7 @@ export interface FileRouteTypes {
     | '/onboarding/datos-personales'
     | '/onboarding/en-proceso'
     | '/onboarding/kyc'
+    | '/p/$code'
     | '/registro/empresa'
     | '/registro/exito'
     | '/registro/validacion-exitosa'
@@ -545,6 +557,7 @@ export interface RootRouteChildren {
   OnboardingDatosPersonalesRoute: typeof OnboardingDatosPersonalesRoute
   OnboardingEnProcesoRoute: typeof OnboardingEnProcesoRoute
   OnboardingKycRoute: typeof OnboardingKycRoute
+  PCodeRoute: typeof PCodeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -632,6 +645,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/registro/empresa'
       preLoaderRoute: typeof RegistroEmpresaRouteImport
       parentRoute: typeof RegistroRoute
+    }
+    '/p/$code': {
+      id: '/p/$code'
+      path: '/p/$code'
+      fullPath: '/p/$code'
+      preLoaderRoute: typeof PCodeRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/onboarding/kyc': {
       id: '/onboarding/kyc'
@@ -971,6 +991,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingDatosPersonalesRoute: OnboardingDatosPersonalesRoute,
   OnboardingEnProcesoRoute: OnboardingEnProcesoRoute,
   OnboardingKycRoute: OnboardingKycRoute,
+  PCodeRoute: PCodeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
