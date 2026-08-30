@@ -14,6 +14,7 @@ import {
   XCircle,
   FileSpreadsheet,
   Download,
+  LinkIcon,
 } from "lucide-react";
 import { Card, BtnPrimary, BtnOutline, Badge } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -227,6 +228,14 @@ function DetalleLote() {
         onClick: handlePausar,
         variant: "outline",
       });
+      if (registros.some((r) => !r.linkDePago)) {
+        actions.push({
+          label: "Regenerar links",
+          icon: <LinkIcon size={14} />,
+          onClick: handleIniciar,
+          variant: "primary",
+        });
+      }
     }
     if (lote.estado === "pausado") {
       actions.push({
@@ -235,6 +244,14 @@ function DetalleLote() {
         onClick: handleReanudar,
         variant: "primary",
       });
+      if (registros.some((r) => !r.linkDePago)) {
+        actions.push({
+          label: "Regenerar links",
+          icon: <LinkIcon size={14} />,
+          onClick: handleIniciar,
+          variant: "primary",
+        });
+      }
     }
     if (lote.estado !== "finalizado" && lote.estado !== "eliminado") {
       actions.push({

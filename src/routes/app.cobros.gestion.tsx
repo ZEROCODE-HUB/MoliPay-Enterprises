@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, type ReactNode } from "react";
 import {
   Plus, Eye, FileSpreadsheet, Download, Search, Filter, X,
-  Play, Pause, PlayIcon, Trash2, Copy, ExternalLink,
+  Play, Pause, PlayIcon, Trash2, Copy, ExternalLink, LinkIcon,
 } from "lucide-react";
 import { Card, BtnPrimary, BtnOutline, Input, Label } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
@@ -551,9 +551,15 @@ function GestionLotes() {
           }
           if (lote.estado === "en_proceso") {
             actions.push({ label: "Pausar", icon: <Pause size={14} />, onClick: handlePausar, variant: "outline" });
+            if (registrosDetalle.some((r) => !r.linkDePago)) {
+              actions.push({ label: "Regenerar links", icon: <LinkIcon size={14} />, onClick: handleIniciar, variant: "primary" });
+            }
           }
           if (lote.estado === "pausado") {
             actions.push({ label: "Reanudar", icon: <PlayIcon size={14} />, onClick: handleReanudar, variant: "primary" });
+            if (registrosDetalle.some((r) => !r.linkDePago)) {
+              actions.push({ label: "Regenerar links", icon: <LinkIcon size={14} />, onClick: handleIniciar, variant: "primary" });
+            }
           }
           if (lote.estado !== "finalizado" && lote.estado !== "eliminado") {
             actions.push({ label: "Eliminar", icon: <Trash2 size={14} />, onClick: () => setConfirmarEliminarId(id), variant: "danger" });
