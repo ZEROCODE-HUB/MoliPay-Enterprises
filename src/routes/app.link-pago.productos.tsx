@@ -1,5 +1,5 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Copy, Share2, Edit3, ToggleLeft, RotateCcw, History, Search, Eye, Trash2, X } from "lucide-react";
 import {
   Card,
@@ -14,21 +14,20 @@ import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import {
-  mockProducts,
-  mockLinks,
   paymentMethods,
-  generateId,
   formatARS,
   type Product,
   type PaymentLink,
 } from "@/data/links-pago";
 import QRCode from "qrcode";
+import { requireSupabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/app/link-pago/productos")({ component: Page });
 
 function Page() {
-  const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [links, setLinks] = useState<PaymentLink[]>(mockLinks);
+  const [legajo, setLegajo] = useState<string>("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [links, setLinks] = useState<PaymentLink[]>([]);
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -50,23 +49,154 @@ function Page() {
   const [linkRef, setLinkRef] = useState("");
   const [linkNotes, setLinkNotes] = useState("");
 
+  const loadProductos = async (lg: string) => {
+    const s = requireSupabase();
+    const { data } = await s
+      .from("productos")
+      .select("*")
+      .eq("cliente_legajo", lg)
+      .order("created_at", { ascending: false });
+    const rows: Product[] = (data ?? []).map((r: any) => ({
+      id: r.id,
+      name: r.nombre,
+      qty: Number(r.cantidad ?? 1),
+      price: Number(r.precio ?? 0),
+      desc: r.descripcion ?? undefined,
+    }));
+    setProducts(rows);
+  };
+
+  const loadLinks = async (lg: string) => {
+    const s = requireSupabase();
+    const { data: lks } = await s
+      .from("cliente_links_pago")
+      .select("*")
+      .eq("cliente_legajo", lg)
+      .order("created_at", { ascending: false });
+    const lk = lks ?? [];
+    const ids = lk.map((x: any) => x.id);
+    let det: any[] = [];
+    if (ids.length) {
+      const { data: d } = await s
+        .from("cliente_links_pago_detalle")
+        .select("*")
+        .in("link_id", ids);
+      det = d ?? [];
+    }
+    const byLink = new Map<string, any[]>();
+    det.forEach((d) => {
+      const arr = byLink.get(d.link_id) ?? [];
+      arr.push(d);
+      byLink.set(d.link_id, arr);
+    });
+    const rows: PaymentLink[] = lk.map((x: any) => {
+      const dd = byLink.get(x.id) ?? [];
+      const prods: Product[] = dd.map((d) => ({
+        id: d.producto_id ?? d.id,
+        name: d.producto_nombre,
+        qty: Number(d.cantidad ?? 1),
+        price: Number(d.precio_unitario ?? 0),
+      }));
+      return {
+        id: x.id,
+        url: x.url,
+        products: prods,
+        status: (x.estado ?? "Activo") as PaymentLink["status"],
+        partialPayments: !!x.pagos_parciales,
+        methods: Array.isArray(x.metodos_pago) ? x.metodos_pago : [],
+        reference: x.referencia ?? undefined,
+        notes: x.notas ?? undefined,
+        createdAt: (x.created_at ?? "").slice(0, 10).split("-").reverse().join("/"),
+        expiresAt: x.expira_en
+          ? (x.expira_en as string).slice(0, 10).split("-").reverse().join("/")
+          : undefined,
+        views: Number(x.vistas ?? 0),
+        payments: Number(x.pagos ?? 0),
+      };
+    });
+    setLinks(rows);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = requireSupabase();
+        const { data: u } = await s.auth.getUser();
+        const mail = u.user?.email;
+        if (!mail) return;
+        const { data: cli } = await s
+          .from("clientes")
+          .select("legajo")
+          .eq("correo", mail)
+          .maybeSingle();
+        if (!cli) return;
+        if (cancelled) return;
+        setLegajo(cli.legajo);
+        await loadProductos(cli.legajo);
+        await loadLinks(cli.legajo);
+      } catch {
+        // silencioso
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const toggleMethod = (id: string) => {
     setLinkMethods((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const generateLink = async () => {
+    const s = requireSupabase();
     const selProducts = products.filter((p) => selected.includes(p.id));
     if (selProducts.length === 0) {
       toast.error("Selecciona al menos un producto");
       return;
     }
-    const id = generateId();
-    const url = "https://pay.molly.com.ar/l/" + id.toLowerCase();
+    if (!legajo) {
+      toast.error("Sesion no disponible");
+      return;
+    }
+    const code = "LP-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+    const url = "https://pay.molly.com.ar/l/" + code;
+    const monto = selProducts.reduce((a, p) => a + p.price * p.qty, 0);
+    const insertLink = {
+      cliente_legajo: legajo,
+      comercio_nombre: selProducts.map((p) => p.name).join(", "),
+      url,
+      monto,
+      estado: linkStatus,
+      referencia: linkRef || null,
+      notas: linkNotes || null,
+      expira_en: linkExpires ? new Date(linkExpires + "T23:59:59").toISOString() : null,
+      pagos_parciales: linkPartial,
+      metodos_pago: linkMethods,
+    };
+    const { data: inserted, error } = await s
+      .from("cliente_links_pago")
+      .insert(insertLink)
+      .select()
+      .single();
+    if (error || !inserted) {
+      toast.error("No se pudo generar el link");
+      return;
+    }
+    const detRows = selProducts.map((p) => ({
+      link_id: inserted.id,
+      producto_id: p.id,
+      producto_nombre: p.name,
+      cantidad: p.qty,
+      precio_unitario: p.price,
+    }));
+    const { error: e2 } = await s.from("cliente_links_pago_detalle").insert(detRows);
+    if (e2) toast.error("Link creado, pero fallo el detalle");
     const link: PaymentLink = {
-      id,
+      id: inserted.id,
       url,
       products: selProducts,
-      status: linkStatus as any,
+      status: linkStatus as PaymentLink["status"],
       partialPayments: linkPartial,
       methods: linkMethods,
       reference: linkRef || undefined,
@@ -86,29 +216,67 @@ function Page() {
     }
     setShowLinkForm(false);
     setShowResult(true);
+    setSelected([]);
+    setLinkRef("");
+    setLinkNotes("");
+    setLinkExpires("");
+    setLinkPartial(false);
+    setLinkMethods(paymentMethods.filter((m) => m.enabled).map((m) => m.id));
+    setLinkStatus("Activo");
     toast.success("Link de pago generado");
+    await loadLinks(legajo);
   };
 
-  const deleteLink = (id: string) => {
+  const deleteLink = async (id: string) => {
+    const s = requireSupabase();
+    const { error } = await s.from("cliente_links_pago").delete().eq("id", id);
+    if (error) {
+      toast.error("No se pudo eliminar");
+      return;
+    }
     setLinks((prev) => prev.filter((l) => l.id !== id));
     toast.success("Link de pago eliminado");
   };
 
-  const deleteProduct = (id: string) => {
+  const deleteProduct = async (id: string) => {
+    const s = requireSupabase();
+    const { error } = await s.from("productos").delete().eq("id", id);
+    if (error) {
+      toast.error("No se pudo eliminar");
+      return;
+    }
     setProducts((prev) => prev.filter((p) => p.id !== id));
     setSelected((prev) => prev.filter((x) => x !== id));
     toast.success("Producto eliminado");
   };
 
-  const saveProduct = (product: Product) => {
+  const saveProduct = async (product: Product) => {
+    const s = requireSupabase();
+    const payload = {
+      cliente_legajo: legajo,
+      nombre: product.name,
+      descripcion: product.desc ?? null,
+      precio: product.price,
+      cantidad: product.qty,
+    };
     if (editingProduct) {
-      setProducts((prev) => prev.map((p) => (p.id === product.id ? product : p)));
+      const { error } = await s.from("productos").update(payload).eq("id", editingProduct.id);
+      if (error) {
+        toast.error("No se pudo actualizar");
+        return;
+      }
+      toast.success("Producto actualizado");
     } else {
-      setProducts((prev) => [...prev, { ...product, id: "p" + Date.now() }]);
+      const { error } = await s.from("productos").insert(payload);
+      if (error) {
+        toast.error("No se pudo crear");
+        return;
+      }
+      toast.success("Producto creado");
     }
     setShowProductForm(false);
     setEditingProduct(null);
-    toast.success(editingProduct ? "Producto actualizado" : "Producto creado");
+    if (legajo) await loadProductos(legajo);
   };
 
   return (
@@ -241,6 +409,7 @@ function Page() {
       </Card>
 
       <ProductFormDialog
+        key={editingProduct?.id ?? "nuevo"}
         open={showProductForm}
         onClose={() => {
           setShowProductForm(false);
@@ -512,7 +681,7 @@ function Page() {
                     const desc = l.products.map((p) => p.name).join(", ") || l.reference || "-";
                     return (
                       <tr key={l.id} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="px-5 py-3 font-mono text-xs">{l.id}</td>
+                        <td className="px-5 py-3 font-mono text-xs">{(l.url.split("/").pop()) ?? l.id}</td>
                         <td className="px-5 py-3 text-xs max-w-[220px] truncate" title={desc}>
                           {desc}
                         </td>
@@ -621,7 +790,7 @@ function Page() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-xs text-muted-foreground">ID</span>
-                  <div className="font-mono">{detailLink.id}</div>
+                  <div className="font-mono">{(detailLink.url.split("/").pop()) ?? detailLink.id}</div>
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground">Estado</span>
