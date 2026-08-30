@@ -24,6 +24,17 @@ import { requireSupabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/app/link-pago/productos")({ component: Page });
 
+function linkDisplayStatus(l: PaymentLink): string {
+  if (l.status === "Activo" && l.expiresAt) {
+    const parts = l.expiresAt.split("/");
+    if (parts.length === 3) {
+      const exp = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T23:59:59`);
+      if (exp.getTime() < Date.now()) return "Vencido";
+    }
+  }
+  return l.status;
+}
+
 function Page() {
   const [legajo, setLegajo] = useState<string>("");
   const [products, setProducts] = useState<Product[]>([]);
@@ -718,14 +729,14 @@ function Page() {
                         <td className="px-5 py-3">
                           <Badge
                             tone={
-                              l.status === "Activo"
+                              linkDisplayStatus(l) === "Activo"
                                 ? "success"
-                                : l.status === "Inactivo"
+                                : linkDisplayStatus(l) === "Inactivo"
                                   ? "neutral"
                                   : "danger"
                             }
                           >
-                            {l.status}
+                            {linkDisplayStatus(l)}
                           </Badge>
                         </td>
                         <td className="px-5 py-3 font-mono tabular-nums text-right text-xs font-semibold">
@@ -840,22 +851,22 @@ function Page() {
                   <span className="text-xs text-muted-foreground">ID</span>
                   <div className="font-mono">{(detailLink.url.split("/").pop()) ?? detailLink.id}</div>
                 </div>
-                <div>
-                  <span className="text-xs text-muted-foreground">Estado</span>
                   <div>
-                    <Badge
-                      tone={
-                        detailLink.status === "Activo"
-                          ? "success"
-                          : detailLink.status === "Inactivo"
-                            ? "neutral"
-                            : "danger"
-                      }
-                    >
-                      {detailLink.status}
-                    </Badge>
+                    <span className="text-xs text-muted-foreground">Estado</span>
+                    <div>
+                      <Badge
+                        tone={
+                          linkDisplayStatus(detailLink) === "Activo"
+                            ? "success"
+                            : linkDisplayStatus(detailLink) === "Inactivo"
+                              ? "neutral"
+                              : "danger"
+                        }
+                      >
+                        {linkDisplayStatus(detailLink)}
+                      </Badge>
+                    </div>
                   </div>
-                </div>
                 <div>
                   <span className="text-xs text-muted-foreground">Monto total</span>
                   <div className="font-semibold">
