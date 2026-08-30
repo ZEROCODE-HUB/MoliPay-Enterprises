@@ -59,12 +59,14 @@ function GestionLotes() {
   const [detalleLote, setDetalleLote] = useState<Lote | null>(null);
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [confirmarEliminarId, setConfirmarEliminarId] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
 
   const ejecutarEliminar = () => {
     if (confirmarEliminarId !== null && eliminarLote(confirmarEliminarId)) {
       toast.success("Lote eliminado");
       setDetalleOpen(false);
       setDetalleLote(null);
+      setTick((t) => t + 1);
     }
   };
 
@@ -89,7 +91,7 @@ function GestionLotes() {
       data = data.filter((l) => l.createdAt.slice(0, 10) <= fechaHasta);
     }
     return data;
-  }, [busqueda, filtroEstado, fechaDesde, fechaHasta]);
+  }, [busqueda, filtroEstado, fechaDesde, fechaHasta, tick]);
 
   useEffect(() => { setPage(1); }, [busqueda, filtroEstado, fechaDesde, fechaHasta]);
 
@@ -452,6 +454,7 @@ function GestionLotes() {
           if (iniciarLote(id)) {
             toast.success("Lote iniciado - se generaron los links de pago");
             setDetalleLote(getLoteById(id) ?? null);
+            setTick((t) => t + 1);
           } else {
             toast.error("El lote no esta en estado pendiente");
           }
