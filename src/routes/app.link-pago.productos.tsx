@@ -708,15 +708,16 @@ function Page() {
                           {l.payments}
                         </td>
                         <td className="px-5 py-3">
-                          <BtnOutline
-                            className="h-7 px-2 text-[11px]"
-                            onClick={() => {
-                              navigator.clipboard.writeText(l.url);
-                              toast.success("Link copiado");
-                            }}
-                          >
-                            <Copy size={12} /> Copiar
-                          </BtnOutline>
+                              <BtnOutline
+                                className="h-7 px-2 text-[11px]"
+                                onClick={() => {
+                                  const code = l.url.split("/").pop();
+                                  navigator.clipboard.writeText(code ? `${window.location.origin}/p/${code}` : l.url);
+                                  toast.success("Link copiado");
+                                }}
+                              >
+                                <Copy size={12} /> Copiar
+                              </BtnOutline>
                         </td>
                         <td className="px-5 py-3 text-right">
                           <div className="flex gap-1 justify-end">
@@ -765,15 +766,16 @@ function Page() {
             <div className="p-6 space-y-4">
               <div className="font-mono text-sm break-all p-3 bg-muted rounded">{detailLink.url}</div>
               <div className="flex gap-2">
-                <BtnOutline
-                  className="flex-1 text-xs"
-                  onClick={() => {
-                    navigator.clipboard.writeText(detailLink.url);
-                    toast.success("Link copiado");
-                  }}
-                >
-                  <Copy size={13} /> Copiar enlace
-                </BtnOutline>
+                  <BtnOutline
+                    className="flex-1 text-xs"
+                    onClick={() => {
+                      const code = detailLink.url.split("/").pop();
+                      navigator.clipboard.writeText(code ? `${window.location.origin}/p/${code}` : detailLink.url);
+                      toast.success("Link copiado");
+                    }}
+                  >
+                    <Copy size={13} /> Copiar enlace
+                  </BtnOutline>
                 <BtnOutline
                   className="flex-1 text-xs"
                   onClick={() => {
