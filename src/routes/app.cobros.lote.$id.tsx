@@ -81,13 +81,21 @@ function DetalleLote() {
   const [lote, setLote] = useState<Lote | null>(null);
   const [registros, setRegistros] = useState<RegistroDeLote[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setCargando(true);
-      const [l, r] = await Promise.all([getLoteByIdDB(id), getRegistrosByLoteIdDB(id)]);
-      if (!cancelled) { setLote(l); setRegistros(r); setCargando(false); }
+      setErrorCarga(null);
+      try {
+        const [l, r] = await Promise.all([getLoteByIdDB(id), getRegistrosByLoteIdDB(id)]);
+        if (!cancelled) { setLote(l); setRegistros(r); }
+      } catch (e) {
+        if (!cancelled) setErrorCarga(String(e));
+      } finally {
+        if (!cancelled) setCargando(false);
+      }
     })();
     return () => { cancelled = true; };
   }, [id, refresh]);
@@ -116,6 +124,11 @@ function DetalleLote() {
         <p className="text-sm text-muted-foreground mt-1">
           El lote con ID {id} no existe o fue eliminado.
         </p>
+        {errorCarga && (
+          <p className="text-xs text-red-500 mt-2 font-mono bg-red-50 rounded px-3 py-2 inline-block">
+            Error: {errorCarga}
+          </p>
+        )}
         <BtnOutline className="mt-4" onClick={() => navigate({ to: "/app/cobros/gestion" })}>
           Volver a gestion
         </BtnOutline>

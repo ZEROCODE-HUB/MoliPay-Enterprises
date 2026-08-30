@@ -313,9 +313,13 @@ export async function getLotesGestionDB(): Promise<LoteGestionRow[]> {
 export async function getLoteByIdDB(id: string): Promise<Lote | null> {
   try {
     const s = requireSupabase();
-    const { data } = await s.from("lotes").select("*").eq("id", id).maybeSingle();
+    console.log("[getLoteByIdDB] querying id:", id);
+    const { data, error } = await s.from("lotes").select("*").eq("id", id).maybeSingle();
+    if (error) { console.error("[getLoteByIdDB] Supabase error:", error.message, error); return null; }
+    console.log("[getLoteByIdDB] result:", data);
     return data ? rowToLote(data) : null;
-  } catch {
+  } catch (e) {
+    console.error("[getLoteByIdDB] Exception:", e);
     return null;
   }
 }
@@ -323,13 +327,15 @@ export async function getLoteByIdDB(id: string): Promise<Lote | null> {
 export async function getRegistrosByLoteIdDB(loteId: string): Promise<RegistroDeLote[]> {
   try {
     const s = requireSupabase();
-    const { data } = await s
+    const { data, error } = await s
       .from("lote_registros")
       .select("*")
       .eq("lote_id", loteId)
       .order("created_at", { ascending: true });
+    if (error) { console.error("[getRegistrosByLoteIdDB] Supabase error:", error.message, error); return []; }
     return (data ?? []).map(rowToRegistro);
-  } catch {
+  } catch (e) {
+    console.error("[getRegistrosByLoteIdDB] Exception:", e);
     return [];
   }
 }
