@@ -39,6 +39,7 @@ function Page() {
   const [confirmarEliminarLinkId, setConfirmarEliminarLinkId] = useState<string | null>(null);
   const [tab, setTab] = useState<"productos" | "links">("productos");
   const [detailLink, setDetailLink] = useState<PaymentLink | null>(null);
+  const [editLink, setEditLink] = useState<PaymentLink | null>(null);
 
   const [linkPartial, setLinkPartial] = useState(false);
   const [linkMethods, setLinkMethods] = useState<string[]>(
@@ -238,6 +239,35 @@ function Page() {
     toast.success("Link de pago eliminado");
   };
 
+  const saveEditLink = async (id: string, vals: {
+    status: string;
+    reference?: string;
+    notes?: string;
+    expires?: string;
+    partial: boolean;
+    methods: string[];
+  }) => {
+    const s = requireSupabase();
+    const { error } = await s
+      .from("cliente_links_pago")
+      .update({
+        estado: vals.status,
+        referencia: vals.reference || null,
+        notas: vals.notes || null,
+        expira_en: vals.expires ? new Date(vals.expires + "T23:59:59").toISOString() : null,
+        pagos_parciales: vals.partial,
+        metodos_pago: vals.methods,
+      })
+      .eq("id", id);
+    if (error) {
+      toast.error("No se pudo actualizar el link");
+      return;
+    }
+    toast.success("Link de pago actualizado");
+    setEditLink(null);
+    if (legajo) await loadLinks(legajo);
+  };
+
   const deleteProduct = async (id: string) => {
     const s = requireSupabase();
     const { error } = await s.from("productos").delete().eq("id", id);
@@ -286,15 +316,15 @@ function Page() {
         description="Crea productos y genera links de cobro para compartir con tus clientes."
       />
 
-      <div className="flex gap-1.5 mb-6">
+      <div className="grid grid-cols-2 border-b border-black-100 mb-6">
         {([["productos", "Productos"], ["links", "Links de pago"]] as const).map(([k, l]) => (
           <button
             key={k}
             onClick={() => setTab(k)}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition ${
+            className={`pb-3 text-sm font-semibold transition-colors ${
               tab === k
-                ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] border-transparent"
-                : "bg-card hover:bg-muted"
+                ? "border-b-2 border-red-500 text-black-800"
+                : "text-muted-foreground"
             }`}
           >
             {l}
@@ -729,6 +759,13 @@ function Page() {
                               <Eye size={14} />
                             </button>
                             <button
+                              onClick={() => setEditLink(l)}
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition"
+                              title="Editar"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <button
                               onClick={() => setConfirmarEliminarLinkId(l.id)}
                               className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 hover:text-red-600 transition"
                               title="Eliminar"
@@ -776,6 +813,15 @@ function Page() {
                   >
                     <Copy size={13} /> Copiar enlace
                   </BtnOutline>
+                <BtnOutline
+                  className="flex-1 text-xs"
+                  onClick={() => {
+                    setEditLink(detailLink);
+                    setDetailLink(null);
+                  }}
+                >
+                  <Edit3 size={13} /> Editar
+                </BtnOutline>
                 <BtnOutline
                   className="flex-1 text-xs"
                   onClick={() => {
@@ -866,6 +912,12 @@ function Page() {
           setConfirmarEliminarLinkId(null);
         }}
       />
+
+      <LinkEditDialog
+        link={editLink}
+        onClose={() => setEditLink(null)}
+        onSave={saveEditLink}
+      />
     </>
   );
 }
@@ -932,6 +984,124 @@ function ProductFormDialog({
           onChange={(e) => setDesc(e.target.value)}
           placeholder="Plan mensual premium"
         />
+      </div>
+    </FormDialog>
+  );
+}
+
+function LinkEditDialog({
+  link,
+  onClose,
+  onSave,
+}: {
+  link: PaymentLink | null;
+  onClose: () => void;
+  onSave: (
+    id: string,
+    vals: {
+      status: string;
+      reference?: string;
+      notes?: string;
+      expires?: string;
+      partial: boolean;
+      methods: string[];
+    },
+  ) => void;
+}) {
+  const [status, setStatus] = useState("Activo");
+  const [reference, setReference] = useState("");
+  const [notes, setNotes] = useState("");
+  const [expires, setExpires] = useState("");
+  const [partial, setPartial] = useState(false);
+  const [methods, setMethods] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (link) {
+      setStatus(link.status);
+      setReference(link.reference ?? "");
+      setNotes(link.notes ?? "");
+      setExpires(link.expiresAt ? link.expiresAt.split("/").reverse().join("-") : "");
+      setPartial(link.partialPayments);
+      setMethods(link.methods);
+    }
+  }, [link]);
+
+  const toggleMethod = (id: string) => {
+    setMethods((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  return (
+    <FormDialog
+      open={link !== null}
+      onClose={onClose}
+      title="Editar link de pago"
+      description="Modifica la configuracion del enlace de cobro."
+      submitLabel="Guardar cambios"
+      onSubmit={() => {
+        if (!link) return;
+        onSave(link.id, { status, reference, notes, expires, partial, methods });
+      }}
+    >
+      <div>
+        <Label>Estado</Label>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          className="w-full h-10 px-3 rounded-md border bg-card text-sm"
+        >
+          <option value="Activo">Activo</option>
+          <option value="Inactivo">Inactivo</option>
+        </select>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Referencia</Label>
+          <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Factura 00123" />
+        </div>
+        <div>
+          <Label>Fecha de expiracion</Label>
+          <Input type="date" value={expires} onChange={(e) => setExpires(e.target.value)} />
+        </div>
+      </div>
+      <div>
+        <Label>Observaciones</Label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full h-20 px-3 py-2 rounded-md border bg-card text-sm resize-none"
+          placeholder="Notas del cobro"
+        />
+      </div>
+      <label className="flex items-center gap-2 text-sm cursor-pointer">
+        <input type="checkbox" checked={partial} onChange={(e) => setPartial(e.target.checked)} />
+        Permitir pagos parciales
+      </label>
+      <div>
+        <Label>Metodos de pago</Label>
+        <div className="flex flex-wrap gap-2 pt-1">
+          {paymentMethods.map((m) => (
+            <button
+              type="button"
+              key={m.id}
+              onClick={() => toggleMethod(m.id)}
+              className={
+                "flex items-center gap-2 px-3 py-2 rounded-md border text-xs cursor-pointer transition " +
+                (methods.includes(m.id)
+                  ? "border-primary bg-[color:var(--brand-soft)]"
+                  : "bg-card")
+              }
+            >
+              <span
+                className={`h-3.5 w-3.5 rounded-full border flex items-center justify-center ${
+                  methods.includes(m.id) ? "border-primary" : "border-black-200"
+                }`}
+              >
+                {methods.includes(m.id) && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+              </span>
+              {m.nombre}
+            </button>
+          ))}
+        </div>
       </div>
     </FormDialog>
   );
