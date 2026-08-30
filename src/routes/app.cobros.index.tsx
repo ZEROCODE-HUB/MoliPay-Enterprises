@@ -466,7 +466,7 @@ function Dashboard() {
                   <td className="px-5 py-3 text-center">
                     <button
                       onClick={() =>
-                        navigate({ to: "/app/cobros/gestion/$id", params: { id: l.id } })
+                         navigate({ to: "/app/cobros/lote/$id", params: { id: l.id } })
                       }
                       className="inline-flex items-center justify-center w-8 h-8 rounded-md hover:bg-muted transition"
                       title="Ver detalle"

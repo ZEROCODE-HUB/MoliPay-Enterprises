@@ -35,7 +35,7 @@ import {
 } from "@/data/cobros-masivos";
 import * as XLSX from "xlsx";
 
-export const Route = createFileRoute("/app/cobros/gestion/$id")({
+export const Route = createFileRoute("/app/cobros/lote/$id")({
   component: DetalleLote,
 });
 

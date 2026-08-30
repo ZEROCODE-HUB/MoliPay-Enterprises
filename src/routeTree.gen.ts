@@ -51,7 +51,7 @@ import { Route as AppLinkPagoECommerceRouteImport } from './routes/app.link-pago
 import { Route as AppLinkPagoDashboardRouteImport } from './routes/app.link-pago.dashboard'
 import { Route as AppCobrosNuevoRouteImport } from './routes/app.cobros.nuevo'
 import { Route as AppCobrosGestionRouteImport } from './routes/app.cobros.gestion'
-import { Route as AppCobrosGestionIdRouteImport } from './routes/app.cobros.gestion.$id'
+import { Route as AppCobrosLoteIdRouteImport } from './routes/app.cobros.lote.$id'
 
 const VerificarCorreoRoute = VerificarCorreoRouteImport.update({
   id: '/verificar-correo',
@@ -265,10 +265,10 @@ const AppCobrosGestionRoute = AppCobrosGestionRouteImport.update({
   path: '/gestion',
   getParentRoute: () => AppCobrosRoute,
 } as any)
-const AppCobrosGestionIdRoute = AppCobrosGestionIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AppCobrosGestionRoute,
+const AppCobrosLoteIdRoute = AppCobrosLoteIdRouteImport.update({
+  id: '/lote/$id',
+  path: '/lote/$id',
+  getParentRoute: () => AppCobrosRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -306,7 +306,7 @@ export interface FileRoutesByFullPath {
   '/registro/validacion-exitosa': typeof RegistroValidacionExitosaRoute
   '/registro/validar-email': typeof RegistroValidarEmailRoute
   '/app/': typeof AppIndexRoute
-  '/app/cobros/gestion': typeof AppCobrosGestionRouteWithChildren
+  '/app/cobros/gestion': typeof AppCobrosGestionRoute
   '/app/cobros/nuevo': typeof AppCobrosNuevoRoute
   '/app/link-pago/dashboard': typeof AppLinkPagoDashboardRoute
   '/app/link-pago/e-commerce': typeof AppLinkPagoECommerceRoute
@@ -314,7 +314,7 @@ export interface FileRoutesByFullPath {
   '/app/qr/dashboard': typeof AppQrDashboardRoute
   '/app/qr/puntos-de-venta': typeof AppQrPuntosDeVentaRoute
   '/app/cobros/': typeof AppCobrosIndexRoute
-  '/app/cobros/gestion/$id': typeof AppCobrosGestionIdRoute
+  '/app/cobros/lote/$id': typeof AppCobrosLoteIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -349,7 +349,7 @@ export interface FileRoutesByTo {
   '/registro/validacion-exitosa': typeof RegistroValidacionExitosaRoute
   '/registro/validar-email': typeof RegistroValidarEmailRoute
   '/app': typeof AppIndexRoute
-  '/app/cobros/gestion': typeof AppCobrosGestionRouteWithChildren
+  '/app/cobros/gestion': typeof AppCobrosGestionRoute
   '/app/cobros/nuevo': typeof AppCobrosNuevoRoute
   '/app/link-pago/dashboard': typeof AppLinkPagoDashboardRoute
   '/app/link-pago/e-commerce': typeof AppLinkPagoECommerceRoute
@@ -357,7 +357,7 @@ export interface FileRoutesByTo {
   '/app/qr/dashboard': typeof AppQrDashboardRoute
   '/app/qr/puntos-de-venta': typeof AppQrPuntosDeVentaRoute
   '/app/cobros': typeof AppCobrosIndexRoute
-  '/app/cobros/gestion/$id': typeof AppCobrosGestionIdRoute
+  '/app/cobros/lote/$id': typeof AppCobrosLoteIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -395,7 +395,7 @@ export interface FileRoutesById {
   '/registro/validacion-exitosa': typeof RegistroValidacionExitosaRoute
   '/registro/validar-email': typeof RegistroValidarEmailRoute
   '/app/': typeof AppIndexRoute
-  '/app/cobros/gestion': typeof AppCobrosGestionRouteWithChildren
+  '/app/cobros/gestion': typeof AppCobrosGestionRoute
   '/app/cobros/nuevo': typeof AppCobrosNuevoRoute
   '/app/link-pago/dashboard': typeof AppLinkPagoDashboardRoute
   '/app/link-pago/e-commerce': typeof AppLinkPagoECommerceRoute
@@ -403,7 +403,7 @@ export interface FileRoutesById {
   '/app/qr/dashboard': typeof AppQrDashboardRoute
   '/app/qr/puntos-de-venta': typeof AppQrPuntosDeVentaRoute
   '/app/cobros/': typeof AppCobrosIndexRoute
-  '/app/cobros/gestion/$id': typeof AppCobrosGestionIdRoute
+  '/app/cobros/lote/$id': typeof AppCobrosLoteIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -450,7 +450,7 @@ export interface FileRouteTypes {
     | '/app/qr/dashboard'
     | '/app/qr/puntos-de-venta'
     | '/app/cobros/'
-    | '/app/cobros/gestion/$id'
+    | '/app/cobros/lote/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -493,7 +493,7 @@ export interface FileRouteTypes {
     | '/app/qr/dashboard'
     | '/app/qr/puntos-de-venta'
     | '/app/cobros'
-    | '/app/cobros/gestion/$id'
+    | '/app/cobros/lote/$id'
   id:
     | '__root__'
     | '/'
@@ -538,7 +538,7 @@ export interface FileRouteTypes {
     | '/app/qr/dashboard'
     | '/app/qr/puntos-de-venta'
     | '/app/cobros/'
-    | '/app/cobros/gestion/$id'
+    | '/app/cobros/lote/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -856,37 +856,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCobrosGestionRouteImport
       parentRoute: typeof AppCobrosRoute
     }
-    '/app/cobros/gestion/$id': {
-      id: '/app/cobros/gestion/$id'
-      path: '/$id'
-      fullPath: '/app/cobros/gestion/$id'
-      preLoaderRoute: typeof AppCobrosGestionIdRouteImport
-      parentRoute: typeof AppCobrosGestionRoute
+    '/app/cobros/lote/$id': {
+      id: '/app/cobros/lote/$id'
+      path: '/lote/$id'
+      fullPath: '/app/cobros/lote/$id'
+      preLoaderRoute: typeof AppCobrosLoteIdRouteImport
+      parentRoute: typeof AppCobrosRoute
     }
   }
 }
 
-interface AppCobrosGestionRouteChildren {
-  AppCobrosGestionIdRoute: typeof AppCobrosGestionIdRoute
-}
-
-const AppCobrosGestionRouteChildren: AppCobrosGestionRouteChildren = {
-  AppCobrosGestionIdRoute: AppCobrosGestionIdRoute,
-}
-
-const AppCobrosGestionRouteWithChildren =
-  AppCobrosGestionRoute._addFileChildren(AppCobrosGestionRouteChildren)
-
 interface AppCobrosRouteChildren {
-  AppCobrosGestionRoute: typeof AppCobrosGestionRouteWithChildren
+  AppCobrosGestionRoute: typeof AppCobrosGestionRoute
   AppCobrosNuevoRoute: typeof AppCobrosNuevoRoute
   AppCobrosIndexRoute: typeof AppCobrosIndexRoute
+  AppCobrosLoteIdRoute: typeof AppCobrosLoteIdRoute
 }
 
 const AppCobrosRouteChildren: AppCobrosRouteChildren = {
-  AppCobrosGestionRoute: AppCobrosGestionRouteWithChildren,
+  AppCobrosGestionRoute: AppCobrosGestionRoute,
   AppCobrosNuevoRoute: AppCobrosNuevoRoute,
   AppCobrosIndexRoute: AppCobrosIndexRoute,
+  AppCobrosLoteIdRoute: AppCobrosLoteIdRoute,
 }
 
 const AppCobrosRouteWithChildren = AppCobrosRoute._addFileChildren(
