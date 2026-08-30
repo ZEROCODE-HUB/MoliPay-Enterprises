@@ -13,6 +13,7 @@ import {
   type RegistroDeLote,
 } from "@/data/cobros-masivos";
 import { format } from "date-fns";
+import * as XLSX from "xlsx";
 
 export const Route = createFileRoute("/app/cobros/nuevo")({ component: NuevoLote });
 
@@ -79,8 +80,8 @@ function NuevoLote() {
       toast.error("El nombre del lote es obligatorio");
       return false;
     }
-    if (!periodo.match(/^\d{4}-\d{2}$/)) {
-      toast.error("El periodo debe estar en formato AAAA-MM");
+    if (!periodo) {
+      toast.error("Selecciona el periodo");
       return false;
     }
     if (!diaProcesamiento || diaProcesamiento < 1 || diaProcesamiento > 31) {
@@ -130,7 +131,7 @@ function NuevoLote() {
       "6",
       "UF 3D",
       "Perez, Juan",
-      "48200",
+      48200,
       "Expensas mensuales - Edificio 6",
       "juan@email.com",
       "",
@@ -138,18 +139,18 @@ function NuevoLote() {
       "2026-04-15",
       "2026-04-30",
       "2026-05-15",
-      "10",
+      10,
       "TRANSFERENCIA|TARJETA_CREDITO",
-      "true",
+      true,
     ];
-    const csvContent = [headers.join(","), example.join(",")].join("\n");
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;bom" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "plantilla-cobros-masivos.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    const ws = XLSX.utils.json_to_sheet(
+      [Object.fromEntries(headers.map((h, i) => [h, example[i]]))],
+      { header: headers },
+    );
+    ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 18) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
+    XLSX.writeFile(wb, "plantilla-cobros-masivos.xlsx");
     toast.success("Plantilla descargada");
   };
 
@@ -335,9 +336,9 @@ function NuevoLote() {
                 />
               </div>
               <div>
-                <Label>Periodo (AAAA-MM)</Label>
+                <Label>Periodo</Label>
                 <Input
-                  placeholder="2026-04"
+                  type="month"
                   value={periodo}
                   onChange={(e) => setPeriodo(e.target.value)}
                 />
