@@ -9,6 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Card, BtnPrimary, Input, Label } from "@/components/portal-shell";
+import { MollyLogo } from "@/components/molly-logo";
 import { toast } from "sonner";
 import { requireSupabase } from "@/lib/supabase";
 import { paymentProcessor } from "@/lib/payment-processor";
@@ -95,12 +96,48 @@ function Checkout() {
     return paymentMethods.filter((m) => data.metodos_pago.includes(m.id));
   }, [data]);
 
+  const isAmex = method === "amex";
+  const cardDigitsMax = method === "amex" ? 15 : method === "diners" ? 14 : 16;
+  const cvvMax = isAmex ? 4 : 3;
+
+  const formatNro = (v: string) => {
+    const digits = v.replace(/\D/g, "").slice(0, cardDigitsMax);
+    if (isAmex) {
+      return [digits.slice(0, 4), digits.slice(4, 10), digits.slice(10, 15)]
+        .filter(Boolean)
+        .join(" ");
+    }
+    return digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+  };
+
+  const formatVenc = (v: string) => {
+    const digits = v.replace(/\D/g, "").slice(0, 4);
+    if (digits.length <= 2) return digits;
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  };
+
+  const chooseMethod = (id: string) => {
+    setMethod(id);
+    const amex = id === "amex";
+    const max = id === "amex" ? 15 : id === "diners" ? 14 : 16;
+    setNro((prev) => {
+      const digits = prev.replace(/\D/g, "").slice(0, max);
+      if (amex) {
+        return [digits.slice(0, 4), digits.slice(4, 10), digits.slice(10, 15)]
+          .filter(Boolean)
+          .join(" ");
+      }
+      return digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+    });
+    setCvv((prev) => prev.slice(0, amex ? 4 : 3));
+  };
+
   const validar = () => {
     if (!method) return "Selecciona un metodo de pago";
     if (!titular.trim()) return "Ingresa el titular de la tarjeta";
-    if (nro.replace(/\s/g, "").length < 12) return "Numero de tarjeta invalido";
+    if (nro.replace(/\s/g, "").length !== cardDigitsMax) return "Numero de tarjeta invalido";
     if (!/^\d{2}\/\d{2}$/.test(venc)) return "Vencimiento invalido (MM/AA)";
-    if (cvv.length < 3) return "CVV invalido";
+    if (cvv.length !== cvvMax) return "CVV invalido";
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return "Email invalido";
     const mp = parseFloat(montoPagar.replace(",", "."));
     if (data && (mp <= 0 || mp > total(data) + 0.001)) return "Monto a pagar invalido";
@@ -138,20 +175,15 @@ function Checkout() {
   return (
     <div className="min-h-screen bg-[radial-gradient(120%_120%_at_50%_0%,#fff_40%,#fdecee_100%)] flex flex-col">
       {/* Barra de marca */}
-      <header className="flex items-center justify-between px-5 py-4 max-w-2xl mx-auto w-full">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-[color:var(--brand-dark)] flex items-center justify-center">
-            <span className="text-white font-black text-sm">M</span>
-          </div>
-          <span className="font-black tracking-tight text-lg text-[color:var(--brand-dark)]">MoliPay</span>
-        </div>
+      <header className="flex items-center justify-between px-5 py-4 max-w-4xl mx-auto w-full">
+        <MollyLogo size={30} />
         <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
           <Lock size={13} /> Pago seguro
         </div>
       </header>
 
-      <main className="flex-1 px-4 pb-10 flex justify-center">
-        <div className="w-full max-w-md">
+      <main className="flex-1 px-4 pb-10">
+        <div className="w-full max-w-4xl mx-auto">
           {status === "loading" && (
             <CenterCard>
               <Loader2 className="animate-spin text-[color:var(--brand-dark)]" size={28} />
@@ -207,112 +239,151 @@ function Checkout() {
           )}
 
           {status === "ready" && data && (
-            <Card className="p-5 sm:p-6 shadow-xl border-0">
-              <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground mb-1">
-                <ShieldCheck size={14} className="text-emerald-600" /> Cobro generado por MoliPay
-              </div>
-              <div className="text-3xl font-black tracking-tight text-[color:var(--brand-dark)]">
-                {formatARS(parseFloat(montoPagar.replace(",", ".")))}
-              </div>
-              <div className="text-xs text-muted-foreground">Total a abonar</div>
+            <div className="grid md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-6 items-start">
+              {/* Resumen del cobro */}
+              <Card className="p-6 shadow-xl border-0">
+                <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground mb-1">
+                  <ShieldCheck size={14} className="text-emerald-600" /> Cobro generado por MoliPay
+                </div>
+                <div className="text-3xl font-black tracking-tight text-[color:var(--brand-dark)]">
+                  {formatARS(parseFloat(montoPagar.replace(",", ".")))}
+                </div>
+                <div className="text-xs text-muted-foreground">Total a abonar</div>
 
-              {data.detalle?.length > 0 && (
-                <div className="mt-4 border rounded-lg divide-y">
-                  {data.detalle.map((p, i) => (
-                    <div key={i} className="flex items-center justify-between px-3 py-2.5 text-sm">
-                      <div className="min-w-0">
-                        <div className="font-semibold truncate">{p.producto_nombre}</div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {p.cantidad} × {formatARS(p.precio_unitario)}
+                {data.detalle?.length > 0 && (
+                  <div className="mt-4 border rounded-lg divide-y">
+                    {data.detalle.map((p, i) => (
+                      <div key={i} className="flex items-center justify-between px-3 py-2.5 text-sm">
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{p.producto_nombre}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {p.cantidad} × {formatARS(p.precio_unitario)}
+                          </div>
+                        </div>
+                        <div className="font-mono tabular-nums font-semibold">
+                          {formatARS(p.precio_unitario * p.cantidad)}
                         </div>
                       </div>
-                      <div className="font-mono tabular-nums font-semibold">
-                        {formatARS(p.precio_unitario * p.cantidad)}
+                    ))}
+                  </div>
+                )}
+
+                {data.referencia && (
+                  <div className="mt-4 text-xs text-muted-foreground">
+                    Referencia: <span className="font-semibold text-foreground">{data.referencia}</span>
+                  </div>
+                )}
+                {data.notas && (
+                  <div className="mt-2 text-xs text-muted-foreground">{data.notas}</div>
+                )}
+
+                {data.pagos_parciales && (
+                  <div className="mt-4">
+                    <Label>Monto a pagar (pagos parciales habilitados)</Label>
+                    <Input
+                      className="mt-1"
+                      inputMode="decimal"
+                      value={montoPagar}
+                      onChange={(e) => setMontoPagar(e.target.value)}
+                    />
+                    <div className="text-[11px] text-muted-foreground mt-1">
+                      Máximo {formatARS(total(data))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+
+              {/* Pago */}
+              <Card className="p-6 shadow-xl border-0">
+                <div>
+                  <Label>Metodo de pago</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
+                    {metodosDisponibles.map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => chooseMethod(m.id)}
+                        className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-semibold transition ${
+                          method === m.id
+                            ? "border-[color:var(--brand-dark)] bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)]"
+                            : "bg-card hover:bg-muted"
+                        }`}
+                      >
+                        <CreditCard size={15} /> {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-6 rounded-lg border border-black-100 bg-[color:var(--brand-soft)] p-4">
+                  <div className="flex items-center gap-2 text-sm font-bold mb-3">
+                    <CreditCard size={17} className="text-[color:var(--brand-dark)]" />
+                    Datos de la tarjeta
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Titular de la tarjeta</Label>
+                      <Input className="mt-1 bg-card" autoComplete="cc-name" maxLength={60} value={titular} onChange={(e) => setTitular(e.target.value)} placeholder="Como aparece en la tarjeta" />
+                    </div>
+                    <div>
+                      <Label>Numero de tarjeta</Label>
+                      <Input
+                        className="mt-1 bg-card font-mono tracking-wider"
+                        inputMode="numeric"
+                        autoComplete="cc-number"
+                        value={nro}
+                        onChange={(e) => setNro(formatNro(e.target.value))}
+                        placeholder={isAmex ? "0000 000000 00000" : "0000 0000 0000 0000"}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label>Vencimiento</Label>
+                        <Input
+                          className="mt-1 bg-card font-mono"
+                          inputMode="numeric"
+                          autoComplete="cc-exp"
+                          maxLength={5}
+                          value={venc}
+                          onChange={(e) => setVenc(formatVenc(e.target.value))}
+                          placeholder="MM/AA"
+                        />
+                      </div>
+                      <div>
+                        <Label>CVV</Label>
+                        <Input
+                          className="mt-1 bg-card font-mono"
+                          inputMode="numeric"
+                          autoComplete="cc-csc"
+                          maxLength={cvvMax}
+                          value={cvv}
+                          onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, cvvMax))}
+                          placeholder={isAmex ? "1234" : "123"}
+                        />
                       </div>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              )}
 
-              {data.pagos_parciales && (
                 <div className="mt-4">
-                  <Label>Monto a pagar (pagos parciales habilitados)</Label>
-                  <Input
-                    className="mt-1"
-                    inputMode="decimal"
-                    value={montoPagar}
-                    onChange={(e) => setMontoPagar(e.target.value)}
-                  />
-                  <div className="text-[11px] text-muted-foreground mt-1">
-                    Máximo {formatARS(total(data))}
-                  </div>
+                  <Label>Email para el comprobante</Label>
+                  <Input className="mt-1" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" />
                 </div>
-              )}
 
-              <div className="mt-5">
-                <Label>Metodo de pago</Label>
-                <div className="grid grid-cols-2 gap-2 mt-1.5">
-                  {metodosDisponibles.map((m) => (
-                    <button
-                      key={m.id}
-                      onClick={() => setMethod(m.id)}
-                      className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-semibold transition ${
-                        method === m.id
-                          ? "border-[color:var(--brand-dark)] bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)]"
-                          : "bg-card hover:bg-muted"
-                      }`}
-                    >
-                      <CreditCard size={15} /> {m.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                <BtnPrimary className="w-full mt-6 h-12 text-sm" onClick={pagar} disabled={processing}>
+                  {processing ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Procesando…
+                    </>
+                  ) : (
+                    `Pagar ${formatARS(parseFloat(montoPagar.replace(",", ".")))}`
+                  )}
+                </BtnPrimary>
 
-              <div className="mt-5 space-y-3">
-                <div>
-                  <Label>Titular de la tarjeta</Label>
-                  <Input className="mt-1" value={titular} onChange={(e) => setTitular(e.target.value)} placeholder="Como aparece en la tarjeta" />
-                </div>
-                <div>
-                  <Label>Numero de tarjeta</Label>
-                  <Input
-                    className="mt-1 font-mono"
-                    inputMode="numeric"
-                    value={nro}
-                    onChange={(e) => setNro(e.target.value)}
-                    placeholder="0000 0000 0000 0000"
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <Label>Vencimiento</Label>
-                    <Input className="mt-1 font-mono" value={venc} onChange={(e) => setVenc(e.target.value)} placeholder="MM/AA" />
-                  </div>
-                  <div>
-                    <Label>CVV</Label>
-                    <Input className="mt-1 font-mono" inputMode="numeric" value={cvv} onChange={(e) => setCvv(e.target.value)} placeholder="123" />
-                  </div>
-                  <div className="col-span-1">
-                    <Label>Email</Label>
-                    <Input className="mt-1" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" />
-                  </div>
-                </div>
-              </div>
-
-              <BtnPrimary className="w-full mt-6 h-12 text-sm" onClick={pagar} disabled={processing}>
-                {processing ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" /> Procesando…
-                  </>
-                ) : (
-                  `Pagar ${formatARS(parseFloat(montoPagar.replace(",", ".")))}`
-                )}
-              </BtnPrimary>
-
-              <p className="text-[11px] text-center text-muted-foreground mt-3 flex items-center justify-center gap-1">
-                <Lock size={11} /> Tus datos se transmiten cifrados
-              </p>
-            </Card>
+                <p className="text-[11px] text-center text-muted-foreground mt-3 flex items-center justify-center gap-1">
+                  <Lock size={11} /> Tus datos se transmiten cifrados
+                </p>
+              </Card>
+            </div>
           )}
         </div>
       </main>
@@ -322,7 +393,7 @@ function Checkout() {
 
 function CenterCard({ children }: { children: ReactNode }) {
   return (
-    <Card className="p-8 shadow-xl border-0 flex flex-col items-center text-center">
+    <Card className="p-8 shadow-xl border-0 flex flex-col items-center text-center mx-auto max-w-md w-full">
       {children}
     </Card>
   );

@@ -1083,36 +1083,50 @@ function LinkEditDialog({
           placeholder="Notas del cobro"
         />
       </div>
-      <label className="flex items-center gap-2 text-sm cursor-pointer">
-        <input type="checkbox" checked={partial} onChange={(e) => setPartial(e.target.checked)} />
-        Permitir pagos parciales
+      <label className="flex items-center justify-between text-sm cursor-pointer">
+        <span className="font-semibold">Permitir pagos parciales</span>
+        <input
+          type="checkbox"
+          checked={partial}
+          onChange={(e) => setPartial(e.target.checked)}
+          className="toggle"
+        />
       </label>
       <div>
-        <Label>Metodos de pago</Label>
-        <div className="flex flex-wrap gap-2 pt-1">
-          {paymentMethods.map((m) => (
-            <button
-              type="button"
-              key={m.id}
-              onClick={() => toggleMethod(m.id)}
-              className={
-                "flex items-center gap-2 px-3 py-2 rounded-md border text-xs cursor-pointer transition " +
-                (methods.includes(m.id)
-                  ? "border-primary bg-[color:var(--brand-soft)]"
-                  : "bg-card")
-              }
-            >
-              <span
-                className={`h-3.5 w-3.5 rounded-full border flex items-center justify-center ${
-                  methods.includes(m.id) ? "border-primary" : "border-black-200"
-                }`}
-              >
-                {methods.includes(m.id) && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
-              </span>
-              {m.nombre}
-            </button>
-          ))}
-        </div>
+        <Label>Metodos de pago permitidos</Label>
+        {(["credit", "debit"] as const).map((cat) => (
+          <div key={cat} className="mb-3">
+            <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
+              {cat === "credit" ? "Tarjetas de Credito" : "Tarjetas de Debito"}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {paymentMethods
+                .filter((m) => m.category === cat)
+                .map((m) => (
+                  <label
+                    key={m.id}
+                    className={
+                      "flex items-center gap-2 px-3 py-2 rounded-md border text-xs cursor-pointer transition " +
+                      (!m.enabled
+                        ? "opacity-40 cursor-not-allowed"
+                        : methods.includes(m.id)
+                          ? "border-primary bg-[color:var(--brand-soft)]"
+                          : "bg-card hover:bg-muted")
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={methods.includes(m.id)}
+                      disabled={!m.enabled}
+                      onChange={() => m.enabled && toggleMethod(m.id)}
+                      className="accent-[color:var(--brand-dark)]"
+                    />
+                    {m.label}
+                  </label>
+                ))}
+            </div>
+          </div>
+        ))}
       </div>
     </FormDialog>
   );

@@ -130,6 +130,11 @@
   --red-100: #FCD3D8;
   --red-50: #FFF0F1;
 
+  /* Brand aliases usadas en componentes y checkout publico */
+  --brand-dark: var(--red-700);
+  --brand-primary: var(--red-500);
+  --brand-soft: var(--red-50);
+
   --moli-orange: #f97316;
   --moli-orange-dark: #ea580c;
 
