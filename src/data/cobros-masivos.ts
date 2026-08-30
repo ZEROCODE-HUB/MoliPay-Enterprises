@@ -137,6 +137,15 @@ export const medioPagoLabels: Record<MedioPago, string> = {
   QR: "Codigo QR",
 };
 
+// ===== Helper: parsear JSONB que puede venir como string o array =====
+function parseJsonbArray(val: unknown): unknown[] {
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
+    try { const p = JSON.parse(val); return Array.isArray(p) ? p : []; } catch { return []; }
+  }
+  return [];
+}
+
 // ===== Helper: mapear row de Supabase a Lote =====
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToLote(row: any): Lote {
@@ -151,7 +160,7 @@ function rowToLote(row: any): Lote {
     fechaVencimiento1: row.fecha_venc_1,
     fechaVencimiento2: row.fecha_venc_2,
     fechaVencimiento3: row.fecha_venc_3,
-    mediosPago: (row.medios_pago ?? []) as MedioPago[],
+    mediosPago: parseJsonbArray(row.medios_pago) as MedioPago[],
     pagosParcialesHabilitado: row.pagos_parciales ?? true,
     notificacionesHabilitado: row.notificaciones ?? false,
     createdAt: row.created_at,
@@ -178,7 +187,7 @@ function rowToRegistro(row: any): RegistroDeLote {
     fechaVencimiento2: row.fecha_venc_2 ?? null,
     fechaVencimiento3: row.fecha_venc_3 ?? null,
     tasaInteres: row.tasa_interes != null ? Number(row.tasa_interes) : null,
-    mediosPago: (row.medios_pago ?? null) as MedioPago[] | null,
+    mediosPago: parseJsonbArray(row.medios_pago) as MedioPago[] | null,
     pagosParcialesHabilitado: row.pagos_parciales ?? null,
     cbuId: row.cbu_id ?? null,
     linkDePago: row.link_de_pago ?? null,
