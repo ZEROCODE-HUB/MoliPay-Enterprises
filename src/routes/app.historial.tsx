@@ -1,45 +1,35 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Download, Filter, FileText, ArrowDownLeft, ArrowUpRight,
-  ChevronRight, Wallet, X, Eye, FileSpreadsheet, Share2,
+  ChevronRight, Wallet, X, Eye, FileSpreadsheet, Share2, ScanLine,
 } from "lucide-react";
 import { PageHeader, Card, Input, BtnOutline, BtnPrimary, Badge } from "@/components/portal-shell";
 import { toast } from "sonner";
-import { FormDialog } from "@/components/form-dialog";
 import { MollyLogo } from "@/components/molly-logo";
+import { requireSupabase } from "@/lib/supabase";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 export const Route = createFileRoute("/app/historial")({ component: Page });
 
 const formatARS = (n: number) =>
   `$ ${n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const EMPRESA = {
-  nombre: "Money Life S.R.L.",
-  cuit: "30-71000000-0",
-  cbu: "0000003100001234567890",
+const formatFecha = (f: string | null) => {
+  if (!f) return "—";
+  const d = new Date(f);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
-
-function isInternalTransfer(txid: string) {
-  return /^\d+$/.test(txid);
-}
-
-function isCoelsa(txid: string) {
-  return /^[A-Za-z0-9]{22}$/.test(txid);
-}
-
-function txidLabel(txid: string) {
-  if (isInternalTransfer(txid)) return { label: "Transferencia interna", code: txid };
-  if (isCoelsa(txid)) return { label: "Codigo COELSA", code: txid };
-  return { label: "TXID", code: txid };
-}
 
 type Categoria = "Ingresos" | "Egresos" | "Comisiones" | "Cobros con Tarjeta" | "Pagos con QR" | "Cobros con QR";
 
 type Mov = {
   txid: string;
   tipo: "ingreso" | "egreso";
-  categoria: Categoria;
+  categoria: string;
   titular: string;
   cuit: string;
   cbuCvu: string;
@@ -60,28 +50,61 @@ type Mov = {
   receiverCbu: string;
 };
 
-const movs: Mov[] = [
-  { txid: "TX-2026-06-02-8841", tipo: "ingreso", categoria: "Cobros con QR", titular: "Carlos Mendez S.A.", cuit: "30-71234567-8", cbuCvu: "0000003100054321678901", fecha: "02/06/2026 14:32", monto: 1840000, estado: "Acreditado", medio: "Cobro QR", referencia: "QR-8821", usuario: "Sistema", numeroOp: "OP-2026-4421", canal: "Web", subcuenta: "Sucursal Centro", senderName: "Carlos Mendez S.A.", senderCuit: "30-71234567-8", senderCbu: "0000003100054321678901", receiverName: EMPRESA.nombre, receiverCuit: EMPRESA.cuit, receiverCbu: EMPRESA.cbu },
-  { txid: "TX-2026-06-02-8842", tipo: "egreso", categoria: "Egresos", titular: "Proveedor SA", cuit: "30-71888888-1", cbuCvu: "0000003100023456789012", fecha: "02/06/2026 11:08", monto: 220000, estado: "Acreditado", medio: "Transferencia", referencia: "TR-9982", usuario: "Admin", numeroOp: "OP-2026-4422", canal: "Web", subcuenta: "Operaciones", senderName: EMPRESA.nombre, senderCuit: EMPRESA.cuit, senderCbu: EMPRESA.cbu, receiverName: "Proveedor SA", receiverCuit: "30-71888888-1", receiverCbu: "0000003100023456789012" },
-  { txid: "8843", tipo: "ingreso", categoria: "Ingresos", titular: "Consorcio Av. Siempre Viva", cuit: "30-72345678-9", cbuCvu: "0000003100076543210987", fecha: "01/06/2026 18:30", monto: 1480500, estado: "Acreditado", medio: "Lote", referencia: "LT-0034", usuario: "Admin", numeroOp: "OP-2026-4423", canal: "Web", subcuenta: "Operaciones", senderName: "Consorcio Av. Siempre Viva", senderCuit: "30-72345678-9", senderCbu: "0000003100076543210987", receiverName: EMPRESA.nombre, receiverCuit: EMPRESA.cuit, receiverCbu: EMPRESA.cbu },
-  { txid: "TX-2026-06-01-8844", tipo: "egreso", categoria: "Egresos", titular: "Edesur S.A.", cuit: "30-50000000-4", cbuCvu: "0000003100034567890123", fecha: "01/06/2026 16:12", monto: 64320, estado: "Acreditado", medio: "Servicio", referencia: "SV-1102", usuario: "Sistema", numeroOp: "OP-2026-4424", canal: "API", subcuenta: "Sucursal Norte", senderName: EMPRESA.nombre, senderCuit: EMPRESA.cuit, senderCbu: EMPRESA.cbu, receiverName: "Edesur S.A.", receiverCuit: "30-50000000-4", receiverCbu: "0000003100034567890123" },
-  { txid: "LP9k2x7COELSA8823456", tipo: "ingreso", categoria: "Cobros con Tarjeta", titular: "Estudio Rios Asoc.", cuit: "30-73456789-0", cbuCvu: "0000003100045678901234", fecha: "31/05/2026 14:08", monto: 92800, estado: "Acreditado", medio: "Link de pago", referencia: "LP-9k2x7", usuario: "Sistema", numeroOp: "OP-2026-4425", canal: "Web", subcuenta: "Operaciones", senderName: "Estudio Rios Asoc.", senderCuit: "30-73456789-0", senderCbu: "0000003100045678901234", receiverName: EMPRESA.nombre, receiverCuit: EMPRESA.cuit, receiverCbu: EMPRESA.cbu },
-  { txid: "COELSA9988776655443322", tipo: "egreso", categoria: "Egresos", titular: "Estudio Rios Asoc.", cuit: "30-73456789-0", cbuCvu: "0000003100045678901234", fecha: "30/05/2026 11:22", monto: 145000, estado: "Acreditado", medio: "Transferencia", referencia: "TR-9974", usuario: "Admin", numeroOp: "OP-2026-4426", canal: "Web", subcuenta: "Operaciones", senderName: EMPRESA.nombre, senderCuit: EMPRESA.cuit, senderCbu: EMPRESA.cbu, receiverName: "Estudio Rios Asoc.", receiverCuit: "30-73456789-0", receiverCbu: "0000003100045678901234" },
-  { txid: "TX-2026-05-30-8847", tipo: "ingreso", categoria: "Cobros con QR", titular: "Lucia Fernandez", cuit: "27-38456789-1", cbuCvu: "0000003100056789012345", fecha: "30/05/2026 09:05", monto: 8200, estado: "Acreditado", medio: "Cobro QR", referencia: "QR-8820", usuario: "Sistema", numeroOp: "OP-2026-4427", canal: "Movil", subcuenta: "Sucursal Centro", senderName: "Lucia Fernandez", senderCuit: "27-38456789-1", senderCbu: "0000003100056789012345", receiverName: EMPRESA.nombre, receiverCuit: EMPRESA.cuit, receiverCbu: EMPRESA.cbu },
-  { txid: "TX-2026-05-29-8848", tipo: "egreso", categoria: "Egresos", titular: "Juan Perez", cuit: "20-27890123-4", cbuCvu: "0000003100067890123456", fecha: "29/05/2026 17:44", monto: 35000, estado: "Pendiente", medio: "Transferencia", referencia: "TR-9968", usuario: "Admin", numeroOp: "OP-2026-4428", canal: "Web", subcuenta: "Sucursal Norte", senderName: EMPRESA.nombre, senderCuit: EMPRESA.cuit, senderCbu: EMPRESA.cbu, receiverName: "Juan Perez", receiverCuit: "20-27890123-4", receiverCbu: "0000003100067890123456" },
-  { txid: "TX-2026-05-28-8849", tipo: "ingreso", categoria: "Ingresos", titular: "Inmobiliaria del Plata", cuit: "30-74567890-1", cbuCvu: "0000003100078901234567", fecha: "28/05/2026 10:30", monto: 2800000, estado: "Acreditado", medio: "Transferencia", referencia: "TR-9967", usuario: "Sistema", numeroOp: "OP-2026-4429", canal: "API", subcuenta: "Operaciones", senderName: "Inmobiliaria del Plata", senderCuit: "30-74567890-1", senderCbu: "0000003100078901234567", receiverName: EMPRESA.nombre, receiverCuit: EMPRESA.cuit, receiverCbu: EMPRESA.cbu },
-  { txid: "TX-2026-05-27-8850", tipo: "egreso", categoria: "Egresos", titular: "AFIP", cuit: "30-50000000-4", cbuCvu: "0000003100089012345678", fecha: "27/05/2026 09:00", monto: 890000, estado: "Acreditado", medio: "Servicio", referencia: "SV-1101", usuario: "Sistema", numeroOp: "OP-2026-4430", canal: "API", subcuenta: "Operaciones", senderName: EMPRESA.nombre, senderCuit: EMPRESA.cuit, senderCbu: EMPRESA.cbu, receiverName: "AFIP", receiverCuit: "30-50000000-4", receiverCbu: "0000003100089012345678" },
-  { txid: "TX-2026-05-26-8851", tipo: "ingreso", categoria: "Cobros con Tarjeta", titular: "Club Social y Deportivo", cuit: "30-75678901-2", cbuCvu: "0000003100090123456789", fecha: "26/05/2026 15:45", monto: 550000, estado: "Acreditado", medio: "Link de pago", referencia: "LP-9k2x6", usuario: "Sistema", numeroOp: "OP-2026-4431", canal: "Web", subcuenta: "Sucursal Centro", senderName: "Club Social y Deportivo", senderCuit: "30-75678901-2", senderCbu: "0000003100090123456789", receiverName: EMPRESA.nombre, receiverCuit: EMPRESA.cuit, receiverCbu: EMPRESA.cbu },
-  { txid: "TX-2026-05-25-8852", tipo: "egreso", categoria: "Comisiones", titular: "OSECAC", cuit: "30-71000000-0", cbuCvu: "0000003100001234567890", fecha: "25/05/2026 08:30", monto: 420000, estado: "Rechazado", medio: "Comision", referencia: "TR-9966", usuario: "Admin", numeroOp: "OP-2026-4432", canal: "Web", subcuenta: "Sucursal Norte", senderName: EMPRESA.nombre, senderCuit: EMPRESA.cuit, senderCbu: EMPRESA.cbu, receiverName: "OSECAC", receiverCuit: "30-71000000-0", receiverCbu: "0000003100001234567890" },
-  { txid: "TX-2026-05-24-8853", tipo: "ingreso", categoria: "Ingresos", titular: "Alquileres Galeria Central", cuit: "30-76789012-3", cbuCvu: "0000003100101234567890", fecha: "24/05/2026 11:00", monto: 3200000, estado: "Acreditado", medio: "Transferencia", referencia: "TR-9965", usuario: "Sistema", numeroOp: "OP-2026-4433", canal: "Web", subcuenta: "Operaciones", senderName: "Alquileres Galeria Central", senderCuit: "30-76789012-3", senderCbu: "0000003100101234567890", receiverName: EMPRESA.nombre, receiverCuit: EMPRESA.cuit, receiverCbu: EMPRESA.cbu },
-  { txid: "TX-2026-05-23-8854", tipo: "egreso", categoria: "Pagos con QR", titular: "Proveedor Logistica SA", cuit: "30-77890123-4", cbuCvu: "0000003100112345678901", fecha: "23/05/2026 16:30", monto: 78000, estado: "Acreditado", medio: "Cobro QR", referencia: "QR-8819", usuario: "Admin", numeroOp: "OP-2026-4434", canal: "Movil", subcuenta: "Sucursal Centro", senderName: EMPRESA.nombre, senderCuit: EMPRESA.cuit, senderCbu: EMPRESA.cbu, receiverName: "Proveedor Logistica SA", receiverCuit: "30-77890123-4", receiverCbu: "0000003100112345678901" },
-];
+type MovRow = {
+  id_txn: string;
+  tipo: string;
+  cvu: string | null;
+  monto_operacion: number;
+  fecha: string | null;
+  estado_codigo?: string;
+  estado_nombre?: string;
+  legajo: string;
+};
 
-function parseRowDate(f: string): Date {
-  const [d, t] = f.split(" ");
-  const [dd, mm, yyyy] = d.split("/").map(Number);
-  const [hh, min] = (t ?? "00:00").split(":").map(Number);
-  return new Date(yyyy, mm - 1, dd, hh, min);
+function prettyTipo(tipo: string): string {
+  const map: Record<string, string> = {
+    cobro_pct: "Cobros con QR",
+    cobro_link: "Cobros con Tarjeta",
+    deposito: "Ingresos",
+    transferencia: "Egresos",
+    retiro: "Egresos",
+    comision: "Comisiones",
+  };
+  return map[tipo] ?? (tipo ? tipo.charAt(0).toUpperCase() + tipo.slice(1) : "Movimiento");
+}
+
+function mapMov(r: MovRow): Mov {
+  const tipo = /cobro|deposito|ingreso/.test(r.tipo) ? "ingreso" : "egreso";
+  const categoria = prettyTipo(r.tipo);
+  const nombreEstado = (r.estado_nombre ?? r.estado_codigo ?? "Pendiente").toLowerCase();
+  const estado: Mov["estado"] = nombreEstado.includes("acredit")
+    ? "Acreditado"
+    : nombreEstado.includes("rechaz")
+      ? "Rechazado"
+      : "Pendiente";
+  return {
+    txid: r.id_txn,
+    tipo,
+    categoria,
+    titular: r.legajo,
+    cuit: "—",
+    cbuCvu: r.cvu ?? "—",
+    fecha: formatFecha(r.fecha),
+    monto: Number(r.monto_operacion) || 0,
+    estado,
+    medio: categoria,
+    referencia: r.id_txn,
+    usuario: "Sistema",
+    numeroOp: r.id_txn,
+    canal: "Web",
+    subcuenta: "—",
+    senderName: tipo === "ingreso" ? r.legajo : "MoliPay",
+    senderCuit: "—",
+    senderCbu: r.cvu ?? "—",
+    receiverName: tipo === "ingreso" ? "MoliPay" : r.legajo,
+    receiverCuit: "—",
+    receiverCbu: r.cvu ?? "—",
+  };
 }
 
 const CATEGORIAS: Array<{ k: string; l: string }> = [
@@ -96,9 +119,10 @@ const CATEGORIAS: Array<{ k: string; l: string }> = [
 
 function Page() {
   const [vista, setVista] = useState<"principal" | "sub">("principal");
-  const [sub, setSub] = useState("Operaciones");
+  const [sub, setSub] = useState("");
   const [preview, setPreview] = useState(false);
   const [detalle, setDetalle] = useState<Mov | null>(null);
+  const [scan, setScan] = useState(false);
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [categoria, setCategoria] = useState("Todas");
@@ -109,12 +133,72 @@ function Page() {
   const [buscarTitular, setBuscarTitular] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 5;
-  const serie = "RP-EMP-2026-000042";
+  const serie = "RP-EMP-2026-" + Math.floor(100000 + Math.random() * 899999);
 
-  const filtered = movs.filter((r) => {
-    const rd = parseRowDate(r.fecha);
-    if (desde) { const d1 = new Date(desde + "T00:00:00"); if (rd < d1) return false; }
-    if (hasta) { const d2 = new Date(hasta + "T23:59:59"); if (rd > d2) return false; }
+  const [movimientos, setMovimientos] = useState<Mov[]>([]);
+  const [subcuentas, setSubcuentas] = useState<{ nombre: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sinSubcuentas, setSinSubcuentas] = useState(false);
+
+  const cargar = useCallback(async () => {
+    setLoading(true);
+    try {
+      const sb = requireSupabase();
+      const { data: { user } } = await sb.auth.getUser();
+      const { data: cli } = await sb
+        .from("clientes")
+        .select("legajo, tipo_persona, nombre, cuit, correo")
+        .eq("correo", user?.email ?? "")
+        .maybeSingle();
+      const legajo = cli?.legajo;
+      if (!legajo) {
+        setMovimientos([]);
+        setSubcuentas([]);
+        setSinSubcuentas(true);
+        return;
+      }
+      const { data: movs } = await sb
+        .from("movimientos")
+        .select("id_txn, tipo, cvu, monto_operacion, fecha, legajo, estados_movimiento(codigo, nombre)")
+        .eq("legajo", legajo)
+        .order("fecha", { ascending: false });
+      const filas: MovRow[] = (movs ?? []).map((m: any) => ({
+        id_txn: m.id_txn,
+        tipo: m.tipo,
+        cvu: m.cvu,
+        monto_operacion: m.monto_operacion,
+        fecha: m.fecha,
+        legajo: m.legajo,
+        estado_codigo: m.estados_movimiento?.codigo,
+        estado_nombre: m.estados_movimiento?.nombre,
+      }));
+      setMovimientos(filas.map(mapMov));
+
+      const { data: subs } = await sb
+        .from("subcuentas")
+        .select("nombre")
+        .eq("cliente_legajo", legajo)
+        .order("nombre", { ascending: true });
+      const lista = (subs ?? []).map((s: any) => ({ nombre: s.nombre || "Sin nombre" }));
+      setSubcuentas(lista);
+      setSinSubcuentas(lista.length === 0);
+      if (lista.length > 0 && !sub) setSub(lista[0].nombre);
+    } catch (e) {
+      toast.error("No se pudieron cargar los movimientos");
+      setMovimientos([]);
+      setSubcuentas([]);
+      setSinSubcuentas(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [sub]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const filtered = movimientos.filter((r) => {
+    const rd = r.fecha ? new Date(r.fecha.split(" ")[0].split("/").reverse().join("-") + "T00:00:00") : null;
+    if (desde && rd && rd < new Date(desde + "T00:00:00")) return false;
+    if (hasta && rd && rd > new Date(hasta + "T23:59:59")) return false;
     if (categoria !== "Todas" && r.categoria !== categoria) return false;
     if (subFiltro !== "Todas" && r.subcuenta !== subFiltro) return false;
     if (buscarCbu && !r.cbuCvu.includes(buscarCbu)) return false;
@@ -127,7 +211,6 @@ function Page() {
     return true;
   });
 
-  const subcuentas = [...new Set(movs.map((m) => m.subcuenta))];
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -142,6 +225,64 @@ function Page() {
     setBuscarCbu(""); setBuscarCuit(""); setBuscarTxid(""); setBuscarTitular("");
   }
 
+  const exportExcel = () => {
+    const body = filtered.map((r) => ({
+      TXID: r.txid,
+      Fecha: r.fecha,
+      Tipo: r.tipo === "ingreso" ? "Ingreso" : "Egreso",
+      Categoria: r.categoria,
+      Titular: r.titular,
+      CBU_CVU: r.cbuCvu,
+      Monto: r.monto,
+      Estado: r.estado,
+    }));
+    const ws = XLSX.utils.json_to_sheet([
+      { Resumen: "Ingresos", Valor: formatARS(totalIngresos) },
+      { Resumen: "Egresos", Valor: formatARS(totalEgresos) },
+      { Resumen: "Neto", Valor: formatARS(totalIngresos - totalEgresos) },
+      { Resumen: "Pendientes/Rechazados", Valor: String(totalPendientes) },
+      {},
+      ...body,
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
+    XLSX.writeFile(wb, `historial-movimientos-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success("Excel descargado");
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFillColor(211, 0, 31);
+    doc.rect(0, 0, 210, 26, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.text("MoliPay", 14, 17);
+    doc.setFontSize(9);
+    doc.text("Reporte de movimientos", 14, 23);
+    doc.setTextColor(20, 20, 20);
+    doc.setFontSize(10);
+    doc.text(`Generado: ${new Date().toLocaleString("es-AR")}`, 196, 17, { align: "right" });
+    doc.text(serie, 196, 23, { align: "right" });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (doc as any).autoTable({
+      startY: 34,
+      head: [["Ingresos", "Egresos", "Neto", "Pendientes/Rechazados"]],
+      body: [[formatARS(totalIngresos), formatARS(totalEgresos), formatARS(totalIngresos - totalEgresos), String(totalPendientes)]],
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (doc as any).autoTable({
+      startY: 52,
+      head: [["TXID", "Fecha", "Tipo", "Categoria", "Titular", "Monto", "Estado"]],
+      body: filtered.map((r) => [
+        r.txid, r.fecha, r.tipo === "ingreso" ? "Ingreso" : "Egreso", r.categoria, r.titular, r.monto.toFixed(2), r.estado,
+      ]),
+      styles: { fontSize: 7 },
+    });
+    doc.save(`historial-movimientos-${new Date().toISOString().slice(0, 10)}.pdf`);
+    toast.success("PDF descargado");
+  };
+
   return (
     <>
       <PageHeader
@@ -149,10 +290,27 @@ function Page() {
         description="Auditoria completa de movimientos con filtros, exportacion y detalle de transacciones."
         action={
           <div className="flex gap-2">
-            <BtnOutline onClick={() => setPreview(true)}><Download size={14} /> Exportar reporte</BtnOutline>
+            <BtnOutline onClick={exportExcel}><FileSpreadsheet size={14} /> Excel</BtnOutline>
+            <BtnPrimary onClick={exportPDF}><Download size={14} /> PDF</BtnPrimary>
           </div>
         }
       />
+
+      {/* Escaneo de codigos */}
+      <Card className="mb-6 flex flex-wrap items-center gap-4">
+        <div className="w-11 h-11 rounded-xl bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] flex items-center justify-center">
+          <ScanLine size={20} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold">Escaneo de codigos</div>
+          <div className="text-xs text-muted-foreground">
+            Para realizar pagos en comercios, profesionales, etc. Escanea el codigo de barras o QR desde tu camara.
+          </div>
+        </div>
+        <BtnPrimary className="h-9 px-4 text-xs" onClick={() => setScan(true)}>
+          <ScanLine size={14} /> Escanear
+        </BtnPrimary>
+      </Card>
 
       {/* Vista tabs */}
       <Card className="mb-6">
@@ -177,12 +335,16 @@ function Page() {
             ))}
           </div>
           {vista === "sub" && (
-            <select value={sub} onChange={(e) => setSub(e.target.value)} className="h-9 px-3 rounded-md border bg-card text-sm">
-              {subcuentas.map((s) => <option key={s}>{s}</option>)}
-            </select>
+            sinSubcuentas ? (
+              <span className="text-xs text-muted-foreground">Sin subcuentas asociadas</span>
+            ) : (
+              <select value={sub} onChange={(e) => setSub(e.target.value)} className="h-9 px-3 rounded-md border bg-card text-sm">
+                {subcuentas.map((s) => <option key={s.nombre}>{s.nombre}</option>)}
+              </select>
+            )
           )}
           <span className="ml-auto text-xs text-muted-foreground">
-            {vista === "principal" ? "Mostrando consolidado de cuenta madre" : `Filtrando movimientos de ${sub}`}
+            {vista === "principal" ? "Mostrando consolidado de cuenta madre" : (sinSubcuentas ? "Sin subcuentas asociadas" : `Filtrando movimientos de ${sub}`)}
           </span>
         </div>
       </Card>
@@ -214,7 +376,6 @@ function Page() {
 
       {/* Filtros */}
       <Card className="mb-6">
-        {/* Rango de fechas */}
         <div className="flex flex-wrap items-end gap-4 mb-5">
           <div className="min-w-0">
             <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Fecha de inicio</label>
@@ -232,14 +393,17 @@ function Page() {
           </div>
           <div className="min-w-0">
             <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Subcuenta</label>
-            <select value={subFiltro} onChange={(e) => setSubFiltro(e.target.value)} className="h-10 px-3 rounded-md border bg-card text-sm w-full sm:w-auto sm:min-w-[150px]">
-              <option value="Todas">Todas</option>
-              {subcuentas.map((s) => <option key={s}>{s}</option>)}
-            </select>
+            {sinSubcuentas ? (
+              <span className="inline-flex h-10 items-center text-xs text-muted-foreground">Sin subcuentas asociadas</span>
+            ) : (
+              <select value={subFiltro} onChange={(e) => setSubFiltro(e.target.value)} className="h-10 px-3 rounded-md border bg-card text-sm w-full sm:w-auto sm:min-w-[150px]">
+                <option value="Todas">Todas</option>
+                {subcuentas.map((s) => <option key={s.nombre}>{s.nombre}</option>)}
+              </select>
+            )}
           </div>
         </div>
 
-        {/* Busquedas independientes */}
         <div className="border-t pt-4 mb-4">
           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Busquedas especificas</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -264,15 +428,18 @@ function Page() {
 
         <div className="flex justify-between items-center border-t pt-4">
           <div className="text-xs text-muted-foreground">
-            {filtered.length} de {movs.length} movimientos
+            {loading ? "Cargando..." : `${filtered.length} de ${movimientos.length} movimientos`}
           </div>
           <div className="flex gap-2">
             <BtnOutline className="h-8 px-4 text-xs" onClick={limpiarFiltros}>
               Limpiar filtros
             </BtnOutline>
-            <BtnOutline className="h-8 px-4 text-xs" onClick={() => setPreview(true)}>
-              <Download size={13} /> Exportar
+            <BtnOutline className="h-8 px-4 text-xs" onClick={exportExcel}>
+              <FileSpreadsheet size={13} /> Excel
             </BtnOutline>
+            <BtnPrimary className="h-8 px-4 text-xs" onClick={exportPDF}>
+              <Download size={13} /> PDF
+            </BtnPrimary>
           </div>
         </div>
       </Card>
@@ -294,11 +461,16 @@ function Page() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
+              {!loading && filtered.length === 0 && (
                 <tr>
                   <td colSpan={8} className="text-center py-12 text-sm text-muted-foreground">
-                    No hay movimientos que coincidan con los filtros.
+                    Sin datos registrados.
                   </td>
+                </tr>
+              )}
+              {loading && (
+                <tr>
+                  <td colSpan={8} className="text-center py-12 text-sm text-muted-foreground">Cargando movimientos...</td>
                 </tr>
               )}
               {paginated.map((r, i) => (
@@ -320,7 +492,6 @@ function Page() {
                   </td>
                   <td className="px-5 py-4">
                     <div className="text-xs font-mono text-muted-foreground">{r.txid}</div>
-                    <div className="text-[10px] text-muted-foreground/60 mt-0.5">{txidLabel(r.txid).label}</div>
                   </td>
                   <td className="px-5 py-4 text-xs font-mono text-muted-foreground max-w-[140px] truncate">{r.cbuCvu}</td>
                   <td className="px-5 py-4 text-sm font-medium truncate max-w-[160px]">{r.titular}</td>
@@ -381,7 +552,6 @@ function Page() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/50" onClick={() => setDetalle(null)} />
           <div className="relative bg-card rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            {/* Header */}
             <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-center z-10 rounded-t-xl">
               <div className="font-semibold">Comprobante de transaccion</div>
               <button onClick={() => setDetalle(null)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-accent transition">
@@ -390,7 +560,6 @@ function Page() {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Tipo de operacion */}
               <div className="flex items-center gap-4 pb-5 border-b">
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
                   detalle.tipo === "ingreso" ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"
@@ -409,7 +578,6 @@ function Page() {
                 </div>
               </div>
 
-              {/* Monto + Estado + ID */}
               <div className="flex items-end justify-between pb-5 border-b">
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Monto</div>
@@ -425,85 +593,44 @@ function Page() {
                 </div>
               </div>
 
-              {/* TXID con identificacion */}
               <div className="pb-5 border-b">
-                <div className="text-xs text-muted-foreground mb-1">{txidLabel(detalle.txid).label}</div>
+                <div className="text-xs text-muted-foreground mb-1">TXID</div>
                 <div className="font-mono text-sm font-medium break-all">{detalle.txid}</div>
               </div>
 
-              {/* Desde */}
               <div className="pb-5 border-b">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-2 h-2 rounded-full bg-emerald-500" />
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Desde</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <div className="text-xs text-muted-foreground">Nombre</div>
-                    <div className="font-medium truncate">{detalle.senderName}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">CUIT</div>
-                    <div className="font-mono text-xs">{detalle.senderCuit}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">CBU / CVU</div>
-                    <div className="font-mono text-xs truncate">{detalle.senderCbu}</div>
-                  </div>
+                  <div><div className="text-xs text-muted-foreground">Nombre</div><div className="font-medium truncate">{detalle.senderName}</div></div>
+                  <div><div className="text-xs text-muted-foreground">CUIT</div><div className="font-mono text-xs">{detalle.senderCuit}</div></div>
+                  <div><div className="text-xs text-muted-foreground">CBU / CVU</div><div className="font-mono text-xs truncate">{detalle.senderCbu}</div></div>
                 </div>
               </div>
 
-              {/* Hacia */}
               <div className="pb-5 border-b">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Hacia</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <div className="text-xs text-muted-foreground">Nombre</div>
-                    <div className="font-medium truncate">{detalle.receiverName}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">CUIT</div>
-                    <div className="font-mono text-xs">{detalle.receiverCuit}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">CBU / CVU</div>
-                    <div className="font-mono text-xs truncate">{detalle.receiverCbu}</div>
-                  </div>
+                  <div><div className="text-xs text-muted-foreground">Nombre</div><div className="font-medium truncate">{detalle.receiverName}</div></div>
+                  <div><div className="text-xs text-muted-foreground">CUIT</div><div className="font-mono text-xs">{detalle.receiverCuit}</div></div>
+                  <div><div className="text-xs text-muted-foreground">CBU / CVU</div><div className="font-mono text-xs truncate">{detalle.receiverCbu}</div></div>
                 </div>
               </div>
 
-              {/* Info adicional */}
               <div className="grid grid-cols-2 gap-4 text-sm pb-2">
-                <div>
-                  <div className="text-xs text-muted-foreground">N° de operacion</div>
-                  <div className="font-medium">{detalle.numeroOp}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Referencia</div>
-                  <div className="font-mono text-xs">{detalle.referencia}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Canal de origen</div>
-                  <div>{detalle.canal}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Usuario</div>
-                  <div>{detalle.usuario}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Subcuenta</div>
-                  <div>{detalle.subcuenta}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Categoria</div>
-                  <div>{detalle.categoria}</div>
-                </div>
+                <div><div className="text-xs text-muted-foreground">N° de operacion</div><div className="font-medium">{detalle.numeroOp}</div></div>
+                <div><div className="text-xs text-muted-foreground">Referencia</div><div className="font-mono text-xs">{detalle.referencia}</div></div>
+                <div><div className="text-xs text-muted-foreground">Canal de origen</div><div>{detalle.canal}</div></div>
+                <div><div className="text-xs text-muted-foreground">Usuario</div><div>{detalle.usuario}</div></div>
+                <div><div className="text-xs text-muted-foreground">Subcuenta</div><div>{detalle.subcuenta}</div></div>
+                <div><div className="text-xs text-muted-foreground">Categoria</div><div>{detalle.categoria}</div></div>
               </div>
 
-              {/* Acciones */}
               <div className="flex gap-3 pt-4 border-t">
                 <BtnPrimary className="flex-1" onClick={() => { toast.success(`Comprobante ${detalle.txid} descargado`); }}>
                   <Download size={15} /> Descargar comprobante
@@ -517,18 +644,37 @@ function Page() {
         </div>
       )}
 
-      {/* Filtros avanzados */}
-      <FormDialog
-        open={false}
-        onClose={() => {}}
-        title="Filtros avanzados"
-        description="Combina criterios para acotar tu historial."
-        submitLabel="Aplicar filtros"
-        size="lg"
-        onSubmit={() => {}}
-      >
-        <div />
-      </FormDialog>
+      {/* Escaneo de codigos modal */}
+      {scan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setScan(false)} />
+          <div className="relative bg-card rounded-xl max-w-md w-full shadow-2xl">
+            <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-center rounded-t-xl">
+              <div className="font-semibold">Escanear codigo</div>
+              <button onClick={() => setScan(false)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-accent transition"><X size={16} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-center w-full h-48 rounded-lg bg-muted/40 border border-dashed">
+                <ScanLine size={48} className="text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground text-center">
+                Apunta la camara al codigo de barras o QR del comercio para iniciar el pago.
+              </p>
+              <BtnPrimary className="w-full" onClick={() => {
+                if (navigator.mediaDevices?.getUserMedia) {
+                  navigator.mediaDevices.getUserMedia({ video: true })
+                    .then((stream) => { stream.getTracks().forEach((t) => t.stop()); toast.success("Camara lista para escanear"); setScan(false); })
+                    .catch(() => toast.error("No se pudo acceder a la camara"));
+                } else {
+                  toast.error("Este dispositivo no soporta camara");
+                }
+              }}>
+                <ScanLine size={15} /> Abrir camara
+              </BtnPrimary>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Preview reporte */}
       {preview && (
@@ -549,7 +695,7 @@ function Page() {
               </div>
               <h2 className="text-xl font-semibold">Reporte de movimientos</h2>
               <div className="text-sm text-muted-foreground">
-                {vista === "principal" ? "Cuenta principal (consolidado)" : `Subcuenta: ${sub}`}
+                {vista === "principal" ? "Cuenta principal (consolidado)" : (sinSubcuentas ? "Sin subcuentas asociadas" : `Subcuenta: ${sub}`)}
                 {categoria !== "Todas" && ` · Categoria: ${categoria}`}
               </div>
               <Card className="bg-muted/30 p-5">
@@ -560,13 +706,13 @@ function Page() {
                 </div>
               </Card>
               <div className="text-xs text-muted-foreground border-t pt-4">
-                Documento firmado digitalmente por {EMPRESA.nombre} · Serie {serie}
+                Documento firmado digitalmente por MoliPay · Serie {serie}
               </div>
               <div className="flex gap-3 pt-2">
-                <BtnOutline className="flex-1" onClick={() => { setPreview(false); toast.success("Reporte Excel descargado"); }}>
+                <BtnOutline className="flex-1" onClick={() => { setPreview(false); exportExcel(); }}>
                   <FileSpreadsheet size={14} /> Excel (.xlsx)
                 </BtnOutline>
-                <BtnPrimary className="flex-1" onClick={() => { setPreview(false); toast.success(`Reporte ${serie} descargado`); }}>
+                <BtnPrimary className="flex-1" onClick={() => { setPreview(false); exportPDF(); }}>
                   <Download size={14} /> PDF
                 </BtnPrimary>
               </div>

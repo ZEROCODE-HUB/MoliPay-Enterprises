@@ -1,7 +1,7 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import {
-  RefreshCw, Pause, Key, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+  RefreshCw, Pause, Play, Key, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Server, Webhook, ShieldCheck, Globe, X,
 } from "lucide-react";
 import { Card, Badge, BtnOutline, Input, Label, PageHeader } from "@/components/portal-shell";
@@ -162,9 +162,14 @@ function Page() {
                     <div className="flex gap-1 justify-end">
                       <button
                         onClick={() => toggleEstado(e.id)}
-                        className="h-8 px-2.5 inline-flex items-center gap-1.5 rounded-md border bg-card hover:bg-red-50 hover:text-red-600 transition text-xs font-semibold text-muted-foreground"
+                        className={`h-8 px-2.5 inline-flex items-center gap-1.5 rounded-md border bg-card transition text-xs font-semibold text-muted-foreground ${
+                          e.estado === "Habilitado"
+                            ? "hover:bg-red-50 hover:text-red-600"
+                            : "hover:bg-emerald-50 hover:text-emerald-600"
+                        }`}
                       >
-                        <Pause size={12} /> DESHABILITAR
+                        {e.estado === "Habilitado" ? <Pause size={12} /> : <Play size={12} />}
+                        {e.estado === "Habilitado" ? "DESHABILITAR" : "HABILITAR"}
                       </button>
                       <button
                         onClick={() => openClaveModal(e.id, e.name)}

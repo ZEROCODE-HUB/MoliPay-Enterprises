@@ -2,7 +2,7 @@
 import { useMemo, useState, useEffect } from "react";
 import {
   Plus, ArrowDownLeft, ArrowUpRight, Eye, Pencil, Trash2, Search,
-  ArrowLeftRight, Lock, Download, Filter, X, Pause,
+  ArrowLeftRight, Lock, Download, Filter, X, Pause, Play,
   Building2, ChevronUp, PieChart,
 } from "lucide-react";
 import { PageHeader, Card, BtnPrimary, BtnOutline, Badge, Input, Label } from "@/components/portal-shell";
@@ -10,6 +10,9 @@ import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { requireSupabase } from "@/lib/supabase";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 export const Route = createFileRoute("/app/subcuentas")({ component: Page });
 
@@ -302,6 +305,15 @@ function Page() {
                       <div className="flex gap-1 justify-end">
                         <button onClick={() => setDetailSub(s)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition" title="Ver detalle"><Eye size={14} /></button>
                         <button onClick={() => abrirEditar(s)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition" title="Editar"><Pencil size={14} /></button>
+                        <button
+                          onClick={() => cambiarEstado(s.id!, s.e === "Activa" ? "Pausada" : "Activa")}
+                          className={`h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card transition ${
+                            s.e === "Activa" ? "hover:bg-amber-50 hover:text-amber-600" : "hover:bg-emerald-50 hover:text-emerald-600"
+                          }`}
+                          title={s.e === "Activa" ? "Desactivar subcuenta" : "Activar subcuenta"}
+                        >
+                          {s.e === "Activa" ? <Pause size={14} /> : <Play size={14} />}
+                        </button>
                         <button onClick={() => setConfirmarBorrar(s)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 hover:text-red-600 transition" title="Borrar"><Trash2 size={14} /></button>
                       </div>
                     </td>
@@ -453,6 +465,51 @@ function SubDetailModal({ sub, onClose, onCambiarEstado }: {
   const confirmAction = (accion: string, detalle: string): boolean =>
     window.confirm(`¿Estas seguro de que queres ${accion}?\n\n${detalle}`);
 
+  const downloadReporte = (formato: "excel" | "pdf") => {
+    const nombre = (sub.n || sub.cbu || "subcuenta").replace(/\s+/g, "_");
+    if (formato === "excel") {
+      const ws = XLSX.utils.json_to_sheet([
+        { Subcuenta: sub.n, CBU: sub.cbu, Estado: sub.e, Tipo: sub.tipo, Email: sub.email },
+        {},
+        ...allMoves.map((m) => ({
+          Fecha: m.fecha,
+          Hora: m.hora,
+          Tipo: m.tipo === "ingreso" ? "Ingreso" : "Egreso",
+          Concepto: m.titulo,
+          TXID: m.txid,
+          CBU: m.cbu,
+          Monto: m.monto,
+        })),
+      ]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
+      XLSX.writeFile(wb, `subcuenta-${nombre}.xlsx`);
+      toast.success("Reporte Excel descargado");
+    } else {
+      const doc = new jsPDF();
+      doc.setFillColor(211, 0, 31);
+      doc.rect(0, 0, 210, 22, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.text("MoliPay", 14, 15);
+      doc.setTextColor(20, 20, 20);
+      doc.setFontSize(10);
+      doc.text(`Subcuenta: ${sub.n || sub.cbu}`, 14, 32);
+      doc.text(`Estado: ${sub.e} · CBU: ${sub.cbu}`, 14, 38);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (doc as any).autoTable({
+        startY: 44,
+        head: [["Fecha", "Hora", "Tipo", "Concepto", "TXID", "Monto"]],
+        body: allMoves.map((m) => [
+          m.fecha, m.hora, m.tipo === "ingreso" ? "Ingreso" : "Egreso", m.titulo, m.txid, m.monto.toFixed(2),
+        ]),
+        styles: { fontSize: 7 },
+      });
+      doc.save(`subcuenta-${nombre}.pdf`);
+      toast.success("Reporte PDF descargado");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
@@ -550,7 +607,8 @@ function SubDetailModal({ sub, onClose, onCambiarEstado }: {
             <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
               <h3 className="text-sm font-semibold">Historial de movimientos</h3>
               <div className="flex gap-2">
-                <BtnOutline className="h-8 px-3 text-[11px]" onClick={() => toast.success("Reporte descargado (demo)")}><Download size={12} /> DESCARGAR REPORTE</BtnOutline>
+                <BtnOutline className="h-8 px-3 text-[11px]" onClick={() => downloadReporte("excel")}><Download size={12} /> EXCEL</BtnOutline>
+                <BtnOutline className="h-8 px-3 text-[11px]" onClick={() => downloadReporte("pdf")}><Download size={12} /> PDF</BtnOutline>
                 <BtnOutline className="h-8 px-3 text-[11px]" onClick={() => setFilterOpen(!filterOpen)}><Filter size={12} /> FILTRAR{filterOpen && <ChevronUp size={11} className="ml-1" />}</BtnOutline>
               </div>
             </div>
