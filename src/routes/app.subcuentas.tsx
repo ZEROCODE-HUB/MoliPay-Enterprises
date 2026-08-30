@@ -9,7 +9,7 @@ import { PageHeader, Card, BtnPrimary, BtnOutline, Badge, Input, Label } from "@
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { requireSupabase } from "@/lib/supabase";
+import { requireSupabase, toDataError, isPermissionError } from "@/lib/supabase";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -228,7 +228,7 @@ function Page() {
     setTransfLoading(true);
     try {
       const s = requireSupabase();
-      const { error } = await s.rpc("registrar_transferencia_subcuentas", {
+      const { data, error } = await s.rpc("registrar_transferencia_subcuentas", {
         p_subcuenta_origen: origen.id,
         p_subcuenta_destino: destino.id,
         p_monto: monto,
@@ -240,8 +240,14 @@ function Page() {
       setTransfConcepto("");
       toast.success(`Transferencia interna por ${fmt(monto)} realizada`);
       await cargar();
-    } catch {
-      toast.error("No se pudo realizar la transferencia");
+    } catch (e) {
+      const err = toDataError(e);
+      console.error("registrar_transferencia_subcuentas:", err);
+      if (isPermissionError(e)) {
+        toast.error("Sin permisos para transferir entre estas subcuentas");
+      } else {
+        toast.error(err.message || "No se pudo realizar la transferencia");
+      }
     } finally {
       setTransfLoading(false);
     }
