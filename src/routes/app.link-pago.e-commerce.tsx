@@ -1,11 +1,12 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   RefreshCw, Pause, Play, Key, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   Server, Webhook, ShieldCheck, Globe, X,
 } from "lucide-react";
 import { Card, Badge, BtnOutline, Input, Label, PageHeader } from "@/components/portal-shell";
 import { toast } from "sonner";
+import { requireSupabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/app/link-pago/e-commerce")({ component: Page });
 
@@ -34,7 +35,8 @@ const ecoms: Ecom[] = [
 const PAGE_SIZES = [10, 20, 50];
 
 function Page() {
-  const [list, setList] = useState(ecoms);
+  const [legajo, setLegajo] = useState("");
+  const [list, setList] = useState<Ecom[]>(ecoms);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [claveModal, setClaveModal] = useState<{ id: string; name: string } | null>(null);
@@ -48,31 +50,122 @@ function Page() {
     [list, page, pageSize],
   );
 
-  const toggleEstado = (id: string) => {
-    setList((prev) =>
-      prev.map((e) =>
-        e.id === id
-          ? { ...e, estado: e.estado === "Habilitado" ? "Deshabilitado" : "Habilitado" as const }
-          : e,
-      ),
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = requireSupabase();
+        const { data: u } = await s.auth.getUser();
+        const mail = u.user?.email;
+        if (!mail) return;
+        const { data: cli } = await s
+          .from("clientes")
+          .select("legajo")
+          .eq("correo", mail)
+          .maybeSingle();
+        if (!cli || cancelled) return;
+        setLegajo(cli.legajo);
+        await refreshFromDB(cli.legajo);
+      } catch {
+        // silencioso
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const refreshFromDB = async (lg: string) => {
+    const s = requireSupabase();
+    const { data } = await s
+      .from("cliente_integraciones_ecommerce")
+      .select("*")
+      .eq("cliente_legajo", lg);
+    const map = new Map<string, any>((data ?? []).map((r: any) => [r.plataforma, r]));
+    setList(
+      ecoms.map((e) => {
+        const r = map.get(e.id);
+        if (!r) return e;
+        return {
+          ...e,
+          estado: (r.estado ?? e.estado) as Ecom["estado"],
+          created: r.created_at
+            ? new Date(r.created_at).toLocaleString("es-AR")
+            : e.created,
+        };
+      }),
     );
+  };
+
+  const upsert = async (plataforma: string, patch: Record<string, any>) => {
+    if (!legajo) return;
+    const s = requireSupabase();
+    await s
+      .from("cliente_integraciones_ecommerce")
+      .upsert(
+        { cliente_legajo: legajo, plataforma, ...patch },
+        { onConflict: "cliente_legajo,plataforma" },
+      );
+  };
+
+  const toggleEstado = (id: string) => {
     const e = list.find((x) => x.id === id);
-    toast.success(`${e?.name} ${e?.estado === "Habilitado" ? "deshabilitada" : "habilitada"}`);
+    if (!e) return;
+    const nuevo = e.estado === "Habilitado" ? "Deshabilitado" : "Habilitado";
+    setList((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, estado: nuevo as Ecom["estado"] } : x)),
+    );
+    upsert(id, { estado: nuevo });
+    toast.success(`${e.name} ${nuevo === "Habilitado" ? "habilitada" : "deshabilitada"}`);
   };
 
   const refreshList = () => {
     setRefreshing(true);
-    setTimeout(() => {
+    setTimeout(async () => {
+      if (legajo) await refreshFromDB(legajo);
       setRefreshing(false);
-      setList([...ecoms]);
       toast.success("Catalogo de integraciones actualizado");
     }, 600);
   };
 
   const openClaveModal = (id: string, name: string) => {
-    setClaveApi("");
-    setWebhookUrl("");
-    setClaveModal({ id, name });
+    const e = list.find((x) => x.id === id);
+    if (legajo) {
+      (async () => {
+        const s = requireSupabase();
+        const { data } = await s
+          .from("cliente_integraciones_ecommerce")
+          .select("api_key, webhook_url")
+          .eq("cliente_legajo", legajo)
+          .eq("plataforma", id)
+          .maybeSingle();
+        setClaveApi(data?.api_key ?? "");
+        setWebhookUrl(data?.webhook_url ?? "");
+        setClaveModal({ id, name });
+      })();
+    } else {
+      setClaveApi("");
+      setWebhookUrl("");
+      setClaveModal({ id, name });
+    }
+  };
+
+  const connectIntegration = async (
+    id: string,
+    name: string,
+    apiKey: string,
+    webhook: string,
+  ) => {
+    if (!apiKey.trim()) {
+      toast.error("La API Key es requerida");
+      return;
+    }
+    await upsert(id, { estado: "Habilitado", api_key: apiKey, webhook_url: webhook });
+    setList((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, estado: "Habilitado" as Ecom["estado"] } : x)),
+    );
+    setClaveModal(null);
+    toast.success(`${name} conectada correctamente`);
   };
 
   return (
@@ -269,9 +362,8 @@ function Page() {
               <BtnOutline
                 className="w-full mt-2"
                 onClick={() => {
-                  if (!claveApi.trim()) { toast.error("La API Key es requerida"); return; }
-                  setClaveModal(null);
-                  toast.success(`${claveModal.name} conectada correctamente`);
+                  if (!claveModal) return;
+                  connectIntegration(claveModal.id, claveModal.name, claveApi, webhookUrl);
                 }}
               >
                 <Key size={14} /> Conectar

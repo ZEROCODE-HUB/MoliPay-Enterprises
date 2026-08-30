@@ -1,5 +1,5 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   PieChart,
   Pie,
@@ -14,17 +14,11 @@ import {
 } from "recharts";
 import { Download, FileSpreadsheet } from "lucide-react";
 import { Card, BtnOutline, PageHeader } from "@/components/portal-shell";
-import {
-  periodFilter,
-  computeMetrics,
-  byMethod,
-  byStatus,
-  formatARS,
-  type PeriodFilter,
-} from "@/data/links-pago";
+import { formatARS } from "@/data/links-pago";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
+import { requireSupabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/app/link-pago/dashboard")({ component: Dashboard });
 
@@ -56,14 +50,102 @@ const METHOD_COLORS = [
 ];
 
 function Dashboard() {
-  const [filter, setFilter] = useState<PeriodFilter>(periodFilter("30 dias", 30));
-  const metrics = computeMetrics(filter);
-  const statusData = Object.entries(byStatus(filter)).map(([name, value]) => ({ name, value }));
-  const methodData = Object.entries(byMethod(filter)).map(([name, { amount }]) => ({
-    name,
-    amount,
+  const [days, setDays] = useState(30);
+  const [movs, setMovs] = useState<any[]>([]);
+  const [links, setLinks] = useState<any[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = requireSupabase();
+        const { data: u } = await s.auth.getUser();
+        const mail = u.user?.email;
+        if (!mail) return;
+        const { data: cli } = await s
+          .from("clientes")
+          .select("legajo")
+          .eq("correo", mail)
+          .maybeSingle();
+        if (!cli) return;
+        const lg = cli.legajo;
+        const now = new Date();
+        const start = new Date(now);
+        start.setDate(now.getDate() - (days === 0 ? 0 : days - 1));
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(now);
+        end.setHours(23, 59, 59, 999);
+
+        const { data: m } = await s
+          .from("movimientos")
+          .select("monto_operacion, fecha, estado_id, id_txn")
+          .eq("legajo", lg)
+          .eq("tipo", "tarjeta")
+          .gte("fecha", start.toISOString())
+          .lte("fecha", end.toISOString());
+
+        const ids = Array.from(new Set((m ?? []).map((x: any) => x.estado_id).filter(Boolean)));
+        const estadoNombre: Record<string, string> = {};
+        if (ids.length) {
+          const { data: est } = await s
+            .from("estados_movimiento")
+            .select("codigo, nombre")
+            .in("codigo", ids);
+          (est ?? []).forEach((e: any) => (estadoNombre[e.codigo] = e.nombre));
+        }
+        const rows = (m ?? []).map((x: any) => ({
+          monto: Math.abs(Number(x.monto_operacion ?? 0)),
+          fecha: x.fecha,
+          estado: estadoNombre[x.estado_id] ?? "Aprobado",
+          id: x.id_txn ?? x.fecha,
+        }));
+        if (cancelled) return;
+        setMovs(rows);
+
+        const { data: lk } = await s
+          .from("cliente_links_pago")
+          .select("id, monto, estado, url")
+          .eq("cliente_legajo", lg);
+        if (!cancelled) setLinks(lk ?? []);
+      } catch {
+        // silencioso
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [days]);
+
+  const metrics = useMemo(() => {
+    const total = movs.length;
+    const aprobados = movs.filter((x) => x.estado === "Aprobado");
+    const totalApproved = aprobados.reduce((a, x) => a + x.monto, 0);
+    const pending = movs.filter((x) => x.estado === "Pendiente").length;
+    const rejected = movs.filter((x) => x.estado === "Rechazado").length;
+    const refunds = movs.filter((x) => x.estado === "Reembolsado").length;
+    return {
+      totalApproved,
+      totalTx: total,
+      pending,
+      rejected,
+      refunds,
+      conversionRate: total > 0 ? Math.round((aprobados.length / total) * 100) : 0,
+      avgTicket: aprobados.length > 0 ? Math.round(totalApproved / aprobados.length) : 0,
+    };
+  }, [movs]);
+
+  const statusData = [
+    { name: "Aprobado", value: movs.filter((x) => x.estado === "Aprobado").length },
+    { name: "Pendiente", value: metrics.pending },
+    { name: "Rechazado", value: metrics.rejected },
+    { name: "Reembolsado", value: metrics.refunds },
+  ];
+
+  const linkData = links.map((l: any) => ({
+    name: (l.url ?? "").split("/").pop() || String(l.id).slice(0, 8).toUpperCase(),
+    amount: Number(l.monto ?? 0),
   }));
-  const volData = methodData.map((d) => ({ ...d, vol: +(d.amount / 1_000_000).toFixed(1) }));
+  const volData = linkData.map((d) => ({ ...d, vol: +(d.amount / 1_000_000).toFixed(1) }));
 
   const kpis = [
     { label: "Total aprobado", value: formatARS(metrics.totalApproved) },
@@ -75,6 +157,8 @@ function Dashboard() {
     { label: "Ticket promedio", value: formatARS(metrics.avgTicket) },
   ];
 
+  const label = presets.find((p) => p.days === days)?.label ?? `${days} dias`;
+
   const exportExcel = () => {
     const ws = XLSX.utils.json_to_sheet([
       { Metrica: "Total aprobado", Valor: formatARS(metrics.totalApproved) },
@@ -84,20 +168,20 @@ function Dashboard() {
       { Metrica: "Reembolsos", Valor: metrics.refunds },
       { Metrica: "Tasa de conversion", Valor: metrics.conversionRate + "%" },
       { Metrica: "Ticket promedio", Valor: formatARS(metrics.avgTicket) },
-      ...methodData.map((d) => ({ Metrica: "Monto " + d.name, Valor: formatARS(d.amount) })),
+      ...linkData.map((d) => ({ Metrica: "Monto " + d.name, Valor: formatARS(d.amount) })),
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Dashboard");
-    XLSX.writeFile(wb, "links-pago-dashboard-" + filter.label + ".xlsx");
+    XLSX.writeFile(wb, "links-pago-dashboard-" + label + ".xlsx");
   };
 
   const exportPDF = () => {
     const doc = new jsPDF();
     doc.text("Dashboard - Links de Pago", 14, 20);
-    doc.text("Periodo: " + filter.label, 14, 30);
+    doc.text("Periodo: " + label, 14, 30);
     const body = kpis.map((k) => [k.label, k.value]);
     (doc as any).autoTable({ startY: 38, head: [["Metrica", "Valor"]], body });
-    doc.save("links-pago-dashboard-" + filter.label + ".pdf");
+    doc.save("links-pago-dashboard-" + label + ".pdf");
   };
 
   return (
@@ -110,10 +194,10 @@ function Dashboard() {
         {presets.map((p) => (
           <button
             key={p.days}
-            onClick={() => setFilter(periodFilter(p.label, p.days))}
+            onClick={() => setDays(p.days)}
             className={
               "px-4 py-2 rounded-lg text-xs font-semibold border transition " +
-              (filter.label === p.label
+              (days === p.days
                 ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] border-transparent"
                 : "bg-card hover:bg-muted")
             }
@@ -136,7 +220,9 @@ function Dashboard() {
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
               {k.label}
             </div>
-            <div className="font-display tabular-nums text-sm md:text-base font-semibold mt-0.5">{k.value}</div>
+            <div className="font-display tabular-nums text-sm md:text-base font-semibold mt-0.5">
+              {k.value}
+            </div>
           </div>
         ))}
       </div>
@@ -168,12 +254,12 @@ function Dashboard() {
 
         <Card>
           <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-            Montos por metodo de pago
+            Montos por link de pago
           </h4>
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
               <Pie
-                data={methodData}
+                data={linkData}
                 dataKey="amount"
                 nameKey="name"
                 cx="50%"
@@ -181,7 +267,7 @@ function Dashboard() {
                 outerRadius={80}
                 label={({ name }: any) => name}
               >
-                {methodData.map((_, i) => (
+                {linkData.map((_, i) => (
                   <Cell key={i} fill={METHOD_COLORS[i % METHOD_COLORS.length]} />
                 ))}
               </Pie>
@@ -192,7 +278,7 @@ function Dashboard() {
 
         <Card className="md:col-span-2 xl:col-span-1">
           <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-            Volumen por metodo (millones ARS)
+            Volumen por link (millones ARS)
           </h4>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={volData}>
