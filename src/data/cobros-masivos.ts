@@ -356,19 +356,22 @@ export async function iniciarLoteDB(
   try {
     const s = requireSupabase();
 
+    console.log("[iniciarLoteDB] loteId:", loteId, "legajo:", legajo);
     const { error: e1 } = await s.rpc("actualizar_estado_lote", {
       p_lote_id: loteId,
       p_estado: "en_proceso",
     });
-    if (e1) return { ok: false, error: e1.message, linksCount: 0 };
+    if (e1) { console.error("[iniciarLoteDB] estado error:", e1); return { ok: false, error: e1.message, linksCount: 0 }; }
 
-    const { data: regs } = await s
+    const { data: regs, error: regQueryErr } = await s
       .from("lote_registros")
       .select("id, monto, descripcion, identificacion_usuario")
       .eq("lote_id", loteId)
       .eq("estado", "pendiente");
+    if (regQueryErr) { console.error("[iniciarLoteDB] regs query error:", regQueryErr); return { ok: false, error: regQueryErr.message, linksCount: 0 }; }
     if (!regs || regs.length === 0) return { ok: true, linksCount: 0 };
 
+    console.log("[iniciarLoteDB] registros pendientes:", regs.length);
     const linkRows = regs.map((r) => ({
       cliente_legajo: legajo,
       comercio_nombre: r.descripcion || r.identificacion_usuario,
@@ -381,17 +384,20 @@ export async function iniciarLoteDB(
       .from("cliente_links_pago")
       .insert(linkRows)
       .select("id, url");
-    if (e2) return { ok: false, error: e2.message, linksCount: 0 };
+    if (e2) { console.error("[iniciarLoteDB] links insert error:", e2); return { ok: false, error: e2.message, linksCount: 0 }; }
 
+    console.log("[iniciarLoteDB] links creados:", inserted.length);
     for (let i = 0; i < inserted.length; i++) {
-      await s.rpc("actualizar_link_registro", {
+      const { error: linkErr } = await s.rpc("actualizar_link_registro", {
         p_registro_id: regs[i].id,
         p_link: inserted[i].url,
       });
+      if (linkErr) console.error("[iniciarLoteDB] actualizar_link error:", linkErr);
     }
 
     return { ok: true, linksCount: inserted.length };
   } catch (e) {
+    console.error("[iniciarLoteDB] Exception:", e);
     return { ok: false, error: String(e), linksCount: 0 };
   }
 }
