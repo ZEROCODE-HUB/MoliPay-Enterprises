@@ -17,10 +17,14 @@ const flattenLeaves = (nav: NavItem[]): NavLeaf[] =>
 export function PortalShell({
   nav,
   title,
+  userName,
+  userEmail,
   children,
 }: {
   nav: NavItem[];
   title: string;
+  userName?: string;
+  userEmail?: string;
   children: ReactNode;
 }) {
   const path = useRouterState({ select: (r) => r.location.pathname });
@@ -56,11 +60,11 @@ export function PortalShell({
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex flex-col items-end leading-tight">
-            <span className="text-xs text-black-400">Sesión demo</span>
-            <span className="text-sm font-semibold text-black-700">Empresa Demo SA</span>
+            <span className="text-xs text-black-400">{userEmail ?? "Sesión activa"}</span>
+            <span className="text-sm font-semibold text-black-700">{userName ?? "Usuario"}</span>
           </div>
           <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold bg-red-50 text-red-500">
-            ED
+            {userName ? userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() : "U"}
           </div>
           <button
             onClick={onLogout}

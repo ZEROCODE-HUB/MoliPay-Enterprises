@@ -1,5 +1,5 @@
 ﻿import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   ArrowLeftRight,
@@ -21,6 +21,7 @@ import { PortalShell, type NavItem } from "@/components/portal-shell";
 import { SupportBot } from "@/components/support-bot";
 import { useDemoMode } from "@/contexts/demo-mode";
 import { RouteSkeleton } from "@/components/route-skeleton";
+import { requireSupabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/app")({
   component: AppLayout,
@@ -66,12 +67,36 @@ const nav: NavItem[] = [
 function AppLayout() {
   const { role, setRole } = useDemoMode();
   const navigate = useNavigate();
+  const [userName, setUserName] = useState<string | undefined>(undefined);
+  const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
+
   useEffect(() => {
     if (role !== "empresa") setRole("empresa");
   }, [role, setRole]);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const sb = requireSupabase();
+        const { data: { user } } = await sb.auth.getUser();
+        if (!user?.email) return;
+        setUserEmail(user.email);
+        const { data: cli } = await sb
+          .from("clientes")
+          .select("nombre, correo, nombre_fantasia")
+          .eq("correo", user.email)
+          .maybeSingle();
+        if (cli) {
+          setUserName(cli.nombre_fantasia || cli.nombre);
+        }
+      } catch {
+        // silencioso
+      }
+    })();
+  }, []);
+
   return (
-    <PortalShell nav={nav} title="Portal Empresa">
+    <PortalShell nav={nav} title="Portal Empresa" userName={userName} userEmail={userEmail}>
       <Outlet />
       <SupportBot />
     </PortalShell>

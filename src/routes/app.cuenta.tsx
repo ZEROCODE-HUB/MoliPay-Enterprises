@@ -83,7 +83,9 @@ function Page() {
     emailValidado,
   } = useOnboarding();
 
-  const isPJ = cliente?.tipo_persona === "juridica" || tipoCuenta === "juridica";
+  const isPJ = cliente?.tipo_persona
+    ? cliente.tipo_persona === "juridica"
+    : tipoCuenta === "juridica";
   const plan = isPJ ? planEmpresa : planPersona;
   const aprobado = cliente?.estado_onboarding === "aprobado";
 
