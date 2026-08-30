@@ -1,6 +1,6 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, Copy, Share2, Edit3, ToggleLeft, RotateCcw, History, Search } from "lucide-react";
+import { Plus, Copy, Share2, Edit3, ToggleLeft, RotateCcw, History, Search, Eye, Trash2, X } from "lucide-react";
 import {
   Card,
   Input,
@@ -37,6 +37,9 @@ function Page() {
   const [generatedLink, setGeneratedLink] = useState<PaymentLink | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [confirmarEliminarId, setConfirmarEliminarId] = useState<string | null>(null);
+  const [confirmarEliminarLinkId, setConfirmarEliminarLinkId] = useState<string | null>(null);
+  const [tab, setTab] = useState<"productos" | "links">("productos");
+  const [detailLink, setDetailLink] = useState<PaymentLink | null>(null);
 
   const [linkPartial, setLinkPartial] = useState(false);
   const [linkMethods, setLinkMethods] = useState<string[]>(
@@ -86,6 +89,11 @@ function Page() {
     toast.success("Link de pago generado");
   };
 
+  const deleteLink = (id: string) => {
+    setLinks((prev) => prev.filter((l) => l.id !== id));
+    toast.success("Link de pago eliminado");
+  };
+
   const deleteProduct = (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
     setSelected((prev) => prev.filter((x) => x !== id));
@@ -109,6 +117,25 @@ function Page() {
         title="Productos"
         description="Crea productos y genera links de cobro para compartir con tus clientes."
       />
+
+      <div className="flex gap-1.5 mb-6">
+        {([["productos", "Productos"], ["links", "Links de pago"]] as const).map(([k, l]) => (
+          <button
+            key={k}
+            onClick={() => setTab(k)}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition ${
+              tab === k
+                ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] border-transparent"
+                : "bg-card hover:bg-muted"
+            }`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {tab === "productos" && (
+      <>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
           <Search
@@ -441,52 +468,6 @@ function Page() {
         )}
       </FormDialog>
 
-      <Card className="p-0 overflow-hidden">
-        <div className="px-5 py-4 border-b">
-          <h3 className="font-semibold text-sm">Links generados recientemente</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
-                <th className="text-left px-5 py-2.5">ID</th>
-                <th className="text-left px-5 py-2.5">Productos</th>
-                <th className="text-right px-5 py-2.5">Estado</th>
-                <th className="text-right px-5 py-2.5">Vistas</th>
-                <th className="text-right px-5 py-2.5">Pagos</th>
-                <th className="text-right px-5 py-2.5">Creado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {links.map((l) => (
-                <tr key={l.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-5 py-3 font-mono text-xs">{l.id}</td>
-                  <td className="px-5 py-3 text-xs">{l.products.map((p) => p.name).join(", ")}</td>
-                  <td className="px-5 py-3 text-right">
-                    <Badge
-                      tone={
-                        l.status === "Activo"
-                          ? "success"
-                          : l.status === "Inactivo"
-                            ? "neutral"
-                            : "danger"
-                      }
-                    >
-                      {l.status}
-                    </Badge>
-                  </td>
-                  <td className="px-5 py-3 font-mono tabular-nums text-right text-xs">{l.views}</td>
-                  <td className="px-5 py-3 font-mono tabular-nums text-right text-xs">{l.payments}</td>
-                  <td className="px-5 py-3 text-right text-xs text-muted-foreground">
-                    {l.createdAt}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
       <ConfirmDialog
         open={confirmarEliminarId !== null}
         title="¿Eliminar producto?"
@@ -494,6 +475,224 @@ function Page() {
         onClose={() => setConfirmarEliminarId(null)}
         onConfirm={() => {
           if (confirmarEliminarId) deleteProduct(confirmarEliminarId);
+        }}
+      />
+      </>
+      )}
+
+      {tab === "links" && (
+        <Card className="p-0 overflow-hidden">
+          <div className="px-5 py-4 border-b">
+            <h3 className="font-semibold text-sm">Links de pago generados</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
+                  <th className="text-left px-5 py-2.5">ID</th>
+                  <th className="text-left px-5 py-2.5">Descripcion</th>
+                  <th className="text-left px-5 py-2.5">Estado</th>
+                  <th className="text-right px-5 py-2.5">Monto total</th>
+                  <th className="text-left px-5 py-2.5">Fecha de expiracion</th>
+                  <th className="text-right px-5 py-2.5">Pagos</th>
+                  <th className="text-left px-5 py-2.5">Link de pago</th>
+                  <th className="text-right px-5 py-2.5">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {links.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                      Aun no generaste links de pago. Crealos desde la pestana Productos.
+                    </td>
+                  </tr>
+                ) : (
+                  links.map((l) => {
+                    const monto = l.products.reduce((s, p) => s + p.price * p.qty, 0);
+                    const desc = l.products.map((p) => p.name).join(", ") || l.reference || "-";
+                    return (
+                      <tr key={l.id} className="border-b last:border-0 hover:bg-muted/30">
+                        <td className="px-5 py-3 font-mono text-xs">{l.id}</td>
+                        <td className="px-5 py-3 text-xs max-w-[220px] truncate" title={desc}>
+                          {desc}
+                        </td>
+                        <td className="px-5 py-3">
+                          <Badge
+                            tone={
+                              l.status === "Activo"
+                                ? "success"
+                                : l.status === "Inactivo"
+                                  ? "neutral"
+                                  : "danger"
+                            }
+                          >
+                            {l.status}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-3 font-mono tabular-nums text-right text-xs font-semibold">
+                          {formatARS(monto)}
+                        </td>
+                        <td className="px-5 py-3 text-xs text-muted-foreground">
+                          {l.expiresAt || "N/A"}
+                        </td>
+                        <td className="px-5 py-3 font-mono tabular-nums text-right text-xs">
+                          {l.payments}
+                        </td>
+                        <td className="px-5 py-3">
+                          <BtnOutline
+                            className="h-7 px-2 text-[11px]"
+                            onClick={() => {
+                              navigator.clipboard.writeText(l.url);
+                              toast.success("Link copiado");
+                            }}
+                          >
+                            <Copy size={12} /> Copiar
+                          </BtnOutline>
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <div className="flex gap-1 justify-end">
+                            <button
+                              onClick={() => setDetailLink(l)}
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition"
+                              title="Ver detalle"
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button
+                              onClick={() => setConfirmarEliminarLinkId(l.id)}
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 hover:text-red-600 transition"
+                              title="Eliminar"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {detailLink && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setDetailLink(null)}
+          />
+          <div className="relative bg-card rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-center z-10">
+              <div className="font-semibold">Detalle del link de pago</div>
+              <button
+                onClick={() => setDetailLink(null)}
+                className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-accent transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="font-mono text-sm break-all p-3 bg-muted rounded">{detailLink.url}</div>
+              <div className="flex gap-2">
+                <BtnOutline
+                  className="flex-1 text-xs"
+                  onClick={() => {
+                    navigator.clipboard.writeText(detailLink.url);
+                    toast.success("Link copiado");
+                  }}
+                >
+                  <Copy size={13} /> Copiar enlace
+                </BtnOutline>
+                <BtnOutline
+                  className="flex-1 text-xs"
+                  onClick={() => {
+                    if (navigator.share) navigator.share({ url: detailLink.url }).catch(() => {});
+                    else {
+                      navigator.clipboard.writeText(detailLink.url);
+                      toast.success("Link copiado");
+                    }
+                  }}
+                >
+                  <Share2 size={13} /> Compartir
+                </BtnOutline>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="text-xs text-muted-foreground">ID</span>
+                  <div className="font-mono">{detailLink.id}</div>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Estado</span>
+                  <div>
+                    <Badge
+                      tone={
+                        detailLink.status === "Activo"
+                          ? "success"
+                          : detailLink.status === "Inactivo"
+                            ? "neutral"
+                            : "danger"
+                      }
+                    >
+                      {detailLink.status}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Monto total</span>
+                  <div className="font-semibold">
+                    {formatARS(detailLink.products.reduce((s, p) => s + p.price * p.qty, 0))}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Pagos</span>
+                  <div>{detailLink.payments}</div>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Creado</span>
+                  <div>{detailLink.createdAt}</div>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Expira</span>
+                  <div>{detailLink.expiresAt || "N/A"}</div>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-xs text-muted-foreground">Productos</span>
+                  <div className="font-semibold">
+                    {detailLink.products.map((p) => p.name).join(", ")}
+                  </div>
+                </div>
+                {detailLink.reference && (
+                  <div className="col-span-2">
+                    <span className="text-xs text-muted-foreground">Referencia</span>
+                    <div>{detailLink.reference}</div>
+                  </div>
+                )}
+                {detailLink.notes && (
+                  <div className="col-span-2">
+                    <span className="text-xs text-muted-foreground">Observaciones</span>
+                    <div>{detailLink.notes}</div>
+                  </div>
+                )}
+                <div>
+                  <span className="text-xs text-muted-foreground">Pagos parciales</span>
+                  <div>{detailLink.partialPayments ? "Si" : "No"}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={confirmarEliminarLinkId !== null}
+        title="¿Eliminar link de pago?"
+        description="El enlace dejara de funcionar y no se podra recuperar. Esta accion no se puede deshacer."
+        onClose={() => setConfirmarEliminarLinkId(null)}
+        onConfirm={() => {
+          if (confirmarEliminarLinkId) deleteLink(confirmarEliminarLinkId);
+          setConfirmarEliminarLinkId(null);
         }}
       />
     </>

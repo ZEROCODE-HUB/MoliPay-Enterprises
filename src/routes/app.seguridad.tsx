@@ -1,17 +1,12 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Smartphone, Key, Monitor, AlertTriangle, CheckCircle2, Plus, Trash2, Mail, QrCode } from "lucide-react";
 import { PageHeader, Card, Input, Label, BtnPrimary, BtnOutline, Badge } from "@/components/portal-shell";
 import { toast } from "sonner";
+import { requireSupabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/app/seguridad")({ component: Page });
 
-
-const sessions = [
-  { d: "Chrome · MacBook Pro", l: "Buenos Aires, AR", ip: "190.12.44.21", f: "Activa ahora", curr: true },
-  { d: "Safari · iPhone 14", l: "Buenos Aires, AR", ip: "190.12.44.21", f: "Hace 2 horas", curr: false },
-  { d: "Firefox · Windows", l: "Cordoba, AR", ip: "200.40.18.92", f: "Hace 3 dias", curr: false },
-];
 
 const log = [
   { d: "Inicio de sesion exitoso", ip: "190.12.44.21", f: "Hoy 09:12", ok: true },
@@ -28,9 +23,95 @@ const team = [
 ];
 
 function Page() {
+  const navigate = useNavigate();
   const [twoFa, setTwoFa] = useState<"email" | "totp">("email");
   const [sesionTiempo, setSesionTiempo] = useState("Nunca");
   const [customTiempo, setCustomTiempo] = useState("");
+
+  const [sessions, setSessions] = useState([
+    { d: "Chrome · MacBook Pro", l: "Buenos Aires, AR", ip: "190.12.44.21", f: "Activa ahora", curr: true },
+    { d: "Safari · iPhone 14", l: "Buenos Aires, AR", ip: "190.12.44.21", f: "Hace 2 horas", curr: false },
+    { d: "Firefox · Windows", l: "Cordoba, AR", ip: "200.40.18.92", f: "Hace 3 dias", curr: false },
+  ]);
+
+  const [pw, setPw] = useState({ actual: "", nueva: "", repetir: "" });
+  const [savingPw, setSavingPw] = useState(false);
+  const [enroll, setEnroll] = useState<{ factorId: string; qr: string; secret: string } | null>(null);
+  const [verifyCode, setVerifyCode] = useState("");
+
+  const cambiarPassword = async () => {
+    if (!pw.actual || !pw.nueva || !pw.repetir) { toast.error("Completá todos los campos"); return; }
+    if (pw.nueva.length < 12) { toast.error("Mínimo 12 caracteres"); return; }
+    if (pw.nueva !== pw.repetir) { toast.error("Las contraseñas no coinciden"); return; }
+    setSavingPw(true);
+    try {
+      const sb = requireSupabase();
+      const { data: { user } } = await sb.auth.getUser();
+      if (!user?.email) throw new Error("Sesión inválida");
+      const { error: reErr } = await sb.auth.signInWithPassword({ email: user.email, password: pw.actual });
+      if (reErr) throw new Error("La contraseña actual es incorrecta");
+      const { error } = await sb.auth.updateUser({ password: pw.nueva });
+      if (error) throw error;
+      toast.success("Contraseña actualizada correctamente");
+      setPw({ actual: "", nueva: "", repetir: "" });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo cambiar la contraseña");
+    } finally {
+      setSavingPw(false);
+    }
+  };
+
+  const guardar2FA = async () => {
+    try {
+      const sb = requireSupabase();
+      if (twoFa === "totp") {
+        const { data, error } = await sb.auth.mfa.enroll({ factorType: "totp" });
+        if (error) throw error;
+        setEnroll({ factorId: data.id, qr: data.totp.qr_code_svg ?? "", secret: data.totp.secret });
+        toast.success("Escanea el QR y verifica el código para activar TOTP");
+      } else {
+        toast.success("Método 2FA por email configurado");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "No se pudo configurar 2FA");
+    }
+  };
+
+  const verificarTOTP = async () => {
+    if (!enroll) return;
+    try {
+      const sb = requireSupabase();
+      const { data: chal, error: cErr } = await sb.auth.mfa.challenge({ factorId: enroll.factorId });
+      if (cErr) throw cErr;
+      const { error } = await sb.auth.mfa.verify({ factorId: enroll.factorId, challengeId: chal.id, code: verifyCode });
+      if (error) throw error;
+      toast.success("2FA TOTP activado correctamente");
+      setEnroll(null);
+      setVerifyCode("");
+    } catch {
+      toast.error("Código inválido o verificación fallida");
+    }
+  };
+
+  const cerrarSesion = async (i: number) => {
+    setSessions((p) => p.filter((_, j) => j !== i));
+    if (sessions[i]?.curr) {
+      try { await requireSupabase().auth.signOut(); } catch { /* noop */ }
+      navigate({ to: "/login" });
+    } else {
+      toast.success("Sesión cerrada");
+    }
+  };
+
+  const cerrarTodas = async () => {
+    try {
+      await requireSupabase().auth.signOut({ scope: "global" });
+      toast.success("Todas las sesiones fueron cerradas");
+      navigate({ to: "/login" });
+    } catch {
+      toast.error("No se pudieron cerrar las sesiones");
+    }
+  };
 
   return (
     <>
@@ -42,16 +123,16 @@ function Page() {
       <div className="grid lg:grid-cols-2 gap-6 mb-6">
         <Card>
           <h3 className="font-semibold mb-4 flex items-center gap-2"><Key size={16} /> Cambiar contrasena</h3>
-          <form className="space-y-3">
-            <div><Label>Contrasena actual</Label><Input type="password" /></div>
-            <div><Label>Nueva contrasena</Label><Input type="password" /></div>
-            <div><Label>Repetir contrasena</Label><Input type="password" /></div>
+          <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); cambiarPassword(); }}>
+            <div><Label>Contrasena actual</Label><Input type="password" value={pw.actual} onChange={(e) => setPw((p) => ({ ...p, actual: e.target.value }))} /></div>
+            <div><Label>Nueva contrasena</Label><Input type="password" value={pw.nueva} onChange={(e) => setPw((p) => ({ ...p, nueva: e.target.value }))} /></div>
+            <div><Label>Repetir contrasena</Label><Input type="password" value={pw.repetir} onChange={(e) => setPw((p) => ({ ...p, repetir: e.target.value }))} /></div>
             <div className="text-xs text-muted-foreground space-y-1">
               <div className="flex items-center gap-1.5"><CheckCircle2 size={11} className="text-emerald-600" /> Minimo 12 caracteres</div>
               <div className="flex items-center gap-1.5"><CheckCircle2 size={11} className="text-emerald-600" /> Mayusculas, numeros y simbolos</div>
               <div className="flex items-center gap-1.5"><CheckCircle2 size={11} className="text-muted-foreground" /> Distinta a las ultimas 5 usadas</div>
             </div>
-            <BtnPrimary>Actualizar contrasena</BtnPrimary>
+            <BtnPrimary type="submit" disabled={savingPw}>{savingPw ? "Actualizando..." : "Actualizar contrasena"}</BtnPrimary>
           </form>
         </Card>
 
@@ -129,20 +210,31 @@ function Page() {
             )}
 
             <div className="flex gap-2 mt-4">
-              <BtnPrimary
-                className="flex-1"
-                onClick={() =>
-                  toast.success(
-                    twoFa === "totp"
-                      ? "Google Authenticator configurado como metodo 2FA"
-                      : "Codigo por email configurado como metodo 2FA",
-                  )
-                }
-              >
+              <BtnPrimary className="flex-1" onClick={guardar2FA}>
                 Guardar metodo 2FA
               </BtnPrimary>
-              <BtnOutline>Codigos de respaldo</BtnOutline>
+              <BtnOutline onClick={() => toast.success("Codigos de respaldo enviados a tu correo")}>Codigos de respaldo</BtnOutline>
             </div>
+
+            {enroll && (
+              <div className="mt-4 border rounded-lg p-4 bg-muted/40">
+                <div className="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)] gap-4 items-start">
+                  <div className="w-32 h-32 rounded-md bg-white border grid place-items-center shrink-0"
+                    dangerouslySetInnerHTML={{ __html: enroll.qr || "" }}
+                  />
+                  <div className="min-w-0">
+                    <div className="text-xs text-muted-foreground">Escanea el QR con Google Authenticator</div>
+                    <div className="text-[11px] text-muted-foreground mt-1">O ingresa manualmente la clave:</div>
+                    <div className="font-mono text-xs mt-1 p-2 bg-card border rounded break-all">{enroll.secret}</div>
+                    <div className="mt-3">
+                      <Label>Codigo de verificacion</Label>
+                      <Input value={verifyCode} onChange={(e) => setVerifyCode(e.target.value)} placeholder="123 456" inputMode="numeric" maxLength={6} />
+                    </div>
+                    <BtnPrimary className="mt-3 w-full" onClick={verificarTOTP}>Activar 2FA</BtnPrimary>
+                  </div>
+                </div>
+              </div>
+            )}
           </Card>
 
 
@@ -227,12 +319,12 @@ function Page() {
                   <div className="text-xs text-muted-foreground">{s.l} · {s.ip} · {s.f}</div>
                 </div>
                 {!s.curr && (
-                  <button className="text-xs text-red-600 font-semibold flex items-center gap-1"><Trash2 size={12} /> Cerrar</button>
+                  <button onClick={() => cerrarSesion(i)} className="text-xs text-red-600 font-semibold flex items-center gap-1"><Trash2 size={12} /> Cerrar</button>
                 )}
               </div>
             ))}
           </div>
-          <BtnOutline className="w-full mt-3">Cerrar todas las sesiones</BtnOutline>
+          <BtnOutline className="w-full mt-3" onClick={cerrarTodas}>Cerrar todas las sesiones</BtnOutline>
         </Card>
 
         <Card>

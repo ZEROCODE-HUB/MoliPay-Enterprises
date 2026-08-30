@@ -300,6 +300,26 @@ function Page() {
                 <div className="pt-1.5"><Badge tone={emailValidado ? "success" : "warn"}>{emailValidado ? "Activo" : "Pendiente"}</Badge></div>
               </div>
             </div>
+           </Card>
+
+          {/* Direccion adicional (PF y PJ) */}
+          <Card>
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <Landmark size={16} /> Direccion adicional
+            </h3>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
+                <Label>Direccion</Label>
+                <Input value={form.direccion ?? dir.direccion} onChange={(e) => setF("direccion", e.target.value)} />
+              </div>
+              <div><Label>Ciudad</Label><Input value={form.ciudad ?? dir.ciudad} onChange={(e) => setF("ciudad", e.target.value)} /></div>
+              <div><Label>Provincia</Label><Input value={form.provincia ?? dir.provincia} onChange={(e) => setF("provincia", e.target.value)} /></div>
+              <div><Label>Codigo Postal</Label><Input value={form.cp ?? dir.cp} onChange={(e) => setF("cp", e.target.value)} /></div>
+              <div className="sm:col-span-2 flex gap-2 justify-end">
+                <BtnOutline disabled={saving} onClick={() => cliente && setForm(clienteToForm(cliente))}>Cancelar</BtnOutline>
+                <BtnPrimary disabled={saving} onClick={guardar}>{saving ? "Guardando…" : "Guardar cambios"}</BtnPrimary>
+              </div>
+            </div>
           </Card>
 
           {/* InformaciOn de la Empresa (solo PJ) */}
@@ -321,10 +341,6 @@ function Page() {
                 <div><Label>Actividad principal</Label><Input value={form.actividad ?? "Servicios financieros"} onChange={(e) => setF("actividad", e.target.value)} /></div>
                 <div><Label>Fecha de inscripcion</Label><Input type="date" value={form.fecha_inscripcion ?? empresaInfo.fechaInscripcion} onChange={(e) => setF("fecha_inscripcion", e.target.value)} /></div>
                 <div><Label>Telefono</Label><Input value={form.telefono ?? ""} onChange={(e) => setF("telefono", e.target.value)} /></div>
-                <div><Label>Direccion</Label><Input value={form.direccion ?? dir.direccion} onChange={(e) => setF("direccion", e.target.value)} /></div>
-                <div><Label>Ciudad</Label><Input value={form.ciudad ?? dir.ciudad} onChange={(e) => setF("ciudad", e.target.value)} /></div>
-                <div><Label>Provincia</Label><Input value={form.provincia ?? dir.provincia} onChange={(e) => setF("provincia", e.target.value)} /></div>
-                <div><Label>Codigo Postal</Label><Input value={form.cp ?? dir.cp} onChange={(e) => setF("cp", e.target.value)} /></div>
                 <div className="sm:col-span-2 flex gap-2 justify-end">
                   <BtnOutline disabled={saving} onClick={() => cliente && setForm(clienteToForm(cliente))}>Cancelar</BtnOutline>
                   <BtnPrimary disabled={saving} onClick={guardar}>{saving ? "Guardando…" : "Guardar cambios"}</BtnPrimary>

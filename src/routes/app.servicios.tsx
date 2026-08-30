@@ -1,5 +1,5 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Search,
   Zap,
@@ -15,6 +15,9 @@ import {
   Send,
   Calendar,
   Filter,
+  ScanLine,
+  CreditCard,
+  GraduationCap,
 } from "lucide-react";
 import {
   PageHeader,
@@ -162,8 +165,45 @@ function Page() {
   const [histAll, setHistAll] = useState(false);
   const [debitoSet, setDebitoSet] = useState<Set<string>>(new Set());
   const [editarServicio, setEditarServicio] = useState<Item | null>(null);
+  const [nuevos, setNuevos] = useState<Item[]>([]);
+  const [nombreNuevo, setNombreNuevo] = useState("");
+  const [catNueva, setCatNueva] = useState("Energia");
+  const [numeroNuevo, setNumeroNuevo] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
 
-  const sorted = [...servicios].sort((a, b) => {
+  const addSuscripcion = () => {
+    if (!numeroNuevo.trim()) return;
+    const catIcon: Record<string, LucideIcon> = {
+      Energia: Zap,
+      Gas: Flame,
+      Agua: Droplet,
+      Impuesto: FileText,
+      Internet: Wifi,
+      Telefonia: Phone,
+      Salud: Building2,
+      Servicios: Globe,
+      Tarjetas: CreditCard,
+      "Cuotas escolares": GraduationCap,
+    };
+    const nuevo: Item = {
+      n: nombreNuevo.trim() || catNueva,
+      c: "Cliente " + numeroNuevo.trim(),
+      v: "$ 0",
+      venc: "-",
+      icon: catIcon[catNueva] ?? Globe,
+      cat: catNueva,
+      e: "Proximo",
+      suscrito: true,
+    };
+    setNuevos((prev) => [nuevo, ...prev]);
+    setNumeroNuevo("");
+    setNombreNuevo("");
+    toast.success("Servicio suscrito: " + nuevo.n);
+    setSectionTab("suscritos");
+  };
+
+  const todos = [...servicios, ...nuevos];
+  const sorted = [...todos].sort((a, b) => {
     if (sort === "vencimiento") return parseDate(a.venc).getTime() - parseDate(b.venc).getTime();
     if (sort === "monto")
       return (
@@ -179,7 +219,7 @@ function Page() {
   );
 
   const suscritos = useMemo(() => filtrados.filter((s) => s.suscrito), [filtrados]);
-  const disponibles = useMemo(() => servicios.filter((s) => !s.suscrito), []);
+  const disponibles = useMemo(() => todos.filter((s) => !s.suscrito), [todos]);
 
   const hFiltrados = historial.filter((t) => {
     if (hCat !== "Todas" && t.cat !== hCat) return false;
@@ -406,8 +446,64 @@ function Page() {
           )}
 
           {sectionTab === "disponibles" && (
-            <Card className="mb-6">
-              <h3 className="font-semibold text-sm mb-4">Servicios disponibles para suscribir</h3>
+            <>
+              <Card className="mb-6">
+                <h3 className="font-semibold text-sm mb-4">Suscribir un servicio</h3>
+                <div className="grid md:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <Label>Nombre del servicio</Label>
+                    <Input
+                      value={nombreNuevo}
+                      onChange={(e) => setNombreNuevo(e.target.value)}
+                      placeholder="Ej. Mi proveedor"
+                    />
+                  </div>
+                  <div>
+                    <Label>Categoria</Label>
+                    <select
+                      className="w-full h-10 px-3 rounded-md border bg-card text-sm"
+                      value={catNueva}
+                      onChange={(e) => setCatNueva(e.target.value)}
+                    >
+                      {[
+                        "Energia",
+                        "Gas",
+                        "Agua",
+                        "Impuesto",
+                        "Internet",
+                        "Telefonia",
+                        "Salud",
+                        "Servicios",
+                        "Tarjetas",
+                        "Cuotas escolares",
+                      ].map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 items-end">
+                  <div className="flex-1 min-w-[220px]">
+                    <Label>Numero de cliente / codigo de barra</Label>
+                    <Input
+                      value={numeroNuevo}
+                      onChange={(e) => setNumeroNuevo(e.target.value)}
+                      placeholder="Escanear o ingresar numero"
+                    />
+                  </div>
+                  <BtnOutline className="h-10" onClick={() => setScanOpen(true)}>
+                    <ScanLine size={14} /> Escanear codigo
+                  </BtnOutline>
+                  <BtnPrimary className="h-10" disabled={!numeroNuevo.trim()} onClick={addSuscripcion}>
+                    Suscribir
+                  </BtnPrimary>
+                </div>
+              </Card>
+
+              <Card className="mb-6">
+                <h3 className="font-semibold text-sm mb-4">Servicios disponibles para suscribir</h3>
               <div className="divide-y">
                 {(dispAll ? disponibles : disponibles.slice(0, PREVIEW_LIMIT)).map((s) => {
                   const Icon = s.icon;
@@ -433,6 +529,7 @@ function Page() {
                 </button>
               )}
             </Card>
+            </>
           )}
 
           {sectionTab === "historial" && (
@@ -745,6 +842,109 @@ function Page() {
           </div>
         </Card>
       </FormDialog>
+
+      <BarcodeScanModal
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onDetect={(code) => setNumeroNuevo(code)}
+      />
     </>
+  );
+}
+
+function BarcodeScanModal({
+  open,
+  onClose,
+  onDetect,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onDetect: (code: string) => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [manual, setManual] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const start = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => {});
+        }
+        const BD = (window as unknown as { BarcodeDetector?: new () => { detect: (s: CanvasImageSource) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector;
+        if (BD) {
+          const detector = new BD();
+          const tick = async () => {
+            if (!videoRef.current || cancelled) return;
+            try {
+              const codes = await detector.detect(videoRef.current);
+              if (codes && codes.length) {
+                onDetect(codes[0].rawValue);
+                onClose();
+                return;
+              }
+            } catch {
+              /* ignore */
+            }
+            if (!cancelled) setTimeout(tick, 500);
+          };
+          tick();
+        }
+      } catch {
+        /* camara no disponible: el usuario usa el ingreso manual */
+      }
+    };
+    start();
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, [open, onDetect, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative bg-card rounded-xl max-w-md w-full p-4 shadow-2xl space-y-3">
+        <div className="font-semibold">Escanear codigo de barra</div>
+        <video ref={videoRef} className="w-full rounded-md bg-black aspect-video" muted playsInline />
+        <p className="text-xs text-muted-foreground">
+          Apunta la camara al codigo. Si no se detecta, ingresa el numero manualmente.
+        </p>
+        <Input
+          value={manual}
+          onChange={(e) => setManual(e.target.value)}
+          placeholder="Numero manual"
+        />
+        <div className="flex gap-2">
+          <BtnOutline className="flex-1" onClick={onClose}>
+            Cancelar
+          </BtnOutline>
+          <BtnPrimary
+            className="flex-1"
+            onClick={() => {
+              if (manual.trim()) {
+                onDetect(manual.trim());
+                onClose();
+              }
+            }}
+          >
+            Usar numero
+          </BtnPrimary>
+        </div>
+      </div>
+    </div>
   );
 }

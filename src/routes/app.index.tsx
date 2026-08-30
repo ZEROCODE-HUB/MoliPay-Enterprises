@@ -10,6 +10,9 @@ import {
 import { PageHeader, Card, BtnOutline } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { requireSupabase } from "@/lib/supabase";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
@@ -142,8 +145,64 @@ function Dashboard() {
     };
   }, [movs, saldoTotal, cuentas]);
 
-  const doExport = (fmt: "xlsx" | "pdf") =>
-    toast.success(`Reporte exportado (${fmt.toUpperCase()})`);
+  const doExport = (fmt: "xlsx" | "pdf") => {
+    const rows = movs.map((m) => ({
+      Fecha: (m.fecha ?? "").slice(0, 16).replace("T", " "),
+      Tipo: m.tipo,
+      Monto: Math.abs(Number(m.monto_operacion ?? 0)),
+    }));
+    if (fmt === "xlsx") {
+      const ws = XLSX.utils.json_to_sheet([
+        { Resumen: "Saldo total", Valor: formatARS(kpis.saldo) },
+        { Resumen: "Depósitos", Valor: formatARS(kpis.depositos) },
+        { Resumen: "Retiros", Valor: formatARS(kpis.retiros) },
+        { Resumen: "Cobros Link de Pago", Valor: formatARS(kpis.cobrosLink) },
+        { Resumen: "Cobros QR", Valor: formatARS(kpis.cobrosQR) },
+        { Resumen: "Pagos QR", Valor: formatARS(kpis.pagosQR) },
+        { Resumen: "Cuentas", Valor: String(kpis.cuentas) },
+        {},
+        ...rows,
+      ]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Dashboard");
+      XLSX.writeFile(wb, `dashboard-movimientos-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast.success("Excel descargado");
+    } else {
+      const doc = new jsPDF();
+      doc.setFillColor(211, 0, 31);
+      doc.rect(0, 0, 210, 24, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.text("MoliPay", 14, 16);
+      doc.setTextColor(20, 20, 20);
+      doc.setFontSize(10);
+      doc.text(`Dashboard · ${periodLabel}`, 196, 12, { align: "right" });
+      doc.text(new Date().toLocaleString("es-AR"), 196, 18, { align: "right" });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (doc as any).autoTable({
+        startY: 32,
+        head: [["KPI", "Valor"]],
+        body: [
+          ["Saldo total", formatARS(kpis.saldo)],
+          ["Depósitos", formatARS(kpis.depositos)],
+          ["Retiros", formatARS(kpis.retiros)],
+          ["Cobros Link de Pago", formatARS(kpis.cobrosLink)],
+          ["Cobros QR", formatARS(kpis.cobrosQR)],
+          ["Pagos QR", formatARS(kpis.pagosQR)],
+          ["Cuentas", String(kpis.cuentas)],
+        ],
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (doc as any).autoTable({
+        startY: (doc as any).lastAutoTable.finalY + 8,
+        head: [["Fecha", "Tipo", "Monto"]],
+        body: rows.map((r) => [r.Fecha, r.Tipo, r.Monto.toFixed(2)]),
+        styles: { fontSize: 7 },
+      });
+      doc.save(`dashboard-movimientos-${new Date().toISOString().slice(0, 10)}.pdf`);
+      toast.success("PDF descargado");
+    }
+  };
 
   const periodLabel = useMemo(() => {
     if (period === "day") return day;
