@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-export type DemoRole = "empresa" | "admin";
+export type DemoRole = "empresa";
 
 type DemoCtx = {
   role: DemoRole | null;
@@ -19,7 +19,7 @@ export function DemoModeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const r = localStorage.getItem("molly_role") as DemoRole | null;
-    if (r === "empresa" || r === "admin") setRoleState(r);
+    if (r === "empresa") setRoleState(r);
   }, []);
 
   const setRole = (r: DemoRole | null) => {
