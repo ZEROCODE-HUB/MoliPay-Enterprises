@@ -1,6 +1,6 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Plus, Copy, Share2, Edit3, ToggleLeft, RotateCcw, History, Search, Eye, Trash2, X } from "lucide-react";
+import { Plus, Copy, Share2, Edit3, Search, Eye, Trash2, X } from "lucide-react";
 import {
   Card,
   Input,
@@ -13,16 +13,41 @@ import {
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import {
-  paymentMethods,
-  formatARS,
-  type Product,
-  type PaymentLink,
-} from "@/data/links-pago";
-import QRCode from "qrcode";
+import { paymentMethods, formatARS, type Product, type PaymentLink } from "@/data/links-pago";
 import { requireSupabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/app/link-pago/productos")({ component: Page });
+
+type DbProducto = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  precio: number;
+  cantidad: number;
+};
+
+type DbLink = {
+  id: string;
+  url: string;
+  estado: string | null;
+  pagos_parciales: boolean | null;
+  metodos_pago: string[] | null;
+  referencia: string | null;
+  notas: string | null;
+  created_at: string | null;
+  expira_en: string | null;
+  vistas: number | null;
+  pagos: number | null;
+};
+
+type DbLinkDetalle = {
+  id: string;
+  link_id: string;
+  producto_id: string | null;
+  producto_nombre: string;
+  cantidad: number;
+  precio_unitario: number;
+};
 
 function linkDisplayStatus(l: PaymentLink): string {
   if (l.status === "Activo" && l.expiresAt) {
@@ -43,9 +68,6 @@ function Page() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [showLinkForm, setShowLinkForm] = useState(false);
-  const [showResult, setShowResult] = useState(false);
-  const [generatedLink, setGeneratedLink] = useState<PaymentLink | null>(null);
-  const [qrDataUrl, setQrDataUrl] = useState("");
   const [confirmarEliminarId, setConfirmarEliminarId] = useState<string | null>(null);
   const [confirmarEliminarLinkId, setConfirmarEliminarLinkId] = useState<string | null>(null);
   const [tab, setTab] = useState<"productos" | "links">("productos");
@@ -68,7 +90,7 @@ function Page() {
       .select("*")
       .eq("cliente_legajo", lg)
       .order("created_at", { ascending: false });
-    const rows: Product[] = (data ?? []).map((r: any) => ({
+    const rows: Product[] = (data ?? []).map((r: DbProducto) => ({
       id: r.id,
       name: r.nombre,
       qty: Number(r.cantidad ?? 1),
@@ -86,22 +108,19 @@ function Page() {
       .eq("cliente_legajo", lg)
       .order("created_at", { ascending: false });
     const lk = lks ?? [];
-    const ids = lk.map((x: any) => x.id);
-    let det: any[] = [];
+    const ids = lk.map((x: DbLink) => x.id);
+    let det: DbLinkDetalle[] = [];
     if (ids.length) {
-      const { data: d } = await s
-        .from("cliente_links_pago_detalle")
-        .select("*")
-        .in("link_id", ids);
+      const { data: d } = await s.from("cliente_links_pago_detalle").select("*").in("link_id", ids);
       det = d ?? [];
     }
-    const byLink = new Map<string, any[]>();
+    const byLink = new Map<string, DbLinkDetalle[]>();
     det.forEach((d) => {
       const arr = byLink.get(d.link_id) ?? [];
       arr.push(d);
       byLink.set(d.link_id, arr);
     });
-    const rows: PaymentLink[] = lk.map((x: any) => {
+    const rows: PaymentLink[] = lk.map((x: DbLink) => {
       const dd = byLink.get(x.id) ?? [];
       const prods: Product[] = dd.map((d) => ({
         id: d.producto_id ?? d.id,
@@ -218,16 +237,9 @@ function Page() {
       views: 0,
       payments: 0,
     };
-    setGeneratedLink(link);
     setLinks((prev) => [link, ...prev]);
-    try {
-      const qr = await QRCode.toDataURL(url, { width: 200, margin: 2 });
-      setQrDataUrl(qr);
-    } catch {
-      setQrDataUrl("");
-    }
     setShowLinkForm(false);
-    setShowResult(true);
+    setTab("links");
     setSelected([]);
     setLinkRef("");
     setLinkNotes("");
@@ -235,7 +247,7 @@ function Page() {
     setLinkPartial(false);
     setLinkMethods(paymentMethods.filter((m) => m.enabled).map((m) => m.id));
     setLinkStatus("Activo");
-    toast.success("Link de pago generado");
+    toast.success("Link generado con exito");
     await loadLinks(legajo);
   };
 
@@ -250,14 +262,17 @@ function Page() {
     toast.success("Link de pago eliminado");
   };
 
-  const saveEditLink = async (id: string, vals: {
-    status: string;
-    reference?: string;
-    notes?: string;
-    expires?: string;
-    partial: boolean;
-    methods: string[];
-  }) => {
+  const saveEditLink = async (
+    id: string,
+    vals: {
+      status: string;
+      reference?: string;
+      notes?: string;
+      expires?: string;
+      partial: boolean;
+      methods: string[];
+    },
+  ) => {
     const s = requireSupabase();
     const { error } = await s
       .from("cliente_links_pago")
@@ -327,15 +342,20 @@ function Page() {
         description="Crea productos y genera links de cobro para compartir con tus clientes."
       />
 
-      <div className="grid grid-cols-2 border-b border-black-100 mb-6">
-        {([["productos", "Productos"], ["links", "Links de pago"]] as const).map(([k, l]) => (
+      <div className="flex gap-6 border-b border-black-100 mb-6">
+        {(
+          [
+            ["productos", "Productos"],
+            ["links", "Links de pago"],
+          ] as const
+        ).map(([k, l]) => (
           <button
             key={k}
             onClick={() => setTab(k)}
-            className={`pb-3 text-sm font-semibold transition-colors ${
+            className={`w-auto pb-3 text-sm font-semibold transition-colors ${
               tab === k
                 ? "border-b-2 border-red-500 text-black-800"
-                : "text-muted-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {l}
@@ -344,350 +364,246 @@ function Page() {
       </div>
 
       {tab === "productos" && (
-      <>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input placeholder="Buscar producto..." className="pl-9" />
-        </div>
-        <div className="flex gap-2">
-          <BtnOutline
-            className="h-10"
-            onClick={() => {
-              setEditingProduct(null);
-              setShowProductForm(true);
-            }}
-          >
-            <Plus size={15} /> Producto
-          </BtnOutline>
-          <BtnPrimary
-            className="h-10"
-            onClick={() => {
-              if (selected.length === 0) {
-                toast.error("Selecciona productos primero");
-                return;
-              }
-              setLinkPartial(false);
-              setLinkMethods(paymentMethods.filter((m) => m.enabled).map((m) => m.id));
-              setLinkExpires("");
-              setLinkStatus("Activo");
-              setLinkRef("");
-              setLinkNotes("");
-              setShowLinkForm(true);
-            }}
-          >
-            <Plus size={15} /> Generar link
-          </BtnPrimary>
-        </div>
-      </div>
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
+              <Search
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input placeholder="Buscar producto..." className="pl-9" />
+            </div>
+            <div className="flex gap-2">
+              <BtnOutline
+                className="h-10"
+                onClick={() => {
+                  setEditingProduct(null);
+                  setShowProductForm(true);
+                }}
+              >
+                <Plus size={15} /> Producto
+              </BtnOutline>
+              <BtnPrimary
+                className="h-10"
+                onClick={() => {
+                  if (selected.length === 0) {
+                    toast.error("Selecciona productos primero");
+                    return;
+                  }
+                  setLinkPartial(false);
+                  setLinkMethods(paymentMethods.filter((m) => m.enabled).map((m) => m.id));
+                  setLinkExpires("");
+                  setLinkStatus("Activo");
+                  setLinkRef("");
+                  setLinkNotes("");
+                  setShowLinkForm(true);
+                }}
+              >
+                <Plus size={15} /> Generar link
+              </BtnPrimary>
+            </div>
+          </div>
 
-      <Card className="p-0 overflow-hidden mb-6">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
-                <th className="w-10 px-3 py-2.5">
-                  <input
-                    type="checkbox"
-                    onChange={(e) => setSelected(e.target.checked ? products.map((p) => p.id) : [])}
-                    checked={selected.length === products.length && products.length > 0}
-                  />
-                </th>
-                <th className="text-left px-3 py-2.5">Producto</th>
-                <th className="text-right px-3 py-2.5">Cantidad</th>
-                <th className="text-right px-3 py-2.5">Precio</th>
-                <th className="text-left px-3 py-2.5 hidden md:table-cell">Descripcion</th>
-                <th className="text-right px-3 py-2.5"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((p) => (
-                <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-3 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(p.id)}
-                      onChange={() =>
-                        setSelected((prev) =>
-                          prev.includes(p.id) ? prev.filter((x) => x !== p.id) : [...prev, p.id],
-                        )
-                      }
-                    />
-                  </td>
-                  <td className="px-3 py-3 font-semibold">{p.name}</td>
-                  <td className="px-3 py-3 font-mono tabular-nums text-right">{p.qty}</td>
-                  <td className="px-3 py-3 font-mono tabular-nums text-right font-semibold">{formatARS(p.price)}</td>
-                  <td className="px-3 py-3 text-xs text-muted-foreground hidden md:table-cell">
-                    {p.desc || "-"}
-                  </td>
-                  <td className="px-3 py-3 text-right">
-                    <div className="flex gap-1 justify-end">
-                      <BtnOutline
-                        className="h-7 px-2 text-[11px]"
-                        onClick={() => {
-                          setEditingProduct(p);
-                          setShowProductForm(true);
-                        }}
-                      >
-                        Editar
-                      </BtnOutline>
-                      <BtnOutline
-                        className="h-7 px-2 text-[11px]"
-                        onClick={() => setConfirmarEliminarId(p.id)}
-                      >
-                        Eliminar
-                      </BtnOutline>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <ProductFormDialog
-        key={editingProduct?.id ?? "nuevo"}
-        open={showProductForm}
-        onClose={() => {
-          setShowProductForm(false);
-          setEditingProduct(null);
-        }}
-        product={editingProduct}
-        onSave={saveProduct}
-      />
-
-      <FormDialog
-        open={showLinkForm}
-        onClose={() => setShowLinkForm(false)}
-        title="Generar link de pago"
-        description="Configura los metodos de pago y opciones del enlace."
-        submitLabel="Generar link"
-        size="lg"
-        onSubmit={generateLink}
-      >
-        <div className="p-3 rounded-md bg-muted text-xs">
-          <span className="text-muted-foreground">Productos seleccionados: </span>
-          <span className="font-semibold">{selected.length}</span>
-          {" - "}
-          <span className="font-semibold">
-            {formatARS(
-              products
-                .filter((p) => selected.includes(p.id))
-                .reduce((s, p) => s + p.price * p.qty, 0),
-            )}
-          </span>
-        </div>
-
-        <label className="flex items-center justify-between text-sm">
-          <span className="font-semibold">Permitir pagos parciales</span>
-          <input
-            type="checkbox"
-            checked={linkPartial}
-            onChange={(e) => setLinkPartial(e.target.checked)}
-            className="toggle"
-          />
-        </label>
-
-        <div>
-          <Label>Metodos de pago permitidos</Label>
-          {(["credit", "debit"] as const).map((cat) => (
-            <div key={cat} className="mb-3">
-              <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
-                {cat === "credit" ? "Tarjetas de Credito" : "Tarjetas de Debito"}
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                {paymentMethods
-                  .filter((m) => m.category === cat)
-                  .map((m) => (
-                    <label
-                      key={m.id}
-                      className={
-                        "flex items-center gap-2 px-3 py-2 rounded-md border text-xs cursor-pointer transition " +
-                        (!m.enabled
-                          ? "opacity-40 cursor-not-allowed"
-                          : linkMethods.includes(m.id)
-                            ? "border-primary bg-[color:var(--brand-soft)]"
-                            : "bg-card hover:bg-muted")
-                      }
-                    >
+          <Card className="p-0 overflow-hidden mb-6">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
+                    <th className="w-10 px-3 py-2.5">
                       <input
                         type="checkbox"
-                        checked={linkMethods.includes(m.id)}
-                        disabled={!m.enabled}
-                        onChange={() => m.enabled && toggleMethod(m.id)}
-                        className="accent-[color:var(--brand-dark)]"
+                        onChange={(e) =>
+                          setSelected(e.target.checked ? products.map((p) => p.id) : [])
+                        }
+                        checked={selected.length === products.length && products.length > 0}
                       />
-                      {m.label}
-                    </label>
+                    </th>
+                    <th className="text-left px-3 py-2.5">Producto</th>
+                    <th className="text-right px-3 py-2.5">Cantidad</th>
+                    <th className="text-right px-3 py-2.5">Precio</th>
+                    <th className="text-left px-3 py-2.5 hidden md:table-cell">Descripcion</th>
+                    <th className="text-right px-3 py-2.5"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map((p) => (
+                    <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30">
+                      <td className="px-3 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selected.includes(p.id)}
+                          onChange={() =>
+                            setSelected((prev) =>
+                              prev.includes(p.id)
+                                ? prev.filter((x) => x !== p.id)
+                                : [...prev, p.id],
+                            )
+                          }
+                        />
+                      </td>
+                      <td className="px-3 py-3 font-semibold">{p.name}</td>
+                      <td className="px-3 py-3 font-mono tabular-nums text-right">{p.qty}</td>
+                      <td className="px-3 py-3 font-mono tabular-nums text-right font-semibold">
+                        {formatARS(p.price)}
+                      </td>
+                      <td className="px-3 py-3 text-xs text-muted-foreground hidden md:table-cell">
+                        {p.desc || "-"}
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <div className="flex gap-1 justify-end">
+                          <BtnOutline
+                            className="h-7 px-2 text-[11px]"
+                            onClick={() => {
+                              setEditingProduct(p);
+                              setShowProductForm(true);
+                            }}
+                          >
+                            Editar
+                          </BtnOutline>
+                          <BtnOutline
+                            className="h-7 px-2 text-[11px]"
+                            onClick={() => setConfirmarEliminarId(p.id)}
+                          >
+                            Eliminar
+                          </BtnOutline>
+                        </div>
+                      </td>
+                    </tr>
                   ))}
-              </div>
+                </tbody>
+              </table>
             </div>
-          ))}
-        </div>
+          </Card>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Fecha de expiracion</Label>
-            <Input
-              type="date"
-              value={linkExpires}
-              onChange={(e) => setLinkExpires(e.target.value)}
-            />
-          </div>
-          <div>
-            <Label>Estado</Label>
-            <select
-              className="w-full h-10 px-3 rounded-md border bg-card text-sm"
-              value={linkStatus}
-              onChange={(e) => setLinkStatus(e.target.value)}
-            >
-              <option value="Activo">Activo</option>
-              <option value="Inactivo">Inactivo</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <Label>Referencia interna</Label>
-          <Input
-            placeholder="FACT-0034"
-            value={linkRef}
-            onChange={(e) => setLinkRef(e.target.value)}
+          <ProductFormDialog
+            key={editingProduct?.id ?? "nuevo"}
+            open={showProductForm}
+            onClose={() => {
+              setShowProductForm(false);
+              setEditingProduct(null);
+            }}
+            product={editingProduct}
+            onSave={saveProduct}
           />
-        </div>
-        <div>
-          <Label>Observaciones (opcional)</Label>
-          <textarea
-            className="w-full h-20 px-3 py-2 rounded-md border bg-card text-sm resize-none"
-            value={linkNotes}
-            onChange={(e) => setLinkNotes(e.target.value)}
+
+          <FormDialog
+            open={showLinkForm}
+            onClose={() => setShowLinkForm(false)}
+            title="Generar link de pago"
+            description="Configura los metodos de pago y opciones del enlace."
+            submitLabel="Generar link"
+            size="lg"
+            onSubmit={generateLink}
+          >
+            <div className="p-3 rounded-md bg-muted text-xs">
+              <span className="text-muted-foreground">Productos seleccionados: </span>
+              <span className="font-semibold">{selected.length}</span>
+              {" - "}
+              <span className="font-semibold">
+                {formatARS(
+                  products
+                    .filter((p) => selected.includes(p.id))
+                    .reduce((s, p) => s + p.price * p.qty, 0),
+                )}
+              </span>
+            </div>
+
+            <label className="flex items-center justify-between text-sm">
+              <span className="font-semibold">Permitir pagos parciales</span>
+              <input
+                type="checkbox"
+                checked={linkPartial}
+                onChange={(e) => setLinkPartial(e.target.checked)}
+                className="toggle"
+              />
+            </label>
+
+            <div>
+              <Label>Metodos de pago permitidos</Label>
+              {(["credit", "debit"] as const).map((cat) => (
+                <div key={cat} className="mb-3">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
+                    {cat === "credit" ? "Tarjetas de Credito" : "Tarjetas de Debito"}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {paymentMethods
+                      .filter((m) => m.category === cat)
+                      .map((m) => (
+                        <label
+                          key={m.id}
+                          className={
+                            "flex items-center gap-2 px-3 py-2 rounded-md border text-xs cursor-pointer transition " +
+                            (!m.enabled
+                              ? "opacity-40 cursor-not-allowed"
+                              : linkMethods.includes(m.id)
+                                ? "border-primary bg-[color:var(--brand-soft)]"
+                                : "bg-card hover:bg-muted")
+                          }
+                        >
+                          <input
+                            type="checkbox"
+                            checked={linkMethods.includes(m.id)}
+                            disabled={!m.enabled}
+                            onChange={() => m.enabled && toggleMethod(m.id)}
+                            className="accent-[color:var(--brand-dark)]"
+                          />
+                          {m.label}
+                        </label>
+                      ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Fecha de expiracion</Label>
+                <Input
+                  type="date"
+                  value={linkExpires}
+                  onChange={(e) => setLinkExpires(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Estado</Label>
+                <select
+                  className="w-full h-10 px-3 rounded-md border bg-card text-sm"
+                  value={linkStatus}
+                  onChange={(e) => setLinkStatus(e.target.value)}
+                >
+                  <option value="Activo">Activo</option>
+                  <option value="Inactivo">Inactivo</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <Label>Referencia interna</Label>
+              <Input
+                placeholder="FACT-0034"
+                value={linkRef}
+                onChange={(e) => setLinkRef(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Observaciones (opcional)</Label>
+              <textarea
+                className="w-full h-20 px-3 py-2 rounded-md border bg-card text-sm resize-none"
+                value={linkNotes}
+                onChange={(e) => setLinkNotes(e.target.value)}
+              />
+            </div>
+          </FormDialog>
+
+          <ConfirmDialog
+            open={confirmarEliminarId !== null}
+            title="¿Eliminar producto?"
+            description="Esta accion no se puede deshacer."
+            onClose={() => setConfirmarEliminarId(null)}
+            onConfirm={() => {
+              if (confirmarEliminarId) deleteProduct(confirmarEliminarId);
+            }}
           />
-        </div>
-      </FormDialog>
-
-      <FormDialog
-        open={showResult}
-        onClose={() => {
-          setShowResult(false);
-          setQrDataUrl("");
-        }}
-        title="Link de pago generado"
-        description="Comparti el enlace con tu cliente para que realice el pago."
-        submitLabel="Cerrar"
-        size="lg"
-        onSubmit={() => {
-          setShowResult(false);
-          setQrDataUrl("");
-        }}
-      >
-        {generatedLink && (
-          <>
-            <div className="flex flex-col items-center gap-4 p-4">
-              {qrDataUrl && <img src={qrDataUrl} alt="QR" className="w-40 h-40" />}
-              <div className="font-mono text-sm break-all p-3 bg-muted rounded w-full text-center">
-                {generatedLink.url}
-              </div>
-              <div className="flex gap-2">
-                <BtnOutline
-                  className="text-xs"
-                  onClick={() => {
-                    navigator.clipboard.writeText(generatedLink.url);
-                    toast.success("URL copiada");
-                  }}
-                >
-                  <Copy size={13} /> Copiar URL
-                </BtnOutline>
-                <BtnOutline
-                  className="text-xs"
-                  onClick={() => {
-                    if (navigator.share)
-                      navigator.share({ url: generatedLink.url }).catch(() => {});
-                    else {
-                      navigator.clipboard.writeText(generatedLink.url);
-                      toast.success("URL copiada para compartir");
-                    }
-                  }}
-                >
-                  <Share2 size={13} /> Compartir
-                </BtnOutline>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <span className="text-muted-foreground text-xs">Estado</span>
-                <div>
-                  <Badge
-                    tone={
-                      generatedLink.status === "Activo"
-                        ? "success"
-                        : generatedLink.status === "Inactivo"
-                          ? "neutral"
-                          : "danger"
-                    }
-                  >
-                    {generatedLink.status}
-                  </Badge>
-                </div>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-xs">Pagos parciales</span>
-                <div>{generatedLink.partialPayments ? "Si" : "No"}</div>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-xs">Creado</span>
-                <div>{generatedLink.createdAt}</div>
-              </div>
-              <div>
-                <span className="text-muted-foreground text-xs">Expira</span>
-                <div>{generatedLink.expiresAt || "Sin vencimiento"}</div>
-              </div>
-              <div className="col-span-2">
-                <span className="text-muted-foreground text-xs">Productos</span>
-                <div className="font-semibold">
-                  {generatedLink.products.map((p) => p.name).join(", ")}
-                </div>
-              </div>
-              {generatedLink.reference && (
-                <div className="col-span-2">
-                  <span className="text-muted-foreground text-xs">Referencia</span>
-                  <div>{generatedLink.reference}</div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-2 pt-2 border-t">
-              <BtnOutline className="text-xs">
-                <Edit3 size={13} /> Editar
-              </BtnOutline>
-              <BtnOutline className="text-xs">
-                <ToggleLeft size={13} />{" "}
-                {generatedLink.status === "Activo" ? "Deshabilitar" : "Habilitar"}
-              </BtnOutline>
-              <BtnOutline className="text-xs">
-                <RotateCcw size={13} /> Regenerar
-              </BtnOutline>
-              <BtnOutline className="text-xs">
-                <History size={13} /> Historial de pagos
-              </BtnOutline>
-            </div>
-          </>
-        )}
-      </FormDialog>
-
-      <ConfirmDialog
-        open={confirmarEliminarId !== null}
-        title="¿Eliminar producto?"
-        description="Esta accion no se puede deshacer."
-        onClose={() => setConfirmarEliminarId(null)}
-        onConfirm={() => {
-          if (confirmarEliminarId) deleteProduct(confirmarEliminarId);
-        }}
-      />
-      </>
+        </>
       )}
 
       {tab === "links" && (
@@ -712,7 +628,10 @@ function Page() {
               <tbody>
                 {links.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                    <td
+                      colSpan={8}
+                      className="px-5 py-10 text-center text-sm text-muted-foreground"
+                    >
                       Aun no generaste links de pago. Crealos desde la pestana Productos.
                     </td>
                   </tr>
@@ -722,7 +641,9 @@ function Page() {
                     const desc = l.products.map((p) => p.name).join(", ") || l.reference || "-";
                     return (
                       <tr key={l.id} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="px-5 py-3 font-mono text-xs">{(l.url.split("/").pop()) ?? l.id}</td>
+                        <td className="px-5 py-3 font-mono text-xs">
+                          {l.url.split("/").pop() ?? l.id}
+                        </td>
                         <td className="px-5 py-3 text-xs max-w-[220px] truncate" title={desc}>
                           {desc}
                         </td>
@@ -749,16 +670,18 @@ function Page() {
                           {l.payments}
                         </td>
                         <td className="px-5 py-3">
-                              <BtnOutline
-                                className="h-7 px-2 text-[11px]"
-                                onClick={() => {
-                                  const code = l.url.split("/").pop();
-                                  navigator.clipboard.writeText(code ? `${window.location.origin}/p/${code}` : l.url);
-                                  toast.success("Link copiado");
-                                }}
-                              >
-                                <Copy size={12} /> Copiar
-                              </BtnOutline>
+                          <BtnOutline
+                            className="h-7 px-2 text-[11px]"
+                            onClick={() => {
+                              const code = l.url.split("/").pop();
+                              navigator.clipboard.writeText(
+                                code ? `${window.location.origin}/p/${code}` : l.url,
+                              );
+                              toast.success("Link copiado");
+                            }}
+                          >
+                            <Copy size={12} /> Copiar
+                          </BtnOutline>
                         </td>
                         <td className="px-5 py-3 text-right">
                           <div className="flex gap-1 justify-end">
@@ -797,10 +720,7 @@ function Page() {
 
       {detailLink && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setDetailLink(null)}
-          />
+          <div className="absolute inset-0 bg-black/50" onClick={() => setDetailLink(null)} />
           <div className="relative bg-card rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-center z-10">
               <div className="font-semibold">Detalle del link de pago</div>
@@ -812,18 +732,22 @@ function Page() {
               </button>
             </div>
             <div className="p-6 space-y-4">
-              <div className="font-mono text-sm break-all p-3 bg-muted rounded">{detailLink.url}</div>
+              <div className="font-mono text-sm break-all p-3 bg-muted rounded">
+                {detailLink.url}
+              </div>
               <div className="flex gap-2">
-                  <BtnOutline
-                    className="flex-1 text-xs"
-                    onClick={() => {
-                      const code = detailLink.url.split("/").pop();
-                      navigator.clipboard.writeText(code ? `${window.location.origin}/p/${code}` : detailLink.url);
-                      toast.success("Link copiado");
-                    }}
-                  >
-                    <Copy size={13} /> Copiar enlace
-                  </BtnOutline>
+                <BtnOutline
+                  className="flex-1 text-xs"
+                  onClick={() => {
+                    const code = detailLink.url.split("/").pop();
+                    navigator.clipboard.writeText(
+                      code ? `${window.location.origin}/p/${code}` : detailLink.url,
+                    );
+                    toast.success("Link copiado");
+                  }}
+                >
+                  <Copy size={13} /> Copiar enlace
+                </BtnOutline>
                 <BtnOutline
                   className="flex-1 text-xs"
                   onClick={() => {
@@ -849,24 +773,26 @@ function Page() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-xs text-muted-foreground">ID</span>
-                  <div className="font-mono">{(detailLink.url.split("/").pop()) ?? detailLink.id}</div>
-                </div>
-                  <div>
-                    <span className="text-xs text-muted-foreground">Estado</span>
-                    <div>
-                      <Badge
-                        tone={
-                          linkDisplayStatus(detailLink) === "Activo"
-                            ? "success"
-                            : linkDisplayStatus(detailLink) === "Inactivo"
-                              ? "neutral"
-                              : "danger"
-                        }
-                      >
-                        {linkDisplayStatus(detailLink)}
-                      </Badge>
-                    </div>
+                  <div className="font-mono">
+                    {detailLink.url.split("/").pop() ?? detailLink.id}
                   </div>
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground">Estado</span>
+                  <div>
+                    <Badge
+                      tone={
+                        linkDisplayStatus(detailLink) === "Activo"
+                          ? "success"
+                          : linkDisplayStatus(detailLink) === "Inactivo"
+                            ? "neutral"
+                            : "danger"
+                      }
+                    >
+                      {linkDisplayStatus(detailLink)}
+                    </Badge>
+                  </div>
+                </div>
                 <div>
                   <span className="text-xs text-muted-foreground">Monto total</span>
                   <div className="font-semibold">
@@ -924,11 +850,7 @@ function Page() {
         }}
       />
 
-      <LinkEditDialog
-        link={editLink}
-        onClose={() => setEditLink(null)}
-        onSave={saveEditLink}
-      />
+      <LinkEditDialog link={editLink} onClose={() => setEditLink(null)} onSave={saveEditLink} />
     </>
   );
 }
@@ -1067,7 +989,11 @@ function LinkEditDialog({
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label>Referencia</Label>
-          <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Factura 00123" />
+          <Input
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+            placeholder="Factura 00123"
+          />
         </div>
         <div>
           <Label>Fecha de expiracion</Label>
