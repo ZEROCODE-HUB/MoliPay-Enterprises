@@ -65,6 +65,7 @@ const fmtMov = (n: number) => (n >= 0 ? "+" : "") + "$ " + Math.abs(n).toLocaleS
 
 const TITULO_MOV: Record<string, string> = {
   deposito: "Depósito",
+  transferencia: "Transferencia",
   cobro_pct: "Cobro QR / Punto de venta",
   retiro: "Retiro",
   pago_pct: "Pago QR",
@@ -88,6 +89,12 @@ function Page() {
   const [confirmarBorrar, setConfirmarBorrar] = useState<Sub | null>(null);
 
   const [form, setForm] = useState({ n: "", apellido: "", email: "", tipo: "Operativa", resp: "", lim: "", saldo: "", activar: true });
+
+  const [transfDesde, setTransfDesde] = useState("");
+  const [transfHacia, setTransfHacia] = useState("");
+  const [transfMonto, setTransfMonto] = useState("");
+  const [transfConcepto, setTransfConcepto] = useState("");
+  const [transfLoading, setTransfLoading] = useState(false);
 
   const cargar = async () => {
     const s = requireSupabase();
@@ -133,7 +140,7 @@ function Page() {
   };
   const abrirEditar = (s: Sub) => {
     setEditSub(s);
-    setForm({ n: s.n, apellido: s.apellido, email: s.email, tipo: s.tipo, resp: s.resp, lim: s.lim, saldo: "", activar: s.e === "Activa" });
+    setForm({ n: s.n, apellido: s.apellido, email: s.email, tipo: s.tipo, resp: s.resp, lim: s.lim, saldo: String(s.disp), activar: s.e === "Activa" });
     setNuevoOpen(true);
   };
 
@@ -149,6 +156,7 @@ function Page() {
           tipo: form.tipo,
           responsable: form.resp,
           limite: form.lim || null,
+          saldo_disponible: Number(form.saldo || 0),
         }).eq("id", editSub.id);
         if (error) throw error;
         toast.success("Subcuenta actualizada");
@@ -205,6 +213,37 @@ function Page() {
       toast.success(estado === "Activa" ? "Subcuenta reactivada" : "Subcuenta pausada");
     } catch {
       toast.error("No se pudo actualizar el estado");
+    }
+  };
+
+  const onSubmitTransferir = async () => {
+    if (transfLoading) return;
+    const origen = subs.find((x) => x.id === transfDesde);
+    const destino = subs.find((x) => x.id === transfHacia);
+    const monto = Number(transfMonto || 0);
+    if (!origen || !destino) { toast.error("Selecciona las subcuentas de origen y destino"); return; }
+    if (transfDesde === transfHacia) { toast.error("Las subcuentas deben ser distintas"); return; }
+    if (!monto || monto <= 0) { toast.error("Ingresa un monto válido"); return; }
+    if (origen.disp < monto) { toast.error("Saldo insuficiente en la subcuenta de origen"); return; }
+    setTransfLoading(true);
+    try {
+      const s = requireSupabase();
+      const { error } = await s.rpc("registrar_transferencia_subcuentas", {
+        p_subcuenta_origen: origen.id,
+        p_subcuenta_destino: destino.id,
+        p_monto: monto,
+        p_concepto: transfConcepto || null,
+      });
+      if (error) throw error;
+      setTransfOpen(false);
+      setTransfMonto("");
+      setTransfConcepto("");
+      toast.success(`Transferencia interna por ${fmt(monto)} realizada`);
+      await cargar();
+    } catch {
+      toast.error("No se pudo realizar la transferencia");
+    } finally {
+      setTransfLoading(false);
     }
   };
 
@@ -373,22 +412,24 @@ function Page() {
         title="Transferir entre subcuentas"
         description="Movimiento interno · acreditacion inmediata, sin comision."
         submitLabel="Transferir"
-        onSubmit={() => { setTransfOpen(false); toast.success("Transferencia interna realizada (demo)"); }}
+        onSubmit={onSubmitTransferir}
       >
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Desde</Label>
-            <select className="w-full h-10 px-3 rounded-md border bg-card text-sm">
-              {subs.map((s) => <option key={s.id ?? s.n}>{s.n} — {fmt(s.disp)}</option>)}
+            <select value={transfDesde} onChange={(e) => setTransfDesde(e.target.value)} className="w-full h-10 px-3 rounded-md border bg-card text-sm">
+              <option value="">Selecciona...</option>
+              {subs.map((s) => <option key={s.id ?? s.n} value={s.id}>{s.n} — {fmt(s.disp)}</option>)}
             </select>
           </div>
           <div><Label>Hacia</Label>
-            <select className="w-full h-10 px-3 rounded-md border bg-card text-sm">
-              {subs.map((s) => <option key={s.id ?? s.n}>{s.n}</option>)}
+            <select value={transfHacia} onChange={(e) => setTransfHacia(e.target.value)} className="w-full h-10 px-3 rounded-md border bg-card text-sm">
+              <option value="">Selecciona...</option>
+              {subs.map((s) => <option key={s.id ?? s.n} value={s.id}>{s.n} — {fmt(s.disp)}</option>)}
             </select>
           </div>
         </div>
-        <div><Label>Monto (ARS)</Label><Input placeholder="0,00" /></div>
-        <div><Label>Concepto</Label><Input placeholder="Barrido fin de dia, fondeo, etc." /></div>
+        <div><Label>Monto (ARS)</Label><Input value={transfMonto} onChange={(e) => setTransfMonto(e.target.value)} placeholder="0,00" /></div>
+        <div><Label>Concepto</Label><Input value={transfConcepto} onChange={(e) => setTransfConcepto(e.target.value)} placeholder="Barrido fin de dia, fondeo, etc." /></div>
       </FormDialog>
 
       <ConfirmDialog
@@ -428,7 +469,7 @@ function SubDetailModal({ sub, onClose, onCambiarEstado }: {
           .limit(200);
         setMoves(
           (data ?? []).map((m: any) => {
-            const egreso = m.tipo === "retiro" || m.tipo === "pago_pct";
+            const egreso = m.tipo === "transferencia" || m.tipo === "retiro" || m.tipo === "pago_pct";
             return {
               tipo: egreso ? "egreso" : "ingreso",
               titulo: TITULO_MOV[m.tipo] ?? m.tipo,
@@ -597,8 +638,16 @@ function SubDetailModal({ sub, onClose, onCambiarEstado }: {
                 <div className="font-display tabular-nums text-base font-semibold mt-1 text-red-700">{fmt(totalRetiros)}</div>
               </div>
               <div className="bg-muted/30 rounded-lg p-3">
-                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">CBU</div>
-                <div className="font-display tabular-nums text-base font-semibold mt-1 font-mono text-xs truncate">{sub.cbu}</div>
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Limite diario</div>
+                <div className={`font-display tabular-nums text-base font-semibold mt-1 ${sub.lim ? "" : "text-muted-foreground"}`}>
+                  {sub.lim ? fmt(Number(sub.lim)) : "—"}
+                </div>
+              </div>
+              <div className="bg-muted/30 rounded-lg p-3 sm:col-span-4">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">CBU</span>
+                  <span className="font-mono text-xs font-semibold truncate">{sub.cbu}</span>
+                </div>
               </div>
             </div>
           </section>

@@ -461,7 +461,7 @@ function Dashboard() {
               {lotesRecientes.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-5 py-8 text-center text-sm text-muted-foreground">
-                    No hay lotes en el periodo seleccionado.
+                    No hay registros.
                   </td>
                 </tr>
               )}

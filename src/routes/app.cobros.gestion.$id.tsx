@@ -544,7 +544,7 @@ function DetalleLote() {
               {registros.length === 0 && (
                 <tr>
                   <td colSpan={9} className="px-5 py-8 text-center text-sm text-muted-foreground">
-                    No hay registros en este lote.
+                    No hay registros.
                   </td>
                 </tr>
               )}

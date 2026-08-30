@@ -1,7 +1,7 @@
-﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useState, useMemo, useEffect, type ReactNode } from "react";
 import {
-  Plus, Eye, FileSpreadsheet, Download, Search, Filter, X,
+  Eye, FileSpreadsheet, Download, Search, Filter, X,
   Play, Pause, PlayIcon, Trash2, Copy, ExternalLink,
 } from "lucide-react";
 import { Card, BtnPrimary, BtnOutline, Input, Label } from "@/components/portal-shell";
@@ -49,7 +49,6 @@ const ESTADO_LABEL: Record<LoteEstado, string> = {
 const estados = Object.keys(estadoCatalogo) as LoteEstado[];
 
 function GestionLotes() {
-  const navigate = useNavigate();
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<LoteEstado | "todos">("todos");
   const [fechaDesde, setFechaDesde] = useState("");
@@ -106,6 +105,69 @@ function GestionLotes() {
 
   const ROWS_OPTIONS = [10, 20, 50];
 
+  const descargarPlantilla = () => {
+    const headers = [
+      "tipo_entidad",
+      "id_entidad",
+      "sub_entidad",
+      "identificacion_usuario",
+      "monto",
+      "descripcion",
+      "email",
+      "periodo_facturacion",
+      "id_unico_beneficiario",
+      "fecha_vencimiento_1",
+      "fecha_vencimiento_2",
+      "fecha_vencimiento_3",
+      "tasa_interes",
+      "medios_de_pago",
+      "pagos_parciales_habilitado",
+    ];
+    const rows = [
+      [
+        "edificio",
+        "6",
+        "UF 3D",
+        "Perez, Juan",
+        48200,
+        "Expensas mensuales - Edificio 6",
+        "juan@email.com",
+        "",
+        "",
+        "2026-04-15",
+        "2026-04-30",
+        "2026-05-15",
+        10,
+        "TRANSFERENCIA|TARJETA_CREDITO",
+        true,
+      ],
+      [
+        "club",
+        "12",
+        "Socio 145",
+        "Romero, Pablo",
+        15000,
+        "Cuota social",
+        "pablo.romero@email.com",
+        "",
+        "",
+        "2026-04-10",
+        "2026-04-25",
+        "2026-05-10",
+        5,
+        "TRANSFERENCIA|QR",
+        false,
+      ],
+    ];
+    const ws = XLSX.utils.json_to_sheet(
+      rows.map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i]]))),
+    );
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Plantilla");
+    XLSX.writeFile(wb, "plantilla-cobros-masivos.xlsx");
+    toast.success("Plantilla descargada");
+  };
+
   const exportExcel = () => {
     const rows = lotes.map((l) => ({
       ID: l.id,
@@ -158,9 +220,9 @@ function GestionLotes() {
     <>
       {/* Acciones globales */}
       <div className="flex flex-wrap gap-3 mb-6 items-center">
-        <BtnPrimary onClick={() => navigate({ to: "/app/cobros/nuevo" })}>
-          <Plus size={16} /> Nuevo lote
-        </BtnPrimary>
+        <BtnOutline className="h-9 px-3 text-xs" onClick={descargarPlantilla}>
+          <Download size={14} /> Descargar plantilla
+        </BtnOutline>
         <BtnOutline className="h-9 px-3 text-xs" onClick={exportExcel}>
           <FileSpreadsheet size={14} /> Excel
         </BtnOutline>
@@ -320,7 +382,7 @@ function GestionLotes() {
               {lotes.length === 0 && (
                 <tr>
                   <td colSpan={12} className="px-5 py-8 text-center text-sm text-muted-foreground">
-                    No se encontraron lotes con los filtros aplicados.
+                    No hay registros.
                   </td>
                 </tr>
               )}
@@ -410,7 +472,8 @@ function GestionLotes() {
           navigator.clipboard.writeText(url);
           toast.success("Link copiado al portapapeles");
         };
-        const exportExcel = () => {
+
+  const exportExcel = () => {
           const rows = registros.map((r) => ({
             Descripcion: r.descripcion,
             Monto: r.monto,
@@ -656,7 +719,7 @@ function GestionLotes() {
                         })}
                         {registros.length === 0 && (
                           <tr>
-                            <td colSpan={9} className="px-5 py-8 text-center text-sm text-muted-foreground">No hay registros en este lote.</td>
+                            <td colSpan={9} className="px-5 py-8 text-center text-sm text-muted-foreground">No hay registros.</td>
                           </tr>
                         )}
                       </tbody>

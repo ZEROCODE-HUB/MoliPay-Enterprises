@@ -1,6 +1,6 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Search, Eye, Edit3, Trash2, Info, X, Download, Printer } from "lucide-react";
+import { Plus, Search, Eye, Edit3, Trash2, Info, X, Download, Printer, ScanLine } from "lucide-react";
 import { Card, Input, Label, BtnPrimary, BtnOutline, Badge, PageHeader } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
@@ -46,6 +46,7 @@ function Page() {
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [eliminarOpen, setEliminarOpen] = useState(false);
   const [eliminarId, setEliminarId] = useState<string | null>(null);
+  const [scan, setScan] = useState(false);
 
   useEffect(() => {
     cargar();
@@ -234,6 +235,22 @@ function Page() {
         title="Puntos de Venta"
         description="Crea y gestiona los puntos de venta con cobro mediante QR."
       />
+
+      {/* Escaneo de codigos */}
+      <Card className="mb-6 flex flex-wrap items-center gap-4">
+        <div className="w-11 h-11 rounded-xl bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] flex items-center justify-center">
+          <ScanLine size={20} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold">Escaneo de codigos</div>
+          <div className="text-xs text-muted-foreground">
+            Para realizar pagos en comercios, profesionales, etc. Escanea el codigo de barras o QR desde tu camara.
+          </div>
+        </div>
+        <BtnPrimary className="h-9 px-4 text-xs" onClick={() => setScan(true)}>
+          <ScanLine size={14} /> Escanear
+        </BtnPrimary>
+      </Card>
 
       {/* Top bar */}
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
@@ -523,6 +540,38 @@ function Page() {
                 }}
               >
                 <Edit3 size={13} /> Editar
+              </BtnPrimary>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Escaneo de codigos */}
+      {scan && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setScan(false)} />
+          <div className="relative bg-card rounded-xl max-w-md w-full shadow-2xl">
+            <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-center rounded-t-xl">
+              <div className="font-semibold">Escanear codigo</div>
+              <button onClick={() => setScan(false)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-accent transition"><X size={16} /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-center w-full h-48 rounded-lg bg-muted/40 border border-dashed">
+                <ScanLine size={48} className="text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground text-center">
+                Apunta la camara al codigo de barras o QR del comercio para iniciar el pago.
+              </p>
+              <BtnPrimary className="w-full" onClick={() => {
+                if (navigator.mediaDevices?.getUserMedia) {
+                  navigator.mediaDevices.getUserMedia({ video: true })
+                    .then((stream) => { stream.getTracks().forEach((t) => t.stop()); toast.success("Camara lista para escanear"); setScan(false); })
+                    .catch(() => toast.error("No se pudo acceder a la camara"));
+                } else {
+                  toast.error("Este dispositivo no soporta camara");
+                }
+              }}>
+                <ScanLine size={15} /> Abrir camara
               </BtnPrimary>
             </div>
           </div>

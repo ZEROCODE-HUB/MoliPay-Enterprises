@@ -123,84 +123,87 @@ function Page() {
 
       {/* Tabs */}
       <div className="bg-card border rounded-lg mb-6 overflow-hidden">
-        <div className="flex gap-0 border-b overflow-x-auto">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 -mb-px transition-colors ${
-                tab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="p-5">
-          {tab === "unica" && (
-            <Unica
-              confirm={confirm}
-              setConfirm={setConfirm}
-              onOtpRequired={openOtp}
-              onSaveDraft={(d) => {
-                setDrafts((prev) => [...prev, d]);
-                toast.success("Borrador guardado");
-              }}
-              onSaveTemplate={() => {
-                toast.success("Plantilla guardada");
-              }}
-              prefilledDestinatario={prefilledDestinatario}
-              onClearPrefill={() => setPrefilledDestinatario(undefined)}
-            />
-          )}
-          {tab === "programar" && (
-            <Programar
-              onSuccess={() => {
-                const newSched: Scheduled = {
-                  id: `s${Date.now()}`,
-                  destinatario: "Nueva transferencia",
-                  alias: "alias.ejemplo",
-                  monto: "$ 0",
-                  fecha: "12/07/2026",
-                  hora: "10:00",
-                  estado: "Programada",
-                  concepto: "Pago",
-                };
-                setScheduled((prev) => [...prev, newSched]);
-                toast.success("Transferencia programada");
-                setTab("programadas");
-              }}
-            />
-          )}
-          {tab === "borradores" && (
-            <Borradores
-              drafts={drafts}
-              onDelete={(id) => setConfirmarEliminacion({ tipo: "borrador", id })}
-              onEdit={(id) => {
+        <div className="md:grid md:grid-cols-[220px_1fr]">
+          <nav className="flex md:flex-col overflow-x-auto overflow-y-hidden md:overflow-visible border-b md:border-b-0 md:border-r bg-muted/10">
+            {tabs.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`shrink-0 px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 md:border-b-0 md:border-l-2 md:text-left transition-colors ${
+                  tab === t.key
+                    ? "border-primary text-primary bg-[color:var(--brand-soft)]/50 md:bg-[color:var(--brand-soft)]/40"
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </nav>
+          <div className="p-5">
+            {tab === "unica" && (
+              <Unica
+                confirm={confirm}
+                setConfirm={setConfirm}
+                onOtpRequired={openOtp}
+                onSaveDraft={(d) => {
+                  setDrafts((prev) => [...prev, d]);
+                  toast.success("Borrador guardado");
+                }}
+                onSaveTemplate={() => {
+                  toast.success("Plantilla guardada");
+                }}
+                prefilledDestinatario={prefilledDestinatario}
+                onClearPrefill={() => setPrefilledDestinatario(undefined)}
+              />
+            )}
+            {tab === "programar" && (
+              <Programar
+                onSuccess={() => {
+                  const newSched: Scheduled = {
+                    id: `s${Date.now()}`,
+                    destinatario: "Nueva transferencia",
+                    alias: "alias.ejemplo",
+                    monto: "$ 0",
+                    fecha: "12/07/2026",
+                    hora: "10:00",
+                    estado: "Programada",
+                    concepto: "Pago",
+                  };
+                  setScheduled((prev) => [...prev, newSched]);
+                  toast.success("Transferencia programada");
+                  setTab("programadas");
+                }}
+              />
+            )}
+            {tab === "borradores" && (
+              <Borradores
+                drafts={drafts}
+                onDelete={(id) => setConfirmarEliminacion({ tipo: "borrador", id })}
+                onEdit={(id) => {
+                  setTab("unica");
+                  toast.success("Borrador cargado en el formulario");
+                }}
+                onExecute={(id) => {
+                  toast.success("Transferencia enviada desde borrador");
+                }}
+              />
+            )}
+            {tab === "programadas" && (
+              <Programadas
+                items={scheduled}
+                onCancel={(id) => setConfirmarEliminacion({ tipo: "programada", id })}
+                onEdit={(id) => toast.success("Editando transferencia programada")}
+                onExecute={(id) => toast.success("Transferencia ejecutada")}
+              />
+            )}
+            {tab === "destinatarios" && (
+              <DestinatariosList onSelect={(d) => {
+                setPrefilledDestinatario(d);
                 setTab("unica");
-                toast.success("Borrador cargado en el formulario");
-              }}
-              onExecute={(id) => {
-                toast.success("Transferencia enviada desde borrador");
-              }}
-            />
-          )}
-          {tab === "programadas" && (
-            <Programadas
-              items={scheduled}
-              onCancel={(id) => setConfirmarEliminacion({ tipo: "programada", id })}
-              onEdit={(id) => toast.success("Editando transferencia programada")}
-              onExecute={(id) => toast.success("Transferencia ejecutada")}
-            />
-          )}
-          {tab === "destinatarios" && (
-            <DestinatariosList onSelect={(d) => {
-              setPrefilledDestinatario(d);
-              setTab("unica");
-              toast.success("Destinatario cargado");
-            }} />
-          )}
+                toast.success("Destinatario cargado");
+              }} />
+            )}
+          </div>
         </div>
       </div>
 
