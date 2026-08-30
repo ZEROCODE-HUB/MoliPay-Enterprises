@@ -292,6 +292,13 @@ function NuevoLote() {
 
   return (
     <div className="max-w-4xl">
+      <button
+        type="button"
+        onClick={() => navigate({ to: "/app/cobros/gestion" })}
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground mb-4"
+      >
+        <ArrowLeft size={14} /> Volver a Gestión de lotes
+      </button>
       {/* Steps indicator */}
       <div className="flex items-center gap-2 mb-8">
         {["Parametros generales", "Carga de CSV", "Confirmacion"].map((label, i) => (
