@@ -453,7 +453,8 @@ function GestionLotes() {
         const handleIniciar = () => {
           if (iniciarLote(id)) {
             toast.success("Lote iniciado - se generaron los links de pago");
-            setDetalleLote(getLoteById(id) ?? null);
+            const fresh = getLoteById(id);
+            if (fresh) setDetalleLote({ ...fresh });
             setTick((t) => t + 1);
           } else {
             toast.error("El lote no esta en estado pendiente");
@@ -475,9 +476,13 @@ function GestionLotes() {
             toast.error("No se pudo reanudar el lote");
           }
         };
-        const copyLink = (url: string) => {
-          navigator.clipboard.writeText(url);
-          toast.success("Link copiado al portapapeles");
+        const copyLink = async (url: string) => {
+          try {
+            await navigator.clipboard.writeText(url);
+            toast.success("Link copiado al portapapeles");
+          } catch {
+            toast.error("No se pudo copiar. Seleccioná el link y copialo manualmente.");
+          }
         };
 
   const exportExcel = () => {
