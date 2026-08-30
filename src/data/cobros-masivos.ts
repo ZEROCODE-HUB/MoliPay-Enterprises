@@ -336,12 +336,14 @@ export async function getLoteByIdDB(id: string): Promise<Lote | null> {
 export async function getRegistrosByLoteIdDB(loteId: string): Promise<RegistroDeLote[]> {
   try {
     const s = requireSupabase();
+    console.log("[getRegistrosByLoteIdDB] querying loteId:", loteId);
     const { data, error } = await s
       .from("lote_registros")
       .select("*")
       .eq("lote_id", loteId)
       .order("created_at", { ascending: true });
     if (error) { console.error("[getRegistrosByLoteIdDB] Supabase error:", error.message, error); return []; }
+    console.log("[getRegistrosByLoteIdDB] result count:", (data ?? []).length, "first:", data?.[0]);
     return (data ?? []).map(rowToRegistro);
   } catch (e) {
     console.error("[getRegistrosByLoteIdDB] Exception:", e);
