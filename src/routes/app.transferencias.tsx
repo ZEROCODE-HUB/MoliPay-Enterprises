@@ -1,10 +1,11 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { ArrowUpRight, Calendar, Clock, ShieldCheck, Star, Trash2, Edit3, Play, FileText, Save, Users, X, Plus, KeyRound } from "lucide-react";
 import { PageHeader, Input, Label, BtnPrimary, BtnOutline, Badge } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { requireSupabase, toDataError, isPermissionError } from "@/lib/supabase";
 
 export const Route = createFileRoute("/app/transferencias")({ component: Page });
 
@@ -15,34 +16,9 @@ type Scheduled = { id: string; destinatario: string; alias: string; monto: strin
 type CoelsaResult = { nombre: string; cuit: string; cbu: string; alias: string };
 type Destinatario = CoelsaResult & { banco: string };
 
-const draftsMock: Draft[] = [
-  { id: "d1", destinatario: "Proveedor SA", alias: "proveedor.sa", monto: "$ 220.000", concepto: "Pago a proveedor", ref: "Factura 0034", fecha: "08/07/2026" },
-  { id: "d2", destinatario: "Estudio Rios", alias: "rios.contable", monto: "$ 145.000", concepto: "Honorarios", ref: "Abril 2026", fecha: "07/07/2026" },
-];
+type Subcuenta = { id: string; nombre: string; cbu: string | null; saldo_disponible: number; tipo: string };
 
-const scheduledMock: Scheduled[] = [
-  { id: "s1", destinatario: "Sueldos Mayo", alias: "sueldos.empresa", monto: "$ 4.820.000", fecha: "10/07/2026", hora: "09:00", estado: "Programada", concepto: "Sueldos" },
-  { id: "s2", destinatario: "Proveedor SA", alias: "proveedor.sa", monto: "$ 220.000", fecha: "15/07/2026", hora: "14:30", estado: "Programada", concepto: "Pago a proveedor" },
-  { id: "s3", destinatario: "Estudio Rios", alias: "rios.contable", monto: "$ 145.000", fecha: "12/07/2026", hora: "10:00", estado: "Recurrente", concepto: "Honorarios" },
-];
-
-const destinatariosMock: Destinatario[] = [
-  { nombre: "Proveedor SA", cuit: "30-12345678-9", cbu: "0000003100099887766112", alias: "proveedor.sa", banco: "Banco Galicia" },
-  { nombre: "Estudio Rios", cuit: "30-87654321-0", cbu: "0000003200099887766223", alias: "rios.contable", banco: "Banco Nacion" },
-  { nombre: "Servicios Generales", cuit: "30-11122333-4", cbu: "0000003300099887766334", alias: "serv.generales", banco: "Banco Macro" },
-  { nombre: "Juan Perez", cuit: "20-22333444-5", cbu: "0000003400099887766445", alias: "juanperez.mp", banco: "Mercado Pago" },
-  { nombre: "Maria Lopez", cuit: "27-33444555-6", cbu: "0000003500099887766556", alias: "mlopez.cv", banco: "Banco Santander" },
-];
-
-const qelsaMock: CoelsaResult[] = [
-  { nombre: "Proveedor SA", cuit: "30-12345678-9", cbu: "0000003100099887766112", alias: "proveedor.sa" },
-  { nombre: "Estudio Rios", cuit: "30-87654321-0", cbu: "0000003200099887766223", alias: "rios.contable" },
-  { nombre: "Servicios Generales", cuit: "30-11122333-4", cbu: "0000003300099887766334", alias: "serv.generales" },
-  { nombre: "Juan Perez", cuit: "20-22333444-5", cbu: "0000003400099887766445", alias: "juanperez.mp" },
-  { nombre: "Maria Lopez", cuit: "27-33444555-6", cbu: "0000003500099887766556", alias: "mlopez.cv" },
-  { nombre: "Electro SA", cuit: "30-44555666-7", cbu: "0000003600099887766667", alias: "electro.sa" },
-  { nombre: "Transportes Rapidos", cuit: "30-55666777-8", cbu: "0000003700099887766778", alias: "trans.rapidos" },
-];
+const fmt = (n: number) => `$ ${n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function Page() {
   const [tab, setTab] = useState<Tab>("unica");
@@ -51,8 +27,8 @@ function Page() {
   const [saveDestOpen, setSaveDestOpen] = useState(false);
   const [prefilledDestinatario, setPrefilledDestinatario] = useState<CoelsaResult | undefined>(undefined);
   const [plantillaOpen, setPlantillaOpen] = useState(false);
-  const [drafts, setDrafts] = useState<Draft[]>(draftsMock);
-  const [scheduled, setScheduled] = useState<Scheduled[]>(scheduledMock);
+  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [scheduled, setScheduled] = useState<Scheduled[]>([]);
   const [otpOpen, setOtpOpen] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -60,6 +36,52 @@ function Page() {
     tipo: "borrador" | "programada";
     id: string;
   } | null>(null);
+
+  const [subcuentas, setSubcuentas] = useState<Subcuenta[]>([]);
+  const [totalDisponible, setTotalDisponible] = useState(0);
+  const [enviadoMes, setEnviadoMes] = useState({ monto: 0, ops: 0 });
+  const [loading, setLoading] = useState(true);
+
+  const cargarDatos = useCallback(async () => {
+    try {
+      const sb = requireSupabase();
+      const { data: { user } } = await sb.auth.getUser();
+      const { data: cli } = await sb
+        .from("clientes")
+        .select("legajo")
+        .eq("correo", user?.email ?? "")
+        .maybeSingle();
+      if (!cli?.legajo) return;
+
+      const { data: subs } = await sb
+        .from("subcuentas")
+        .select("id, nombre, cbu, saldo_disponible, tipo")
+        .eq("cliente_legajo", cli.legajo)
+        .order("nombre", { ascending: true });
+      setSubcuentas(subs ?? []);
+      setTotalDisponible((subs ?? []).reduce((s, x) => s + (Number(x.saldo_disponible) || 0), 0));
+
+      const now = new Date();
+      const primerDiaMes = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const { data: movs } = await sb
+        .from("movimientos")
+        .select("monto_operacion, tipo")
+        .eq("legajo", cli.legajo)
+        .gte("fecha", primerDiaMes)
+        .in("tipo", ["transferencia"]);
+      const movsArr = movs ?? [];
+      setEnviadoMes({
+        monto: movsArr.reduce((s, m) => s + (Number(m.monto_operacion) || 0), 0),
+        ops: movsArr.length,
+      });
+    } catch {
+      // silently fail
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
   const resetOtp = () => {
     setOtp(["", "", "", "", "", ""]);
@@ -71,14 +93,41 @@ function Page() {
     setOtpOpen(true);
   };
 
-  const confirmWithOtp = () => {
+  const [transferPayload, setTransferPayload] = useState<{
+    subcuentaOrigen: string;
+    destinatarioCbu: string;
+    monto: number;
+    concepto: string;
+  } | null>(null);
+
+  const confirmWithOtp = async () => {
     const code = otp.join("");
-    if (code.length !== 6) return;
+    if (code.length !== 6 || !transferPayload) return;
     setOtpOpen(false);
     setConfirm(false);
-    toast.success("Transferencia enviada");
-    setDestAlias("proveedor.sa");
-    setSaveDestOpen(true);
+    try {
+      const sb = requireSupabase();
+      const { data, error } = await sb.rpc("registrar_transferencia_externa", {
+        p_subcuenta_origen: transferPayload.subcuentaOrigen,
+        p_destinatario_cbu: transferPayload.destinatarioCbu,
+        p_monto: transferPayload.monto,
+        p_concepto: transferPayload.concepto || null,
+      });
+      if (error) throw error;
+      const result = data as { ok: boolean; id_txn: string; comision: number; impuesto: number; total_debitado: number };
+      toast.success(`Transferencia enviada — TXID: ${result.id_txn}`);
+      setDestAlias(transferPayload.destinatarioCbu.slice(0, 10) + "...");
+      setSaveDestOpen(true);
+      setTransferPayload(null);
+      await cargarDatos();
+    } catch (e) {
+      const err = toDataError(e);
+      if (isPermissionError(e)) {
+        toast.error("Sin permisos para realizar esta transferencia");
+      } else {
+        toast.error(err.message || "No se pudo enviar la transferencia");
+      }
+    }
   };
 
   const tabs: { key: Tab; label: string }[] = [
@@ -97,31 +146,28 @@ function Page() {
         action={<BtnOutline onClick={() => setPlantillaOpen(true)}><FileText size={14} /> Plantillas</BtnOutline>}
       />
 
-      {/* Stats compactas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Disponible hoy</div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">$ 12.479.330</div>
-          <div className="text-[10px] text-muted-foreground mt-0.5 truncate">Operativa + subcuentas</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">{fmt(totalDisponible)}</div>
+          <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{subcuentas.length} subcuentas</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Enviado este mes</div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">$ 28.4M</div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">142 operaciones</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">{fmt(enviadoMes.monto)}</div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">{enviadoMes.ops} operaciones</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Programadas</div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">3</div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">$ 5.185.000 proximos</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">{scheduled.length}</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Limite diario</div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">$ 25M</div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">73% utilizado</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Subcuentas</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">{subcuentas.length}</div>
+          <div className="text-[10px] text-muted-foreground mt-0.5">activas</div>
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="bg-card border rounded-lg mb-6 overflow-hidden">
         <div className="md:grid md:grid-cols-[220px_1fr]">
           <nav className="flex md:flex-col overflow-x-auto overflow-y-hidden md:overflow-visible border-b md:border-b-0 md:border-r bg-muted/10">
@@ -145,12 +191,11 @@ function Page() {
                 confirm={confirm}
                 setConfirm={setConfirm}
                 onOtpRequired={openOtp}
+                subcuentas={subcuentas}
+                onTransferPayload={setTransferPayload}
                 onSaveDraft={(d) => {
                   setDrafts((prev) => [...prev, d]);
                   toast.success("Borrador guardado");
-                }}
-                onSaveTemplate={() => {
-                  toast.success("Plantilla guardada");
                 }}
                 prefilledDestinatario={prefilledDestinatario}
                 onClearPrefill={() => setPrefilledDestinatario(undefined)}
@@ -158,13 +203,14 @@ function Page() {
             )}
             {tab === "programar" && (
               <Programar
+                subcuentas={subcuentas}
                 onSuccess={() => {
                   const newSched: Scheduled = {
                     id: `s${Date.now()}`,
                     destinatario: "Nueva transferencia",
                     alias: "alias.ejemplo",
                     monto: "$ 0",
-                    fecha: "12/07/2026",
+                    fecha: new Date().toLocaleDateString("es-AR"),
                     hora: "10:00",
                     estado: "Programada",
                     concepto: "Pago",
@@ -207,7 +253,6 @@ function Page() {
         </div>
       </div>
 
-      {/* Plantilla dialog */}
       <FormDialog
         open={plantillaOpen}
         onClose={() => setPlantillaOpen(false)}
@@ -256,7 +301,6 @@ function Page() {
         </div>
       </FormDialog>
 
-      {/* OTP dialog */}
       <FormDialog
         open={otpOpen}
         onClose={() => setOtpOpen(false)}
@@ -308,16 +352,15 @@ function Page() {
         open={saveDestOpen}
         onClose={() => setSaveDestOpen(false)}
         title="¿Deseas guardar este destinatario como frecuente?"
-        description={`Podes agendar a @${destAlias} en tu lista de destinatarios frecuentes para reutilizarlo.`}
+        description={`Podes agendar a ${destAlias} en tu lista de destinatarios frecuentes para reutilizarlo.`}
         submitLabel="Si, guardar destinatario"
         onSubmit={() => {
           setSaveDestOpen(false);
-          toast.success(`@${destAlias} agregado a destinatarios frecuentes`);
+          toast.success(`Destinatario agregado a frecuentes`);
         }}
       >
         <div className="text-xs text-muted-foreground">
           Los destinatarios ya no se guardan automaticamente. Solo se agendan si confirmas aqui.
-          Si presionas "Cancelar" no se guardara.
         </div>
       </FormDialog>
 
@@ -351,16 +394,18 @@ function Unica({
   confirm,
   setConfirm,
   onOtpRequired,
+  subcuentas,
+  onTransferPayload,
   onSaveDraft,
-  onSaveTemplate,
   prefilledDestinatario,
   onClearPrefill,
 }: {
   confirm: boolean;
   setConfirm: (v: boolean) => void;
   onOtpRequired: () => void;
+  subcuentas: Subcuenta[];
+  onTransferPayload: (p: { subcuentaOrigen: string; destinatarioCbu: string; monto: number; concepto: string }) => void;
   onSaveDraft: (d: Draft) => void;
-  onSaveTemplate: () => void;
   prefilledDestinatario?: CoelsaResult;
   onClearPrefill?: () => void;
 }) {
@@ -370,7 +415,22 @@ function Unica({
     () => prefilledDestinatario ?? null
   );
   const [frecuentesOpen, setFrecuentesOpen] = useState(false);
-  const [monto, setMonto] = useState("220000");
+  const [monto, setMonto] = useState("");
+  const [subcuentaOrigen, setSubcuentaOrigen] = useState("");
+  const [concepto, setConcepto] = useState("Pago a proveedor");
+
+  useEffect(() => {
+    if (subcuentas.length > 0 && !subcuentaOrigen) {
+      setSubcuentaOrigen(subcuentas[0].id);
+    }
+  }, [subcuentas, subcuentaOrigen]);
+
+  useEffect(() => {
+    if (prefilledDestinatario) {
+      onClearPrefill?.();
+      setSelectedDestinatario(prefilledDestinatario);
+    }
+  }, [prefilledDestinatario, onClearPrefill]);
 
   const saveAsDraft = () => {
     if (!selectedDestinatario) return;
@@ -379,7 +439,7 @@ function Unica({
       destinatario: selectedDestinatario.nombre,
       alias: selectedDestinatario.alias,
       monto: `$ ${Number(monto).toLocaleString("es-AR")}`,
-      concepto: "Pago a proveedor",
+      concepto,
       ref: "",
       fecha: new Date().toLocaleDateString("es-AR"),
     });
@@ -406,20 +466,20 @@ function Unica({
     }
   };
 
+  const subcuentaSeleccionada = subcuentas.find((s) => s.id === subcuentaOrigen);
+
   if (confirm) {
+    const montoNum = Number(monto) || 0;
     return (
       <div className="space-y-4">
         <div className="text-sm text-muted-foreground">Revisa los datos antes de confirmar.</div>
         <div className="border rounded-md divide-y">
           {[
-            ["Origen", "Cuenta operativa"],
+            ["Origen", subcuentaSeleccionada?.nombre ?? "—"],
+            ["CBU Origen", subcuentaSeleccionada?.cbu ?? "—"],
             ["Destinatario", selectedDestinatario?.nombre ?? "-"],
-            ["CUIT", selectedDestinatario?.cuit ?? "-"],
-            ["CBU", selectedDestinatario?.cbu ?? "-"],
-            ["Alias", selectedDestinatario ? `@${selectedDestinatario.alias}` : "-"],
-            ["Monto", `$ ${Number(monto).toLocaleString("es-AR")}`],
-            ["Comision estimada", "$ 80,00 (0,30%)"],
-            ["Total debito", `$ ${(Number(monto) + 80).toLocaleString("es-AR")}`],
+            ["CBU Destino", selectedDestinatario?.cbu ?? "-"],
+            ["Monto", fmt(montoNum)],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between py-2.5 px-3 text-sm">
               <span className="text-muted-foreground">{k}</span>
@@ -432,7 +492,16 @@ function Unica({
         </div>
         <div className="flex gap-2">
           <BtnOutline onClick={() => setConfirm(false)} className="flex-1">Volver</BtnOutline>
-          <BtnPrimary onClick={onOtpRequired} className="flex-1">Confirmar transferencia</BtnPrimary>
+          <BtnPrimary onClick={() => {
+            if (!subcuentaOrigen || !selectedDestinatario || !montoNum) return;
+            onTransferPayload({
+              subcuentaOrigen,
+              destinatarioCbu: selectedDestinatario.cbu,
+              monto: montoNum,
+              concepto,
+            });
+            onOtpRequired();
+          }} className="flex-1">Confirmar transferencia</BtnPrimary>
         </div>
       </div>
     );
@@ -482,31 +551,9 @@ function Unica({
           onSubmit={() => setFrecuentesOpen(false)}
           size="md"
         >
-          {destinatariosMock.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground text-sm">
-              No tenes destinatarios frecuentes guardados.
-            </div>
-          ) : (
-            <div className="divide-y max-h-72 overflow-y-auto">
-              {destinatariosMock.map((d) => (
-                <div
-                  key={d.alias}
-                  className="flex items-center justify-between py-2.5 px-1 hover:bg-muted/50 cursor-pointer rounded"
-                  onClick={() => {
-                    onClearPrefill?.();
-                    setSelectedDestinatario(d);
-                    setFrecuentesOpen(false);
-                  }}
-                >
-                  <div>
-                    <div className="text-sm font-semibold">{d.nombre}</div>
-                    <div className="text-xs text-muted-foreground">@{d.alias} · {d.banco}</div>
-                  </div>
-                  <span className="text-xs text-primary font-semibold">Seleccionar</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            No tenes destinatarios frecuentes guardados.
+          </div>
         </FormDialog>
       </div>
     );
@@ -514,7 +561,6 @@ function Unica({
 
   return (
     <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setConfirm(true); }}>
-      {/* Validated data card */}
       <div className="border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 rounded-lg p-4">
         <div className="flex items-center gap-2 mb-3">
           <ShieldCheck size={16} className="text-green-600" />
@@ -555,15 +601,29 @@ function Unica({
       <div className="grid sm:grid-cols-2 gap-3">
         <div className="sm:col-span-2">
           <Label>Origen de fondos</Label>
-          <select className="w-full h-10 px-3 rounded-md border bg-card text-sm">
-            <option>Cuenta operativa — $ 6.389.830,55</option>
-            <option>Sucursal Centro — $ 4.220.000,00</option>
-            <option>Sucursal Norte — $ 1.870.500,00</option>
+          <select
+            className="w-full h-10 px-3 rounded-md border bg-card text-sm"
+            value={subcuentaOrigen}
+            onChange={(e) => setSubcuentaOrigen(e.target.value)}
+          >
+            {subcuentas.length === 0 && <option value="">Sin subcuentas</option>}
+            {subcuentas.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nombre} — {fmt(Number(s.saldo_disponible))}
+              </option>
+            ))}
           </select>
         </div>
         <div>
           <Label>Monto</Label>
-          <Input placeholder="$ 0,00" value={monto} onChange={(e) => setMonto(e.target.value)} />
+          <Input
+            type="number"
+            placeholder="$ 0,00"
+            value={monto}
+            onChange={(e) => setMonto(e.target.value)}
+            min="0"
+            step="0.01"
+          />
         </div>
         <div>
           <Label>Moneda</Label>
@@ -573,7 +633,11 @@ function Unica({
         </div>
         <div>
           <Label>Concepto</Label>
-          <select className="w-full h-10 px-3 rounded-md border bg-card text-sm">
+          <select
+            className="w-full h-10 px-3 rounded-md border bg-card text-sm"
+            value={concepto}
+            onChange={(e) => setConcepto(e.target.value)}
+          >
             <option>Pago a proveedor</option>
             <option>Sueldos</option>
             <option>Honorarios</option>
@@ -581,18 +645,11 @@ function Unica({
             <option>Devolucion</option>
           </select>
         </div>
-        <div>
-          <Label>Referencia</Label>
-          <Input placeholder="Factura 0034" />
-        </div>
       </div>
 
       <div className="flex gap-2 pt-1">
         <BtnOutline type="button" className="flex-1" onClick={saveAsDraft}>
           <Save size={14} /> Guardar borrador
-        </BtnOutline>
-        <BtnOutline type="button" className="flex-1" onClick={onSaveTemplate}>
-          <FileText size={14} /> Guardar como plantilla
         </BtnOutline>
         <BtnPrimary type="submit" className="flex-1">Continuar</BtnPrimary>
       </div>
@@ -601,7 +658,7 @@ function Unica({
 }
 
 /* ===== Programar ===== */
-function Programar({ onSuccess }: { onSuccess: () => void }) {
+function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSuccess: () => void }) {
   const [confirm, setConfirm] = useState(false);
 
   if (confirm) {
@@ -610,13 +667,11 @@ function Programar({ onSuccess }: { onSuccess: () => void }) {
         <div className="text-sm text-muted-foreground">Revisa los datos antes de programar.</div>
         <div className="border rounded-md divide-y">
           {[
-            ["Origen", "Cuenta operativa"],
+            ["Origen", subcuentas[0]?.nombre ?? "—"],
             ["Destinatario", "Proveedor SA"],
-            ["CBU", "0000003 100099887766 11"],
             ["Monto", "$ 220.000,00"],
             ["Fecha", "15/07/2026"],
             ["Hora", "14:30"],
-            ["Comision estimada", "$ 80,00 (0,30%)"],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between py-2.5 px-3 text-sm">
               <span className="text-muted-foreground">{k}</span>
@@ -638,9 +693,11 @@ function Programar({ onSuccess }: { onSuccess: () => void }) {
         <div className="sm:col-span-2">
           <Label>Origen de fondos</Label>
           <select className="w-full h-10 px-3 rounded-md border bg-card text-sm">
-            <option>Cuenta operativa — $ 6.389.830,55</option>
-            <option>Sucursal Centro — $ 4.220.000,00</option>
-            <option>Sucursal Norte — $ 1.870.500,00</option>
+            {subcuentas.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nombre} — {fmt(Number(s.saldo_disponible))}
+              </option>
+            ))}
           </select>
         </div>
         <div className="sm:col-span-2">
@@ -680,15 +737,8 @@ function Programar({ onSuccess }: { onSuccess: () => void }) {
             <option>Devolucion</option>
           </select>
         </div>
-        <div>
-          <Label>Referencia</Label>
-          <Input placeholder="Factura 0034" />
-        </div>
       </div>
       <div className="flex gap-2 pt-1">
-        <BtnOutline type="button" className="flex-1" onClick={() => toast.success("Borrador programado guardado")}>
-          <Save size={14} /> Guardar borrador
-        </BtnOutline>
         <BtnPrimary type="submit" className="flex-1">Programar</BtnPrimary>
       </div>
     </form>
@@ -786,57 +836,22 @@ function Programadas({ items, onCancel, onEdit, onExecute }: {
 
 /* ===== Destinatarios frecuentes ===== */
 function DestinatariosList({ onSelect }: { onSelect: (d: Destinatario) => void }) {
-  const [search, setSearch] = useState("");
-  const filtered = search
-    ? destinatariosMock.filter((d) =>
-        d.nombre.toLowerCase().includes(search.toLowerCase()) ||
-        d.alias.toLowerCase().includes(search.toLowerCase()) ||
-        d.banco.toLowerCase().includes(search.toLowerCase())
-      )
-    : destinatariosMock;
-
   return (
     <div className="space-y-3">
-      <div className="flex gap-3 items-center">
-        <div className="flex-1">
-          <Input
-            placeholder="Buscar por nombre, alias o banco..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <Users size={32} className="mx-auto mb-3 opacity-50" />
-          <p className="font-semibold">No se encontraron destinatarios</p>
-          <p className="text-sm mt-1">Agrega destinatarios desde la pantalla de Destinatarios en el menu.</p>
-        </div>
-      ) : (
-        <div className="divide-y">
-          {filtered.map((d) => (
-            <div key={d.alias} className="flex items-center justify-between py-2.5">
-              <div>
-                <div className="text-sm font-semibold">{d.nombre}</div>
-                <div className="text-xs text-muted-foreground">@{d.alias} · {d.banco}</div>
-              </div>
-              <button
-                onClick={() => onSelect(d)}
-                className="text-xs text-primary font-semibold flex items-center gap-1 hover:underline"
-              >
-                Transferir <ArrowUpRight size={12} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="pt-2">
-        <BtnOutline className="w-full">
-          <Plus size={14} /> Ver todos los destinatarios
-        </BtnOutline>
+      <div className="text-center py-12 text-muted-foreground">
+        <Users size={32} className="mx-auto mb-3 opacity-50" />
+        <p className="font-semibold">No tenes destinatarios frecuentes</p>
+        <p className="text-sm mt-1">Los destinatarios se guardan al confirmar una transferencia.</p>
       </div>
     </div>
   );
 }
+
+/* ===== QELSA mock (placeholder hasta integrar API real) ===== */
+const qelsaMock: CoelsaResult[] = [
+  { nombre: "Proveedor SA", cuit: "30-12345678-9", cbu: "0000003100099887766112", alias: "proveedor.sa" },
+  { nombre: "Estudio Rios", cuit: "30-87654321-0", cbu: "0000003200099887766223", alias: "rios.contable" },
+  { nombre: "Servicios Generales", cuit: "30-11122333-4", cbu: "0000003300099887766334", alias: "serv.generales" },
+  { nombre: "Juan Perez", cuit: "20-22333444-5", cbu: "0000003400099887766445", alias: "juanperez.mp" },
+  { nombre: "Maria Lopez", cuit: "27-33444555-6", cbu: "0000003500099887766556", alias: "mlopez.cv" },
+];
