@@ -7,6 +7,7 @@ import {
 import { Card, BtnPrimary, BtnOutline, Input, Label } from "@/components/portal-shell";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { toast } from "sonner";
+import { requireSupabase } from "@/lib/supabase";
 import {
   getLotesGestion,
   getLoteById,
@@ -450,15 +451,39 @@ function GestionLotes() {
         const montoCobrado = registros.reduce((s, r) => s + r.montoPagado, 0);
         const pctCobrado = montoTotal > 0 ? Math.round((montoCobrado / montoTotal) * 100) : 0;
 
-        const handleIniciar = () => {
-          if (iniciarLote(id)) {
-            toast.success("Lote iniciado - se generaron los links de pago");
-            const fresh = getLoteById(id);
-            if (fresh) setDetalleLote({ ...fresh });
-            setTick((t) => t + 1);
-          } else {
+        const handleIniciar = async () => {
+          if (!iniciarLote(id)) {
             toast.error("El lote no esta en estado pendiente");
+            return;
           }
+          const regs = getRegistrosByLoteId(id);
+          try {
+            const s = requireSupabase();
+            const { data: u } = await s.auth.getUser();
+            const mail = u.user?.email;
+            if (!mail) { toast.success("Lote iniciado (sin persistir links)"); setDetalleLote({ ...getLoteById(id)! }); setTick((t) => t + 1); return; }
+            const { data: cli } = await s.from("clientes").select("legajo").eq("correo", mail).maybeSingle();
+            if (!cli) { toast.success("Lote iniciado (sin persistir links)"); setDetalleLote({ ...getLoteById(id)! }); setTick((t) => t + 1); return; }
+            const linkRows = regs.filter((r) => r.linkDePago).map((r) => ({
+              cliente_legajo: cli.legajo,
+              comercio_nombre: r.descripcion || r.identificacionUsuario,
+              url: r.linkDePago,
+              monto: r.monto,
+              estado: "Activo",
+            }));
+            if (linkRows.length > 0) {
+              const { error } = await s.from("cliente_links_pago").insert(linkRows);
+              if (error) toast.error("Links generados pero no se pudieron guardar en la DB");
+              else toast.success(`Lote iniciado - ${linkRows.length} links de pago creados`);
+            } else {
+              toast.success("Lote iniciado");
+            }
+          } catch {
+            toast.success("Lote iniciado (sin persistir links)");
+          }
+          const fresh = getLoteById(id);
+          if (fresh) setDetalleLote({ ...fresh });
+          setTick((t) => t + 1);
         };
         const handlePausar = () => {
           if (pausarLote(id)) {
