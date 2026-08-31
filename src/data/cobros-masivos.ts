@@ -382,25 +382,27 @@ export async function iniciarLoteDB(
     const { data: regs, error: regQueryErr } = await s
       .from("lote_registros")
       .select("id, monto, descripcion, identificacion_usuario, link_de_pago")
-      .eq("lote_id", loteId)
-      .eq("estado", "pendiente");
+      .eq("lote_id", loteId);
     if (regQueryErr) { console.error("[iniciarLoteDB] regs query error:", regQueryErr); return { ok: false, error: regQueryErr.message, linksCount: 0 }; }
     if (!regs || regs.length === 0) return { ok: true, linksCount: 0 };
+
+    console.log("[iniciarLoteDB] total registros:", regs.length, "estados:", regs.map(r => r.link_de_pago ? "con_link" : "sin_link").join(","));
 
     if (force) {
       const regIds = regs.map((r) => r.id);
       if (regIds.length > 0) {
-        const { error: clrErr } = await s
+        const { error: clrErr, count } = await s
           .from("lote_registros")
-          .update({ link_de_pago: null })
+          .update({ link_de_pago: null }, { count: "exact" })
           .in("id", regIds);
         if (clrErr) console.error("[iniciarLoteDB] force clear error:", clrErr);
+        else console.log("[iniciarLoteDB] force cleared:", count, "rows");
         regs.forEach((r) => { r.link_de_pago = null; });
       }
     }
 
     const regsSinLink = regs.filter((r) => !r.link_de_pago);
-    console.log("[iniciarLoteDB] total pendientes:", regs.length, "sin link:", regsSinLink.length);
+    console.log("[iniciarLoteDB] sin link:", regsSinLink.length);
 
     if (regsSinLink.length === 0) return { ok: true, linksCount: 0 };
 
@@ -414,20 +416,25 @@ export async function iniciarLoteDB(
       pagos_parciales: pagosParciales,
     }));
 
+    console.log("[iniciarLoteDB] inserting", linkRows.length, "links into cliente_links_pago");
     const { data: inserted, error: e2 } = await s
       .from("cliente_links_pago")
       .insert(linkRows)
       .select("id, url");
-    if (e2) { console.error("[iniciarLoteDB] links insert error:", e2); return { ok: false, error: e2.message, linksCount: 0 }; }
+    if (e2) { console.error("[iniciarLoteDB] links insert error:", JSON.stringify(e2)); return { ok: false, error: e2.message, linksCount: 0 }; }
 
-    console.log("[iniciarLoteDB] links creados:", inserted.length);
+    console.log("[iniciarLoteDB] links creados:", inserted.length, "urls:", inserted.map(i => i.url));
+
+    let linkUpdatesOk = 0;
     for (let i = 0; i < inserted.length; i++) {
       const { error: linkErr } = await s.rpc("actualizar_link_registro", {
         p_registro_id: regsSinLink[i].id,
         p_link: inserted[i].url,
       });
       if (linkErr) console.error("[iniciarLoteDB] actualizar_link error:", linkErr);
+      else linkUpdatesOk++;
     }
+    console.log("[iniciarLoteDB] link updates:", linkUpdatesOk, "of", inserted.length);
 
     return { ok: true, linksCount: inserted.length };
   } catch (e) {

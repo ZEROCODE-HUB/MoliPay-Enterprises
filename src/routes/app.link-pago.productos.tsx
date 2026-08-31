@@ -73,6 +73,8 @@ function Page() {
   const [tab, setTab] = useState<"productos" | "links">("productos");
   const [detailLink, setDetailLink] = useState<PaymentLink | null>(null);
   const [editLink, setEditLink] = useState<PaymentLink | null>(null);
+  const [linksPage, setLinksPage] = useState(1);
+  const LINKS_PAGE_SIZE = 10;
 
   const [linkPartial, setLinkPartial] = useState(false);
   const [linkMethods, setLinkMethods] = useState<string[]>(
@@ -240,6 +242,7 @@ function Page() {
     setLinks((prev) => [link, ...prev]);
     setShowLinkForm(false);
     setTab("links");
+    setLinksPage(1);
     setSelected([]);
     setLinkRef("");
     setLinkNotes("");
@@ -606,10 +609,17 @@ function Page() {
         </>
       )}
 
-      {tab === "links" && (
+      {tab === "links" && (() => {
+        const totalLinks = links.length;
+        const totalLinkPages = Math.max(1, Math.ceil(totalLinks / LINKS_PAGE_SIZE));
+        const safeLinksPage = Math.min(linksPage, totalLinkPages);
+        const paginatedLinks = links.slice((safeLinksPage - 1) * LINKS_PAGE_SIZE, safeLinksPage * LINKS_PAGE_SIZE);
+
+        return (
         <Card className="p-0 overflow-hidden">
-          <div className="px-5 py-4 border-b">
+          <div className="px-5 py-4 border-b flex items-center justify-between">
             <h3 className="font-semibold text-sm">Links de pago generados</h3>
+            <span className="text-xs text-muted-foreground">{totalLinks} link{totalLinks !== 1 ? "s" : ""}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -626,7 +636,7 @@ function Page() {
                 </tr>
               </thead>
               <tbody>
-                {links.length === 0 ? (
+                {totalLinks === 0 ? (
                   <tr>
                     <td
                       colSpan={8}
@@ -636,7 +646,7 @@ function Page() {
                     </td>
                   </tr>
                 ) : (
-                  links.map((l) => {
+                  paginatedLinks.map((l) => {
                     const monto = l.products.reduce((s, p) => s + p.price * p.qty, 0);
                     const desc = l.products.map((p) => p.name).join(", ") || l.reference || "-";
                     return (
@@ -715,8 +725,21 @@ function Page() {
               </tbody>
             </table>
           </div>
+          {totalLinks > 0 && (
+            <div className="px-5 py-3 border-t flex items-center justify-between text-xs text-muted-foreground">
+              <span>Mostrando {(safeLinksPage - 1) * LINKS_PAGE_SIZE + 1}–{Math.min(safeLinksPage * LINKS_PAGE_SIZE, totalLinks)} de {totalLinks}</span>
+              <div className="flex gap-1">
+                <BtnOutline className="h-7 px-2 text-[11px]" disabled={safeLinksPage <= 1} onClick={() => setLinksPage(1)}>«</BtnOutline>
+                <BtnOutline className="h-7 px-2 text-[11px]" disabled={safeLinksPage <= 1} onClick={() => setLinksPage((p) => Math.max(1, p - 1))}>‹</BtnOutline>
+                <span className="h-7 px-2 flex items-center font-medium">{safeLinksPage}/{totalLinkPages}</span>
+                <BtnOutline className="h-7 px-2 text-[11px]" disabled={safeLinksPage >= totalLinkPages} onClick={() => setLinksPage((p) => Math.min(totalLinkPages, p + 1))}>›</BtnOutline>
+                <BtnOutline className="h-7 px-2 text-[11px]" disabled={safeLinksPage >= totalLinkPages} onClick={() => setLinksPage(totalLinkPages)}>»</BtnOutline>
+              </div>
+            </div>
+          )}
         </Card>
-      )}
+        );
+      })()}
 
       {detailLink && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
