@@ -228,14 +228,12 @@ function DetalleLote() {
         onClick: handlePausar,
         variant: "outline",
       });
-      if (registros.some((r) => !r.linkDePago)) {
-        actions.push({
-          label: "Regenerar links",
-          icon: <LinkIcon size={14} />,
-          onClick: handleIniciar,
-          variant: "primary",
-        });
-      }
+      actions.push({
+        label: "Regenerar links",
+        icon: <LinkIcon size={14} />,
+        onClick: handleIniciar,
+        variant: "primary",
+      });
     }
     if (lote.estado === "pausado") {
       actions.push({
@@ -244,14 +242,12 @@ function DetalleLote() {
         onClick: handleReanudar,
         variant: "primary",
       });
-      if (registros.some((r) => !r.linkDePago)) {
-        actions.push({
-          label: "Regenerar links",
-          icon: <LinkIcon size={14} />,
-          onClick: handleIniciar,
-          variant: "primary",
-        });
-      }
+      actions.push({
+        label: "Regenerar links",
+        icon: <LinkIcon size={14} />,
+        onClick: handleIniciar,
+        variant: "primary",
+      });
     }
     if (lote.estado !== "finalizado" && lote.estado !== "eliminado") {
       actions.push({
