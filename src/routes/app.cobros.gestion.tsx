@@ -20,6 +20,7 @@ import {
   eliminarLoteDB,
   getLegajoUsuario,
   generateId,
+  toResolvableLinkPagoUrl,
   type LoteEstado,
   type Lote,
   type RegistroDeLote,
@@ -534,7 +535,9 @@ function GestionLotes() {
         };
         const copyLink = async (url: string) => {
           try {
-            await navigator.clipboard.writeText(url);
+            const code = url.split("/").pop();
+            const resolvable = code ? `${window.location.origin}/p/${code}` : toResolvableLinkPagoUrl(url);
+            await navigator.clipboard.writeText(resolvable);
             toast.success("Link copiado al portapapeles");
           } catch {
             toast.error("No se pudo copiar. Seleccioná el link y copialo manualmente.");
@@ -557,7 +560,7 @@ function GestionLotes() {
             "Identificacion usuario": r.identificacionUsuario,
             "Fecha pago": r.fechaPago?.slice(0, 10) ?? "-",
             Estado: r.estado,
-            "Link de pago": r.linkDePago ?? "-",
+            "Link de pago": r.linkDePago ? toResolvableLinkPagoUrl(r.linkDePago) : "-",
           }));
           const ws = XLSX.utils.json_to_sheet(rows);
           const wb = XLSX.utils.book_new();
@@ -782,7 +785,7 @@ function GestionLotes() {
                                     <button onClick={() => copyLink(r.linkDePago!)} className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-muted transition" title="Copiar link">
                                       <Copy size={13} className="text-muted-foreground" />
                                     </button>
-                                    <a href={r.linkDePago} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-muted transition" title="Abrir link">
+                                    <a href={toResolvableLinkPagoUrl(r.linkDePago!)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-muted transition" title="Abrir link">
                                       <ExternalLink size={13} className="text-muted-foreground" />
                                     </a>
                                   </div>

@@ -30,6 +30,7 @@ import {
   reanudarLoteDB,
   eliminarLoteDB,
   getLegajoUsuario,
+  toResolvableLinkPagoUrl,
   type Lote,
   type RegistroDeLote,
   type MedioPago,
@@ -200,7 +201,10 @@ function DetalleLote() {
   };
 
   const copyLink = (url: string) => {
-    navigator.clipboard.writeText(url);
+    // Misma lógica resoluble que Links de Pago → Productos (window.location.origin/p/CODE)
+    const code = url.split("/").pop();
+    const resolvable = code ? `${window.location.origin}/p/${code}` : url;
+    navigator.clipboard.writeText(resolvable || toResolvableLinkPagoUrl(url));
     toast.success("Link copiado al portapapeles");
   };
 
@@ -220,7 +224,7 @@ function DetalleLote() {
       "Identificacion usuario": r.identificacionUsuario,
       "Fecha pago": r.fechaPago?.slice(0, 10) ?? "-",
       Estado: REGISTRO_ESTADO_BADGE[r.estado]?.label ?? r.estado,
-      "Link de pago": r.linkDePago ?? "-",
+      "Link de pago": r.linkDePago ? toResolvableLinkPagoUrl(r.linkDePago) : "-",
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -590,7 +594,7 @@ function DetalleLote() {
                             <Copy size={13} className="text-muted-foreground" />
                           </button>
                           <a
-                            href={r.linkDePago}
+                            href={toResolvableLinkPagoUrl(r.linkDePago!)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-muted transition"

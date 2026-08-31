@@ -102,6 +102,18 @@ export function formatARS(n: number) {
   }).format(n);
 }
 
+// Convierte URL de branding (https://pay.molly.com.ar/l/CODE) en URL resoluble (<origin>/p/CODE)
+// Misma lógica que Links de Pago → Productos (ver app.link-pago.productos.tsx:688)
+export function toResolvableLinkPagoUrl(brandingUrl: string): string {
+  if (!brandingUrl) return brandingUrl;
+  const code = brandingUrl.split("/").pop();
+  if (!code) return brandingUrl;
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}/p/${code}`;
+  }
+  return brandingUrl;
+}
+
 // ===== Catálogo de estados =====
 export const estadoCatalogo: Record<LoteEstado, { label: string; desc: string }> = {
   cargado: {
@@ -406,15 +418,20 @@ export async function iniciarLoteDB(
 
     if (regsSinLink.length === 0) return { ok: true, linksCount: 0 };
 
-    const linkRows = regsSinLink.map((r) => ({
-      cliente_legajo: legajo,
-      comercio_nombre: r.descripcion || r.identificacion_usuario,
-      url: `https://pay.molly.com.ar/p/${generateId("LNK").toUpperCase()}`,
-      monto: Number(r.monto),
-      estado: "Activo",
-      metodos_pago: mediosPago.length > 0 ? mediosPago : ["TRANSFERENCIA"],
-      pagos_parciales: pagosParciales,
-    }));
+    // Reutiliza misma lógica de Productos: branding https://pay.molly.com.ar/l/{CODE} con CODE LP-XXXXXX
+    // La URL resoluble real es <origin>/p/{CODE} (ver app.link-pago.productos.tsx y p.$code.tsx)
+    const linkRows = regsSinLink.map((r) => {
+      const code = "LP-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+      return {
+        cliente_legajo: legajo,
+        comercio_nombre: r.descripcion || r.identificacion_usuario,
+        url: `https://pay.molly.com.ar/l/${code}`,
+        monto: Number(r.monto),
+        estado: "Activo",
+        metodos_pago: mediosPago.length > 0 ? mediosPago : ["TRANSFERENCIA"],
+        pagos_parciales: pagosParciales,
+      };
+    });
 
     console.log("[iniciarLoteDB] inserting", linkRows.length, "links into cliente_links_pago, legajo:", legajo);
     const { data: inserted, error: e2 } = await s
@@ -442,6 +459,23 @@ export async function iniciarLoteDB(
       else linkUpdatesOk++;
     }
     console.log("[iniciarLoteDB] link updates:", linkUpdatesOk, "of", inserted.length);
+
+    // Crear detalle snapshot (equivalente a Productos) para que el checkout /p/{CODE} muestre monto/producto
+    // No afecta a links individuales; solo complementa los de lote
+    try {
+      const detalleRows = inserted.map((link, idx) => ({
+        link_id: link.id,
+        producto_id: null,
+        producto_nombre: regsSinLink[idx].descripcion || regsSinLink[idx].identificacion_usuario || "Cobro lote",
+        cantidad: 1,
+        precio_unitario: Number(regsSinLink[idx].monto),
+      }));
+      const { error: detErr } = await s.from("cliente_links_pago_detalle").insert(detalleRows);
+      if (detErr) console.error("[iniciarLoteDB] detalle insert error:", JSON.stringify(detErr));
+      else console.log("[iniciarLoteDB] detalle rows created:", detalleRows.length);
+    } catch (e) {
+      console.error("[iniciarLoteDB] detalle exception:", e);
+    }
 
     return { ok: true, linksCount: inserted.length };
   } catch (e) {

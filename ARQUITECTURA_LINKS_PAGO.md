@@ -124,3 +124,45 @@ molipay-admin (`supabase/migrations`):
 - `0013_productos_y_links_pago.sql` — productos, extensión de `cliente_links_pago`, detalle, RLS cliente.
 - `0014_cliente_integraciones_ecommerce.sql` — integraciones e-commerce por cliente.
 - `0015_checkout_links_pago.sql` — `cliente_links_pago_pagos` + funciones RPC públicas (`obtener_link_pago`, `incrementar_vistas_link`, `registrar_pago_link`).
+
+---
+
+## 10. Recomendación — Enlaces de Pago escalables y robustos (Lotes + Productos)
+
+> Contexto: el fix de Lotes de 2026-08 reutiliza intencionalmente la lógica de Productos (`src/routes/app.link-pago.productos.tsx:195` → `src/data/cobros-masivos.ts:412` + `toResolvableLinkPagoUrl` `src/data/cobros-masivos.ts:105`) para cumplir restricción "no tocar Productos". Es correcto como parche, pero arrastra deuda que no escala. Esta sección define el target a implementar cuando se levante la restricción.
+
+### 10.1 Problemas del modelo actual
+- **URL hardcodeada y dual:** se guarda branding `https://pay.molly.com.ar/l/CODE` (`productos.tsx:196`, `cobros-masivos.ts:412`) y en UI se reconstruye resoluble `window.location.origin/p/CODE` (`p.$code.tsx:1`, `cobros-masivos.ts:111`). El string crudo de DB nunca resuelve sin DNS de `pay.molly.com.ar`; copias/exportes dependen de `window` (falla en SSR/email).
+- **CODE no único:** `LP-` + `Math.random().toString(36)` en frontend. Para lotes con N=500 colisión no despreciable, sin `UNIQUE` ni retry.
+- **Sin transacción, N+1:** `iniciarLoteDB` hace `insert cliente_links_pago` + loop `actualizar_link_registro` N veces + `insert detalle` (`cobros-masivos.ts:425-449`). Fallo parcial deja `lote_registros.link_de_pago` desincronizado.
+- **Duplicación:** `lote_registros.link_de_pago text` copia la URL en vez de FK `link_id uuid → cliente_links_pago.id`; no hay integridad referencial.
+- **Mapeo de medios disperso:** Lote guarda categorías `TRANSFERENCIA|TARJETA_CREDITO` y se inserta directo en `cliente_links_pago.metodos_pago`; la expansión a `visa-cred, mc-deb…` solo vive en `src/routes/p.$code.tsx:37` `LOTE_CATEGORY_TO_METHODS`.
+
+### 10.2 Diseño objetivo
+1. **Single source of truth para URLs.** Centralizar en `src/lib/pay-url.ts`:
+   ```ts
+   export const PAY_BRAND_BASE = import.meta.env.VITE_PAY_BRAND_BASE // https://pay.molly.com.ar
+   export const PAY_APP_ORIGIN = import.meta.env.VITE_APP_ORIGIN   // https://moli-pay-enterprises.vercel.app
+   export const buildBrandingUrl = (code:string) => `${PAY_BRAND_BASE}/l/${code}`
+   export const buildResolvableUrl = (code:string) => `${PAY_APP_ORIGIN}/p/${code}`
+   ```
+   Guardar en DB `code text UNIQUE` + `url_branding` + `url_resoluble` generadas en backend (no en `window`). Email/export usan `url_resoluble`.
+
+2. **Generación en backend, transaccional e idempotente.** Nueva RPC `crear_links_lote(p_lote_id uuid)` `SECURITY DEFINER` que:
+   - valida `legajo_de_sesion() = lotes.cliente_legajo`,
+   - genera `CODE` con `gen_random_uuid()` o secuencia `LP-` + `upper(substr(md5(random()::text),1,6))` con `UNIQUE` y retry,
+   - `INSERT` batch en `cliente_links_pago` + `cliente_links_pago_detalle` + `UPDATE lote_registros SET link_id = ...` en una sola transacción, con `ON CONFLICT DO NOTHING` y retorno `linksCount`.
+
+3. **FK en vez de copia.** Migrar `lote_registros.link_de_pago text` → `lote_registros.link_id uuid REFERENCES cliente_links_pago(id) ON DELETE SET NULL` + vista `lote_registros_con_url`. Mantener `url` solo para histórico/branding.
+
+4. **Catálogo único de medios.** Definir tabla o `enum` `medio_pago_catalog` y función `expand_medios(categorias jsonb) → jsonb` usada tanto al crear (`cobros-masivos.ts`) como al renderizar (`p.$code.tsx`). Eliminar `LOTE_CATEGORY_TO_METHODS` duplicado.
+
+5. **Seguridad.** Dejar de pasar `legajo` desde frontend (`getLegajoUsuario()` `cobros-masivos.ts:203`). La RPC debe derivar `legajo_de_sesion()` internamente.
+
+6. **Observabilidad y lote masivo.** Batch insert (`UNNEST` o `jsonb_populate_recordset`), paginación y `pg_job`/cron para marcar `expira_en < now() → estado='Vencido'` sin evaluar solo en `p.$code.tsx:92`.
+
+### 10.3 Plan de migración (sin romper Productos)
+- Fase 1 (no breaking): crear `pay-url.ts` y hacer que `iniciarLoteDB` y `productos.tsx:generateLink` lo usen.
+- Fase 2 (DB): agregar columnas `code`, `link_id`, `UNIQUE(code)`, backfill `code = split_part(url,'/',4)`.
+- Fase 3 (RPC): implementar `crear_links_lote` y migrar `app.cobros.lote.$id.tsx` / `app.cobros.gestion.tsx` a usarla; deprecar loop cliente.
+- Fase 4: cuando `pay.molly.com.ar` tenga DNS, decidir canónico único y dejar `url_branding` como alias.
