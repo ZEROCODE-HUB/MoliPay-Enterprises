@@ -416,7 +416,7 @@ export async function iniciarLoteDB(
       pagos_parciales: pagosParciales,
     }));
 
-    console.log("[iniciarLoteDB] inserting", linkRows.length, "links into cliente_links_pago");
+    console.log("[iniciarLoteDB] inserting", linkRows.length, "links into cliente_links_pago, legajo:", legajo);
     const { data: inserted, error: e2 } = await s
       .from("cliente_links_pago")
       .insert(linkRows)
@@ -424,6 +424,13 @@ export async function iniciarLoteDB(
     if (e2) { console.error("[iniciarLoteDB] links insert error:", JSON.stringify(e2)); return { ok: false, error: e2.message, linksCount: 0 }; }
 
     console.log("[iniciarLoteDB] links creados:", inserted.length, "urls:", inserted.map(i => i.url));
+
+    const { data: verifyRow, error: verifyErr } = await s
+      .from("cliente_links_pago")
+      .select("id, url")
+      .eq("url", inserted[0]?.url)
+      .maybeSingle();
+    console.log("[iniciarLoteDB] verify link exists:", !!verifyRow, "error:", verifyErr?.message);
 
     let linkUpdatesOk = 0;
     for (let i = 0; i < inserted.length; i++) {

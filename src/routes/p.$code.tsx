@@ -53,7 +53,9 @@ function Checkout() {
     (async () => {
       try {
         const s = requireSupabase();
-        const { data: r } = await s.rpc("obtener_link_pago", { p_codigo: code });
+        console.log("[Checkout] code:", code);
+        const { data: r, error: rpcErr } = await s.rpc("obtener_link_pago", { p_codigo: code });
+        console.log("[Checkout] rpc result:", r, "error:", rpcErr);
         if (cancelled) return;
         if (!r) {
           setStatus("notfound");
