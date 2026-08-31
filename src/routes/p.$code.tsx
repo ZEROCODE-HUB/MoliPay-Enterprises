@@ -34,6 +34,28 @@ type LinkData = {
 const formatARS = (n: number) =>
   `$ ${Number(n || 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+const LOTE_CATEGORY_TO_METHODS: Record<string, string[]> = {
+  TARJETA_CREDITO: ["visa-cred", "mc-cred", "amex", "cabal-cred", "naranja", "diners"],
+  TARJETA_DEBITO: ["visa-deb", "mc-deb", "cabal-deb", "maestro"],
+  TRANSFERENCIA: ["transferencia"],
+  QR: ["qr"],
+};
+
+const EXTRA_METHODS: Array<{ id: string; label: string; category: "credit" | "debit" | "other"; enabled: boolean }> = [
+  { id: "transferencia", label: "Transferencia", category: "other", enabled: true },
+  { id: "qr", label: "Código QR", category: "other", enabled: true },
+];
+
+function expandMethods(raw: string[] | null | undefined): string[] {
+  if (!raw?.length) return [];
+  const ids = raw.flatMap((m) => LOTE_CATEGORY_TO_METHODS[m] ?? (m ? [m] : []));
+  return Array.from(new Set(ids));
+}
+
+function isCardMethod(id: string) {
+  return ["visa-cred", "mc-cred", "amex", "cabal-cred", "naranja", "diners", "visa-deb", "mc-deb", "cabal-deb", "maestro"].includes(id);
+}
+
 function Checkout() {
   const { code } = Route.useParams();
   const [status, setStatus] = useState<"loading" | "ready" | "notfound" | "inactive" | "expired" | "success" | "error">("loading");
@@ -74,7 +96,8 @@ function Checkout() {
         }
         await s.rpc("incrementar_vistas_link", { p_link_id: d.id });
         setData(d);
-        setMethod(d.metodos_pago?.[0] ?? "");
+        const expanded = expandMethods(d.metodos_pago);
+        setMethod((expanded[0] ?? d.metodos_pago?.[0] ?? "").trim());
         setMontoPagar(total(d).toFixed(2));
         setStatus("ready");
       } catch {
@@ -94,8 +117,10 @@ function Checkout() {
   };
 
   const metodosDisponibles = useMemo(() => {
-    if (!data?.metodos_pago?.length) return paymentMethods;
-    return paymentMethods.filter((m) => data.metodos_pago.includes(m.id));
+    const expanded = expandMethods(data?.metodos_pago);
+    if (!expanded.length) return paymentMethods;
+    const base = [...paymentMethods, ...EXTRA_METHODS];
+    return base.filter((m) => expanded.includes(m.id));
   }, [data]);
 
   const isAmex = method === "amex";
@@ -136,10 +161,12 @@ function Checkout() {
 
   const validar = () => {
     if (!method) return "Selecciona un metodo de pago";
-    if (!titular.trim()) return "Ingresa el titular de la tarjeta";
-    if (nro.replace(/\s/g, "").length !== cardDigitsMax) return "Numero de tarjeta invalido";
-    if (!/^\d{2}\/\d{2}$/.test(venc)) return "Vencimiento invalido (MM/AA)";
-    if (cvv.length !== cvvMax) return "CVV invalido";
+    if (isCardMethod(method)) {
+      if (!titular.trim()) return "Ingresa el titular de la tarjeta";
+      if (nro.replace(/\s/g, "").length !== cardDigitsMax) return "Numero de tarjeta invalido";
+      if (!/^\d{2}\/\d{2}$/.test(venc)) return "Vencimiento invalido (MM/AA)";
+      if (cvv.length !== cvvMax) return "CVV invalido";
+    }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return "Email invalido";
     const mp = parseFloat(montoPagar.replace(",", "."));
     if (data && (mp <= 0 || mp > total(data) + 0.001)) return "Monto a pagar invalido";
@@ -316,55 +343,69 @@ function Checkout() {
                   </div>
                 </div>
 
-                <div className="mt-6 rounded-lg border border-black-100 bg-[color:var(--brand-soft)] p-4">
-                  <div className="flex items-center gap-2 text-sm font-bold mb-3">
-                    <CreditCard size={17} className="text-[color:var(--brand-dark)]" />
-                    Datos de la tarjeta
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <Label>Titular de la tarjeta</Label>
-                      <Input className="mt-1 bg-card" autoComplete="cc-name" maxLength={60} value={titular} onChange={(e) => setTitular(e.target.value)} placeholder="Como aparece en la tarjeta" />
+                {isCardMethod(method) ? (
+                  <div className="mt-6 rounded-lg border border-black-100 bg-[color:var(--brand-soft)] p-4">
+                    <div className="flex items-center gap-2 text-sm font-bold mb-3">
+                      <CreditCard size={17} className="text-[color:var(--brand-dark)]" />
+                      Datos de la tarjeta
                     </div>
-                    <div>
-                      <Label>Numero de tarjeta</Label>
-                      <Input
-                        className="mt-1 bg-card font-mono tracking-wider"
-                        inputMode="numeric"
-                        autoComplete="cc-number"
-                        value={nro}
-                        onChange={(e) => setNro(formatNro(e.target.value))}
-                        placeholder={isAmex ? "0000 000000 00000" : "0000 0000 0000 0000"}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-3">
                       <div>
-                        <Label>Vencimiento</Label>
-                        <Input
-                          className="mt-1 bg-card font-mono"
-                          inputMode="numeric"
-                          autoComplete="cc-exp"
-                          maxLength={5}
-                          value={venc}
-                          onChange={(e) => setVenc(formatVenc(e.target.value))}
-                          placeholder="MM/AA"
-                        />
+                        <Label>Titular de la tarjeta</Label>
+                        <Input className="mt-1 bg-card" autoComplete="cc-name" maxLength={60} value={titular} onChange={(e) => setTitular(e.target.value)} placeholder="Como aparece en la tarjeta" />
                       </div>
                       <div>
-                        <Label>CVV</Label>
+                        <Label>Numero de tarjeta</Label>
                         <Input
-                          className="mt-1 bg-card font-mono"
+                          className="mt-1 bg-card font-mono tracking-wider"
                           inputMode="numeric"
-                          autoComplete="cc-csc"
-                          maxLength={cvvMax}
-                          value={cvv}
-                          onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, cvvMax))}
-                          placeholder={isAmex ? "1234" : "123"}
+                          autoComplete="cc-number"
+                          value={nro}
+                          onChange={(e) => setNro(formatNro(e.target.value))}
+                          placeholder={isAmex ? "0000 000000 00000" : "0000 0000 0000 0000"}
                         />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>Vencimiento</Label>
+                          <Input
+                            className="mt-1 bg-card font-mono"
+                            inputMode="numeric"
+                            autoComplete="cc-exp"
+                            maxLength={5}
+                            value={venc}
+                            onChange={(e) => setVenc(formatVenc(e.target.value))}
+                            placeholder="MM/AA"
+                          />
+                        </div>
+                        <div>
+                          <Label>CVV</Label>
+                          <Input
+                            className="mt-1 bg-card font-mono"
+                            inputMode="numeric"
+                            autoComplete="cc-csc"
+                            maxLength={cvvMax}
+                            value={cvv}
+                            onChange={(e) => setCvv(e.target.value.replace(/\D/g, "").slice(0, cvvMax))}
+                            placeholder={isAmex ? "1234" : "123"}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="mt-6 rounded-lg border border-black-100 bg-[color:var(--brand-soft)] p-4">
+                    <div className="flex items-center gap-2 text-sm font-bold mb-3">
+                      <CreditCard size={17} className="text-[color:var(--brand-dark)]" />
+                      {method === "qr" ? "Codigo QR" : "Datos de transferencia"}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {method === "qr"
+                        ? "Se generara un codigo QR para completar el pago."
+                        : "Se te indicaran los datos de la cuenta para transferir."}
+                    </p>
+                  </div>
+                )}
 
                 <div className="mt-4">
                   <Label>Email para el comprobante</Label>
