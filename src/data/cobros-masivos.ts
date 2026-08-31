@@ -407,7 +407,7 @@ export async function iniciarLoteDB(
     const linkRows = regsSinLink.map((r) => ({
       cliente_legajo: legajo,
       comercio_nombre: r.descripcion || r.identificacion_usuario,
-      url: `https://pay.molly.com.ar/l/${generateId("LNK").toLowerCase()}`,
+      url: `https://pay.molly.com.ar/p/${generateId("LNK").toUpperCase()}`,
       monto: Number(r.monto),
       estado: "Activo",
       metodos_pago: mediosPago.length > 0 ? mediosPago : ["TRANSFERENCIA"],

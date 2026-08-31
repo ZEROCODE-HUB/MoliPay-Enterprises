@@ -83,6 +83,7 @@ function DetalleLote() {
   const [registros, setRegistros] = useState<RegistroDeLote[]>([]);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
+  const [generandoLinks, setGenerandoLinks] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,24 +151,34 @@ function DetalleLote() {
   const handleIniciar = async () => {
     const legajo = await getLegajoUsuario();
     if (!legajo) { toast.error("No se pudo identificar el usuario"); return; }
-    const result = await iniciarLoteDB(id, legajo);
-    if (result.ok) {
-      toast.success(`Lote iniciado - ${result.linksCount} links de pago creados`);
-      trigger();
-    } else {
-      toast.error(result.error ?? "El lote no esta en estado pendiente");
+    setGenerandoLinks(true);
+    try {
+      const result = await iniciarLoteDB(id, legajo);
+      if (result.ok) {
+        toast.success(`Lote iniciado - ${result.linksCount} links de pago creados`);
+        trigger();
+      } else {
+        toast.error(result.error ?? "El lote no esta en estado pendiente");
+      }
+    } finally {
+      setGenerandoLinks(false);
     }
   };
 
   const handleRegenerarLinks = async () => {
     const legajo = await getLegajoUsuario();
     if (!legajo) { toast.error("No se pudo identificar el usuario"); return; }
-    const result = await iniciarLoteDB(id, legajo, true);
-    if (result.ok) {
-      toast.success(`${result.linksCount} links regenerados`);
-      trigger();
-    } else {
-      toast.error(result.error ?? "No se pudieron regenerar los links");
+    setGenerandoLinks(true);
+    try {
+      const result = await iniciarLoteDB(id, legajo, true);
+      if (result.ok) {
+        toast.success(`${result.linksCount} links regenerados`);
+        trigger();
+      } else {
+        toast.error(result.error ?? "No se pudieron regenerar los links");
+      }
+    } finally {
+      setGenerandoLinks(false);
     }
   };
 
@@ -306,9 +317,17 @@ function DetalleLote() {
           const Comp = a.variant === "primary" ? BtnPrimary : BtnOutline;
           const extraClass =
             a.variant === "danger" ? "border-red-200 text-red-700 hover:bg-red-50" : "";
+          const isLoading = generandoLinks && (a.label === "Iniciar lote" || a.label === "Regenerar links");
           return (
-            <Comp key={a.label} className={`h-9 px-3 text-xs ${extraClass}`} onClick={a.onClick}>
-              {a.icon} {a.label}
+            <Comp key={a.label} className={`h-9 px-3 text-xs ${extraClass}`} onClick={a.onClick} disabled={isLoading}>
+              {isLoading ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full" />
+                  Generando…
+                </span>
+              ) : (
+                <>{a.icon} {a.label}</>
+              )}
             </Comp>
           );
         })}

@@ -65,6 +65,7 @@ function GestionLotes() {
   const [lotesData, setLotesData] = useState<Awaited<ReturnType<typeof getLotesGestionDB>>>([]);
   const [cargando, setCargando] = useState(true);
   const [registrosDetalle, setRegistrosDetalle] = useState<RegistroDeLote[]>([]);
+  const [generandoLinks, setGenerandoLinks] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -474,32 +475,42 @@ function GestionLotes() {
         const handleIniciar = async () => {
           const legajo = await getLegajoUsuario();
           if (!legajo) { toast.error("No se pudo identificar el usuario"); return; }
-          const result = await iniciarLoteDB(id, legajo);
-          if (!result.ok) {
-            toast.error(result.error ?? "No se pudo iniciar el lote");
-            return;
+          setGenerandoLinks(true);
+          try {
+            const result = await iniciarLoteDB(id, legajo);
+            if (!result.ok) {
+              toast.error(result.error ?? "No se pudo iniciar el lote");
+              return;
+            }
+            toast.success(`Lote iniciado - ${result.linksCount} links de pago creados`);
+            const fresh = await getLoteByIdDB(id);
+            if (fresh) setDetalleLote(fresh);
+            const freshRegs = await getRegistrosByLoteIdDB(id);
+            setRegistrosDetalle(freshRegs);
+            setTick((t) => t + 1);
+          } finally {
+            setGenerandoLinks(false);
           }
-          toast.success(`Lote iniciado - ${result.linksCount} links de pago creados`);
-          const fresh = await getLoteByIdDB(id);
-          if (fresh) setDetalleLote(fresh);
-          const freshRegs = await getRegistrosByLoteIdDB(id);
-          setRegistrosDetalle(freshRegs);
-          setTick((t) => t + 1);
         };
         const handleRegenerarLinks = async () => {
           const legajo = await getLegajoUsuario();
           if (!legajo) { toast.error("No se pudo identificar el usuario"); return; }
-          const result = await iniciarLoteDB(id, legajo, true);
-          if (!result.ok) {
-            toast.error(result.error ?? "No se pudieron regenerar los links");
-            return;
+          setGenerandoLinks(true);
+          try {
+            const result = await iniciarLoteDB(id, legajo, true);
+            if (!result.ok) {
+              toast.error(result.error ?? "No se pudieron regenerar los links");
+              return;
+            }
+            toast.success(`${result.linksCount} links regenerados`);
+            const fresh = await getLoteByIdDB(id);
+            if (fresh) setDetalleLote(fresh);
+            const freshRegs = await getRegistrosByLoteIdDB(id);
+            setRegistrosDetalle(freshRegs);
+            setTick((t) => t + 1);
+          } finally {
+            setGenerandoLinks(false);
           }
-          toast.success(`${result.linksCount} links regenerados`);
-          const fresh = await getLoteByIdDB(id);
-          if (fresh) setDetalleLote(fresh);
-          const freshRegs = await getRegistrosByLoteIdDB(id);
-          setRegistrosDetalle(freshRegs);
-          setTick((t) => t + 1);
         };
         const handlePausar = async () => {
           const result = await pausarLoteDB(id);
@@ -619,9 +630,17 @@ function GestionLotes() {
                   {acciones.map((a) => {
                     const Comp = a.variant === "primary" ? BtnPrimary : BtnOutline;
                     const extraClass = a.variant === "danger" ? "border-red-200 text-red-700 hover:bg-red-50" : "";
+                    const isLoading = generandoLinks && (a.label === "Iniciar lote" || a.label === "Regenerar links");
                     return (
-                      <Comp key={a.label} className={`h-9 px-3 text-xs ${extraClass}`} onClick={a.onClick}>
-                        {a.icon} {a.label}
+                      <Comp key={a.label} className={`h-9 px-3 text-xs ${extraClass}`} onClick={a.onClick} disabled={isLoading}>
+                        {isLoading ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full" />
+                            Generando…
+                          </span>
+                        ) : (
+                          <>{a.icon} {a.label}</>
+                        )}
                       </Comp>
                     );
                   })}
