@@ -354,11 +354,12 @@ export async function getRegistrosByLoteIdDB(loteId: string): Promise<RegistroDe
 export async function iniciarLoteDB(
   loteId: string,
   legajo: string,
+  force = false,
 ): Promise<{ ok: boolean; error?: string; linksCount: number }> {
   try {
     const s = requireSupabase();
 
-    console.log("[iniciarLoteDB] loteId:", loteId, "legajo:", legajo);
+    console.log("[iniciarLoteDB] loteId:", loteId, "legajo:", legajo, "force:", force);
 
     const { data: lote, error: loteErr } = await s
       .from("lotes")
@@ -385,6 +386,18 @@ export async function iniciarLoteDB(
       .eq("estado", "pendiente");
     if (regQueryErr) { console.error("[iniciarLoteDB] regs query error:", regQueryErr); return { ok: false, error: regQueryErr.message, linksCount: 0 }; }
     if (!regs || regs.length === 0) return { ok: true, linksCount: 0 };
+
+    if (force) {
+      const regIds = regs.map((r) => r.id);
+      if (regIds.length > 0) {
+        const { error: clrErr } = await s
+          .from("lote_registros")
+          .update({ link_de_pago: null })
+          .in("id", regIds);
+        if (clrErr) console.error("[iniciarLoteDB] force clear error:", clrErr);
+        regs.forEach((r) => { r.link_de_pago = null; });
+      }
+    }
 
     const regsSinLink = regs.filter((r) => !r.link_de_pago);
     console.log("[iniciarLoteDB] total pendientes:", regs.length, "sin link:", regsSinLink.length);

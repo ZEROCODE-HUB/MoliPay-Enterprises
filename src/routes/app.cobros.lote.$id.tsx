@@ -159,6 +159,18 @@ function DetalleLote() {
     }
   };
 
+  const handleRegenerarLinks = async () => {
+    const legajo = await getLegajoUsuario();
+    if (!legajo) { toast.error("No se pudo identificar el usuario"); return; }
+    const result = await iniciarLoteDB(id, legajo, true);
+    if (result.ok) {
+      toast.success(`${result.linksCount} links regenerados`);
+      trigger();
+    } else {
+      toast.error(result.error ?? "No se pudieron regenerar los links");
+    }
+  };
+
   const handlePausar = async () => {
     const result = await pausarLoteDB(id);
     if (result.ok) { toast.success("Lote pausado"); trigger(); }
@@ -231,7 +243,7 @@ function DetalleLote() {
       actions.push({
         label: "Regenerar links",
         icon: <LinkIcon size={14} />,
-        onClick: handleIniciar,
+        onClick: handleRegenerarLinks,
         variant: "primary",
       });
     }
@@ -245,7 +257,7 @@ function DetalleLote() {
       actions.push({
         label: "Regenerar links",
         icon: <LinkIcon size={14} />,
-        onClick: handleIniciar,
+        onClick: handleRegenerarLinks,
         variant: "primary",
       });
     }

@@ -486,6 +486,21 @@ function GestionLotes() {
           setRegistrosDetalle(freshRegs);
           setTick((t) => t + 1);
         };
+        const handleRegenerarLinks = async () => {
+          const legajo = await getLegajoUsuario();
+          if (!legajo) { toast.error("No se pudo identificar el usuario"); return; }
+          const result = await iniciarLoteDB(id, legajo, true);
+          if (!result.ok) {
+            toast.error(result.error ?? "No se pudieron regenerar los links");
+            return;
+          }
+          toast.success(`${result.linksCount} links regenerados`);
+          const fresh = await getLoteByIdDB(id);
+          if (fresh) setDetalleLote(fresh);
+          const freshRegs = await getRegistrosByLoteIdDB(id);
+          setRegistrosDetalle(freshRegs);
+          setTick((t) => t + 1);
+        };
         const handlePausar = async () => {
           const result = await pausarLoteDB(id);
           if (result.ok) {
@@ -551,11 +566,11 @@ function GestionLotes() {
           }
           if (lote.estado === "en_proceso") {
             actions.push({ label: "Pausar", icon: <Pause size={14} />, onClick: handlePausar, variant: "outline" });
-            actions.push({ label: "Regenerar links", icon: <LinkIcon size={14} />, onClick: handleIniciar, variant: "primary" });
+            actions.push({ label: "Regenerar links", icon: <LinkIcon size={14} />, onClick: handleRegenerarLinks, variant: "primary" });
           }
           if (lote.estado === "pausado") {
             actions.push({ label: "Reanudar", icon: <PlayIcon size={14} />, onClick: handleReanudar, variant: "primary" });
-            actions.push({ label: "Regenerar links", icon: <LinkIcon size={14} />, onClick: handleIniciar, variant: "primary" });
+            actions.push({ label: "Regenerar links", icon: <LinkIcon size={14} />, onClick: handleRegenerarLinks, variant: "primary" });
           }
           if (lote.estado !== "finalizado" && lote.estado !== "eliminado") {
             actions.push({ label: "Eliminar", icon: <Trash2 size={14} />, onClick: () => setConfirmarEliminarId(id), variant: "danger" });
