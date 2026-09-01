@@ -105,7 +105,14 @@ function Page() {
 
   const confirmWithOtp = async () => {
     const code = otp.join("");
-    if (code.length !== 6 || !transferPayload) return;
+    if (code.length !== 6) {
+      toast.error("Ingresa el código de 6 dígitos");
+      return;
+    }
+    if (!transferPayload) {
+      toast.error("No hay datos de transferencia para confirmar");
+      return;
+    }
     setOtpOpen(false);
     setConfirm(false);
     try {
@@ -575,8 +582,10 @@ function Unica({
         </div>
         <div className="flex gap-2">
           <BtnOutline onClick={() => setConfirm(false)} className="flex-1">Volver</BtnOutline>
-          <BtnPrimary onClick={() => {
-            if (!subcuentaOrigen || !selectedDestinatario || !montoNum) return;
+          <BtnPrimary type="button" onClick={() => {
+            if (!subcuentaOrigen) { toast.error("Selecciona una subcuenta de origen"); return; }
+            if (!selectedDestinatario) { toast.error("Falta destinatario validado"); return; }
+            if (!montoNum || montoNum <= 0) { toast.error("Ingresa un monto válido mayor a 0"); return; }
             onTransferPayload({
               subcuentaOrigen,
               destinatarioCbu: selectedDestinatario.cbu,
@@ -752,14 +761,22 @@ function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSucce
   const [hora, setHora] = useState("14:30");
   const [concepto, setConcepto] = useState("Pago a proveedor");
 
-  const handleValidate = async () => {
+  // Sincronizar subcuenta por defecto cuando cargan async
+  useEffect(() => {
+    if (subcuentas.length > 0 && !subcuentaOrigen) setSubcuentaOrigen(subcuentas[0].id);
+  }, [subcuentas, subcuentaOrigen]);
+
+  const handleValidate = async (): Promise<import("@/lib/recipient-validation").RecipientValidationResult | null> => {
     const q = destQuery.trim();
-    if (!q) return;
+    if (!q) { toast.error("Ingresa un CBU/CVU o Alias"); return null; }
     setValidating(true);
     try {
       const res = await recipientValidator.validate({ identifier: q, kind: detectIdentifierKind(q) });
-      if (res.ok) setDestValid(res);
-      else { setDestValid(null); toast.error(res.errorMessage ?? "Destinatario no válido"); }
+      if (res.ok) { setDestValid(res); return res; }
+      else { setDestValid(null); toast.error(res.errorMessage ?? "Destinatario no válido"); return null; }
+    } catch {
+      toast.error("Error validando destinatario");
+      return null;
     } finally { setValidating(false); }
   };
 
@@ -825,9 +842,18 @@ function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSucce
   return (
     <form className="space-y-4" onSubmit={async (e) => {
       e.preventDefault();
-      if (!destValid) { await handleValidate(); if (!destValid) return; }
+      let valid = destValid;
+      if (!valid) {
+        valid = await handleValidate();
+        if (!valid) return;
+      }
       // re-validar si el query cambió después de validar
-      if (destValid && destValid.identifier !== destQuery.trim()) { await handleValidate(); return; }
+      if (valid.identifier !== destQuery.trim()) {
+        valid = await handleValidate();
+        if (!valid) return;
+      }
+      // asegurar monto válido antes de confirmar
+      if (!monto || Number(monto) <= 0) { toast.error("Ingresa un monto válido"); return; }
       setConfirm(true);
     }}>
       <div className="grid sm:grid-cols-2 gap-3">
@@ -885,7 +911,7 @@ function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSucce
         </div>
       </div>
       <div className="flex gap-2 pt-1">
-        <BtnPrimary type="submit" className="flex-1" disabled={!destValid}>Programar</BtnPrimary>
+        <BtnPrimary type="submit" className="flex-1" disabled={validating}>{validating ? "Validando..." : destValid ? "Programar" : "Validar y programar"}</BtnPrimary>
       </div>
     </form>
   );
