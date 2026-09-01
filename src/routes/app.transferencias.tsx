@@ -86,14 +86,36 @@ function Page() {
 
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
+  const [otpSending, setOtpSending] = useState(false);
+
   const resetOtp = () => {
     setOtp(["", "", "", "", "", ""]);
     otpRefs.current[0]?.focus();
   };
 
-  const openOtp = () => {
+  const enviarOtpCorreo = async () => {
+    setOtpSending(true);
+    try {
+      const sb = requireSupabase();
+      const { data, error } = await sb.functions.invoke("enviar-otp-transferencia", { body: {} });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Código enviado a tu correo");
+      return true;
+    } catch (e) {
+      const msg = toDataError(e).message;
+      toast.error(msg || "No se pudo enviar el código. Intenta reenviar.");
+      return false;
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const openOtp = async () => {
     resetOtp();
     setOtpOpen(true);
+    // Envía el código por Resend al correo autenticado (credenciales RESEND_API_KEY / RESEND_FROM)
+    await enviarOtpCorreo();
   };
 
   const [transferPayload, setTransferPayload] = useState<{
@@ -102,6 +124,8 @@ function Page() {
     monto: number;
     concepto: string;
   } | null>(null);
+
+  const [otpVerifying, setOtpVerifying] = useState(false);
 
   const confirmWithOtp = async () => {
     const code = otp.join("");
@@ -113,6 +137,20 @@ function Page() {
       toast.error("No hay datos de transferencia para confirmar");
       return;
     }
+    setOtpVerifying(true);
+    try {
+      const sb = requireSupabase();
+      const { data, error } = await sb.functions.invoke("verificar-otp-transferencia", { body: { codigo: code } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (!data?.ok) throw new Error("Código no válido");
+    } catch (e) {
+      const msg = toDataError(e).message;
+      toast.error(msg || "Código incorrecto o expirado");
+      setOtpVerifying(false);
+      return;
+    }
+    setOtpVerifying(false);
     setOtpOpen(false);
     setConfirm(false);
     try {
@@ -334,16 +372,16 @@ function Page() {
 
       <FormDialog
         open={otpOpen}
-        onClose={() => setOtpOpen(false)}
+        onClose={() => { if (!otpVerifying && !otpSending) setOtpOpen(false); }}
         title="Verificacion de dos factores"
-        description="Ingresa el codigo de 6 digitos enviado a tu correo o generado por tu app de autenticacion."
-        submitLabel="Verificar y confirmar"
+        description={otpSending ? "Enviando código a tu correo..." : "Ingresa el codigo de 6 digitos enviado a tu correo."}
+        submitLabel={otpVerifying ? "Verificando..." : otpSending ? "Enviando código..." : "Verificar y confirmar"}
         onSubmit={confirmWithOtp}
       >
         <div className="space-y-4">
           <div className="flex items-center justify-center gap-2 py-2">
             <KeyRound size={18} className="text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Codigo de verificacion</span>
+            <span className="text-xs text-muted-foreground">{otpSending ? "Enviando código..." : "Codigo de verificacion"}</span>
           </div>
           <div className="flex justify-center gap-2">
             {otp.map((d, i) => (
@@ -372,8 +410,8 @@ function Page() {
           </div>
           <div className="flex justify-between text-xs text-muted-foreground pt-1">
             <span>¿No recibiste el codigo?</span>
-            <button type="button" className="text-primary font-semibold hover:underline" onClick={() => { resetOtp(); toast.success("Nuevo codigo enviado"); }}>
-              Reenviar
+            <button type="button" className="text-primary font-semibold hover:underline disabled:opacity-50" disabled={otpSending} onClick={async () => { resetOtp(); const ok = await enviarOtpCorreo(); if (ok) toast.success("Nuevo código enviado"); }}>
+              {otpSending ? "Enviando..." : "Reenviar"}
             </button>
           </div>
         </div>
@@ -456,7 +494,7 @@ function Unica({
 }: {
   confirm: boolean;
   setConfirm: (v: boolean) => void;
-  onOtpRequired: () => void;
+  onOtpRequired: () => void | Promise<void>;
   subcuentas: Subcuenta[];
   onTransferPayload: (p: { subcuentaOrigen: string; destinatarioCbu: string; monto: number; concepto: string }) => void;
   onSaveDraft: (d: Draft) => void;
@@ -582,7 +620,7 @@ function Unica({
         </div>
         <div className="flex gap-2">
           <BtnOutline onClick={() => setConfirm(false)} className="flex-1">Volver</BtnOutline>
-          <BtnPrimary type="button" onClick={() => {
+          <BtnPrimary type="button" onClick={async () => {
             if (!subcuentaOrigen) { toast.error("Selecciona una subcuenta de origen"); return; }
             if (!selectedDestinatario) { toast.error("Falta destinatario validado"); return; }
             if (!montoNum || montoNum <= 0) { toast.error("Ingresa un monto válido mayor a 0"); return; }
@@ -592,7 +630,7 @@ function Unica({
               monto: montoNum,
               concepto,
             });
-            onOtpRequired();
+            await onOtpRequired();
           }} className="flex-1">Confirmar transferencia</BtnPrimary>
         </div>
       </div>
