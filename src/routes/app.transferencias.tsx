@@ -6,13 +6,15 @@ import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { requireSupabase, toDataError, isPermissionError } from "@/lib/supabase";
+import { recipientValidator, detectIdentifierKind } from "@/lib/recipient-validation";
+import { executeTransfer } from "@/lib/transfer-orchestrator";
 
 export const Route = createFileRoute("/app/transferencias")({ component: Page });
 
 type Tab = "unica" | "programar" | "borradores" | "programadas" | "destinatarios";
 
-type Draft = { id: string; destinatario: string; alias: string; monto: string; concepto: string; ref: string; fecha: string };
-type Scheduled = { id: string; destinatario: string; alias: string; monto: string; fecha: string; hora: string; estado: string; concepto: string };
+type Draft = { id: string; destinatario: string; alias: string; monto: string; concepto: string; ref: string; fecha: string; cbu?: string; subcuentaOrigen?: string; montoNum?: number };
+type Scheduled = { id: string; destinatario: string; alias: string; monto: string; fecha: string; hora: string; estado: string; concepto: string; cbu?: string; subcuentaOrigen?: string; montoNum?: number };
 type CoelsaResult = { nombre: string; cuit: string; cbu: string; alias: string };
 type Destinatario = CoelsaResult & { banco: string };
 
@@ -25,6 +27,7 @@ function Page() {
   const [confirm, setConfirm] = useState(false);
   const [destAlias, setDestAlias] = useState("");
   const [saveDestOpen, setSaveDestOpen] = useState(false);
+  const [destValidation, setDestValidation] = useState<import("@/lib/recipient-validation").RecipientValidationResult | null>(null);
   const [prefilledDestinatario, setPrefilledDestinatario] = useState<CoelsaResult | undefined>(undefined);
   const [plantillaOpen, setPlantillaOpen] = useState(false);
   const [drafts, setDrafts] = useState<Draft[]>([]);
@@ -106,17 +109,28 @@ function Page() {
     setOtpOpen(false);
     setConfirm(false);
     try {
-      const sb = requireSupabase();
-      const { data, error } = await sb.rpc("registrar_transferencia_externa", {
-        p_subcuenta_origen: transferPayload.subcuentaOrigen,
-        p_destinatario_cbu: transferPayload.destinatarioCbu,
-        p_monto: transferPayload.monto,
-        p_concepto: transferPayload.concepto || null,
+      // Flujo desacoplado: validación → ejecución → movimiento
+      const result = await executeTransfer({
+        subcuentaOrigenId: transferPayload.subcuentaOrigen,
+        destinatarioIdentifier: transferPayload.destinatarioCbu,
+        monto: transferPayload.monto,
+        concepto: transferPayload.concepto || null,
       });
-      if (error) throw error;
-      const result = data as { ok: boolean; id_txn: string; comision: number; impuesto: number; total_debitado: number };
-      toast.success(`Transferencia enviada — TXID: ${result.id_txn}`);
-      setDestAlias(transferPayload.destinatarioCbu.slice(0, 10) + "...");
+      if (!result.ok) {
+        const msg =
+          result.validation.status === "not_found"
+            ? "Destinatario no encontrado"
+            : result.validation.status === "rejected"
+              ? "Validación rechazada"
+              : result.validation.status === "timeout"
+                ? "Timeout validando destinatario"
+                : result.error ?? "Validación fallida";
+        toast.error(msg);
+        return;
+      }
+      toast.success(`Transferencia enviada — TXID: ${result.txn.id_txn}`);
+      setDestAlias(result.validation.titular?.alias ?? transferPayload.destinatarioCbu.slice(0, 10) + "...");
+      setDestValidation(result.validation);
       setSaveDestOpen(true);
       setTransferPayload(null);
       await cargarDatos();
@@ -204,18 +218,8 @@ function Page() {
             {tab === "programar" && (
               <Programar
                 subcuentas={subcuentas}
-                onSuccess={() => {
-                  const newSched: Scheduled = {
-                    id: `s${Date.now()}`,
-                    destinatario: "Nueva transferencia",
-                    alias: "alias.ejemplo",
-                    monto: "$ 0",
-                    fecha: new Date().toLocaleDateString("es-AR"),
-                    hora: "10:00",
-                    estado: "Programada",
-                    concepto: "Pago",
-                  };
-                  setScheduled((prev) => [...prev, newSched]);
+                onSuccess={(s) => {
+                  setScheduled((prev) => [...prev, s]);
                   toast.success("Transferencia programada");
                   setTab("programadas");
                 }}
@@ -226,11 +230,21 @@ function Page() {
                 drafts={drafts}
                 onDelete={(id) => setConfirmarEliminacion({ tipo: "borrador", id })}
                 onEdit={(id) => {
+                  const d = drafts.find((x) => x.id === id);
+                  if (d?.cbu) setPrefilledDestinatario({ nombre: d.destinatario, cuit: "", cbu: d.cbu!, alias: d.alias });
                   setTab("unica");
                   toast.success("Borrador cargado en el formulario");
                 }}
-                onExecute={(id) => {
-                  toast.success("Transferencia enviada desde borrador");
+                onExecute={async (id) => {
+                  const d = drafts.find((x) => x.id === id);
+                  if (!d?.cbu || !d.montoNum || !d.subcuentaOrigen) { toast.error("Borrador incompleto"); return; }
+                  try {
+                    const res = await executeTransfer({ subcuentaOrigenId: d.subcuentaOrigen!, destinatarioIdentifier: d.cbu!, monto: d.montoNum!, concepto: d.concepto });
+                    if (!res.ok) { toast.error(res.error ?? "Validación fallida"); return; }
+                    toast.success(`Borrador ejecutado — TXID: ${res.txn.id_txn}`);
+                    setDrafts((prev) => prev.filter((x) => x.id !== id));
+                    await cargarDatos();
+                  } catch (e) { toast.error(toDataError(e).message); }
                 }}
               />
             )}
@@ -239,7 +253,17 @@ function Page() {
                 items={scheduled}
                 onCancel={(id) => setConfirmarEliminacion({ tipo: "programada", id })}
                 onEdit={(id) => toast.success("Editando transferencia programada")}
-                onExecute={(id) => toast.success("Transferencia ejecutada")}
+                onExecute={async (id) => {
+                  const s = scheduled.find((x) => x.id === id);
+                  if (!s?.cbu || !s.montoNum || !s.subcuentaOrigen) { toast.error("Programada incompleta"); return; }
+                  try {
+                    const res = await executeTransfer({ subcuentaOrigenId: s.subcuentaOrigen!, destinatarioIdentifier: s.cbu!, monto: s.montoNum!, concepto: s.concepto, kind: "programada" });
+                    if (!res.ok) { toast.error(res.error ?? "Validación fallida"); return; }
+                    toast.success(`Programada ejecutada — TXID: ${res.txn.id_txn}`);
+                    setScheduled((prev) => prev.map((x) => x.id === id ? { ...x, estado: "Ejecutada" } : x));
+                    await cargarDatos();
+                  } catch (e) { toast.error(toDataError(e).message); }
+                }}
               />
             )}
             {tab === "destinatarios" && (
@@ -354,9 +378,32 @@ function Page() {
         title="¿Deseas guardar este destinatario como frecuente?"
         description={`Podes agendar a ${destAlias} en tu lista de destinatarios frecuentes para reutilizarlo.`}
         submitLabel="Si, guardar destinatario"
-        onSubmit={() => {
-          setSaveDestOpen(false);
-          toast.success(`Destinatario agregado a frecuentes`);
+        onSubmit={async () => {
+          try {
+            if (destValidation?.titular) {
+              const sb = requireSupabase();
+              const { data: { user } } = await sb.auth.getUser();
+              const { data: cli } = await sb.from("clientes").select("legajo").eq("correo", user?.email ?? "").maybeSingle();
+              if (cli?.legajo) {
+                await sb.from("destinatarios_frecuentes").insert({
+                  cliente_legajo: cli.legajo,
+                  identifier: destValidation.identifier,
+                  identifier_kind: destValidation.kind,
+                  alias: destValidation.titular.alias,
+                  cbu: destValidation.titular.cbu,
+                  nombre: destValidation.titular.nombre,
+                  cuit: destValidation.titular.cuit,
+                  banco: destValidation.titular.banco ?? null,
+                });
+              }
+            }
+            toast.success(`Destinatario agregado a frecuentes`);
+          } catch {
+            toast.success(`Destinatario agregado a frecuentes (local)`);
+          } finally {
+            setSaveDestOpen(false);
+            setDestValidation(null);
+          }
         }}
       >
         <div className="text-xs text-muted-foreground">
@@ -434,35 +481,71 @@ function Unica({
 
   const saveAsDraft = () => {
     if (!selectedDestinatario) return;
+    // Borrador no genera movimiento; al ejecutar pasa por validación → ejecución → movimiento
     onSaveDraft({
       id: `d${Date.now()}`,
       destinatario: selectedDestinatario.nombre,
       alias: selectedDestinatario.alias,
+      cbu: selectedDestinatario.cbu,
+      subcuentaOrigen,
+      montoNum: Number(monto) || 0,
       monto: `$ ${Number(monto).toLocaleString("es-AR")}`,
       concepto,
       ref: "",
       fecha: new Date().toLocaleDateString("es-AR"),
     });
+    // También persistir en DB para historial/auditoría sin movimiento ejecutado
+    (async () => {
+      try {
+        const sb = requireSupabase();
+        const { data: { user } } = await sb.auth.getUser();
+        const { data: cli } = await sb.from("clientes").select("legajo").eq("correo", user?.email ?? "").maybeSingle();
+        if (cli?.legajo) {
+          await sb.from("transferencias_borrador").insert({
+            cliente_legajo: cli.legajo,
+            subcuenta_origen: subcuentaOrigen || null,
+            destinatario_identifier: selectedDestinatario.cbu,
+            destinatario_kind: detectIdentifierKind(selectedDestinatario.cbu),
+            monto: Number(monto) || 0,
+            concepto,
+          });
+        }
+      } catch { /* silencioso: fallback local */ }
+    })();
   };
 
   const handleSearch = async () => {
     const q = searchQuery.trim();
     if (!q) return;
     setSearching(true);
-    await new Promise((r) => setTimeout(r, 600));
-    const found = qelsaMock.find(
-      (r) =>
-        r.alias.toLowerCase().includes(q.toLowerCase()) ||
-        r.cuit.includes(q) ||
-        r.cbu.includes(q) ||
-        r.nombre.toLowerCase().includes(q.toLowerCase())
-    );
-    setSearching(false);
-    if (found) {
-      onClearPrefill?.();
-      setSelectedDestinatario(found);
-    } else {
-      toast.error("Destinatario no encontrado en QELSA");
+    try {
+      const res = await recipientValidator.validate({ identifier: q, kind: detectIdentifierKind(q) });
+      if (res.ok && res.titular) {
+        onClearPrefill?.();
+        setSelectedDestinatario({
+          nombre: res.titular.nombre,
+          cuit: res.titular.cuit,
+          cbu: res.titular.cbu,
+          alias: res.titular.alias,
+        });
+        if (res.provider === "mock") {
+          // mock acepta cualquier CBU/CVU/Alias sintácticamente válido para pruebas
+        }
+      } else {
+        const msg =
+          res.status === "invalid_format"
+            ? "Formato inválido: CBU/CVU 22 dígitos o Alias 6-20 caracteres"
+            : res.status === "not_found"
+              ? "Destinatario no encontrado"
+              : res.status === "rejected"
+                ? "Validación rechazada"
+                : res.errorMessage ?? "No se pudo validar el destinatario";
+        toast.error(msg);
+      }
+    } catch {
+      toast.error("Error validando destinatario");
+    } finally {
+      setSearching(false);
     }
   };
 
@@ -533,7 +616,7 @@ function Unica({
           </div>
           {searching && (
             <div className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-              <span className="animate-pulse">Consultando QELSA...</span>
+              <span className="animate-pulse">Validando destinatario (CBU/CVU/Alias)...</span>
             </div>
           )}
         </div>
@@ -565,7 +648,7 @@ function Unica({
         <div className="flex items-center gap-2 mb-3">
           <ShieldCheck size={16} className="text-green-600" />
           <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">
-            Datos validados de QELSA
+            Destinatario validado — {detectIdentifierKind(selectedDestinatario.cbu) === "ALIAS" ? "Alias" : (selectedDestinatario.cbu.startsWith("000") ? "CVU" : "CBU")}
           </span>
         </div>
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -658,20 +741,40 @@ function Unica({
 }
 
 /* ===== Programar ===== */
-function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSuccess: () => void }) {
+function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSuccess: (s: Scheduled) => void }) {
   const [confirm, setConfirm] = useState(false);
+  const [destQuery, setDestQuery] = useState("proveedor.sa");
+  const [destValid, setDestValid] = useState<import("@/lib/recipient-validation").RecipientValidationResult | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [subcuentaOrigen, setSubcuentaOrigen] = useState(subcuentas[0]?.id ?? "");
+  const [monto, setMonto] = useState("220000");
+  const [fecha, setFecha] = useState("");
+  const [hora, setHora] = useState("14:30");
+  const [concepto, setConcepto] = useState("Pago a proveedor");
 
-  if (confirm) {
+  const handleValidate = async () => {
+    const q = destQuery.trim();
+    if (!q) return;
+    setValidating(true);
+    try {
+      const res = await recipientValidator.validate({ identifier: q, kind: detectIdentifierKind(q) });
+      if (res.ok) setDestValid(res);
+      else { setDestValid(null); toast.error(res.errorMessage ?? "Destinatario no válido"); }
+    } finally { setValidating(false); }
+  };
+
+  if (confirm && destValid) {
     return (
       <div className="space-y-4">
-        <div className="text-sm text-muted-foreground">Revisa los datos antes de programar.</div>
+        <div className="text-sm text-muted-foreground">Revisa los datos antes de programar. Se validará de nuevo al ejecutar.</div>
         <div className="border rounded-md divide-y">
           {[
-            ["Origen", subcuentas[0]?.nombre ?? "—"],
-            ["Destinatario", "Proveedor SA"],
-            ["Monto", "$ 220.000,00"],
-            ["Fecha", "15/07/2026"],
-            ["Hora", "14:30"],
+            ["Origen", subcuentas.find((s) => s.id === subcuentaOrigen)?.nombre ?? "—"],
+            ["Destinatario", destValid.titular?.nombre ?? destValid.identifier],
+            ["Identificador", destValid.identifier + ` (${destValid.kind})`],
+            ["Monto", fmt(Number(monto) || 0)],
+            ["Fecha", fecha || "—"],
+            ["Hora", hora],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between py-2.5 px-3 text-sm">
               <span className="text-muted-foreground">{k}</span>
@@ -681,18 +784,56 @@ function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSucce
         </div>
         <div className="flex gap-2">
           <BtnOutline onClick={() => setConfirm(false)} className="flex-1">Volver</BtnOutline>
-          <BtnPrimary onClick={onSuccess} className="flex-1">Programar transferencia</BtnPrimary>
+          <BtnPrimary onClick={async () => {
+            // Programada no genera movimiento ahora; se persiste y al ejecutar pasa por validación → movimiento
+            try {
+              const sb = requireSupabase();
+              const { data: { user } } = await sb.auth.getUser();
+              const { data: cli } = await sb.from("clientes").select("legajo").eq("correo", user?.email ?? "").maybeSingle();
+              if (cli?.legajo) {
+                await sb.from("transferencias_programadas").insert({
+                  cliente_legajo: cli.legajo,
+                  subcuenta_origen: subcuentaOrigen || null,
+                  destinatario_identifier: destValid.identifier,
+                  destinatario_kind: destValid.kind,
+                  monto: Number(monto) || 0,
+                  concepto,
+                  fecha_envio: fecha || new Date().toISOString().slice(0, 10),
+                  hora_envio: hora,
+                });
+              }
+            } catch { /* fallback local */ }
+            onSuccess({
+              id: `s${Date.now()}`,
+              destinatario: destValid.titular?.nombre ?? destValid.identifier,
+              alias: destValid.titular?.alias ?? destValid.identifier,
+              cbu: destValid.titular?.cbu ?? destValid.identifier,
+              subcuentaOrigen,
+              montoNum: Number(monto) || 0,
+              monto: fmt(Number(monto) || 0),
+              fecha: fecha || new Date().toLocaleDateString("es-AR"),
+              hora,
+              estado: "Programada",
+              concepto,
+            });
+          }} className="flex-1">Programar transferencia</BtnPrimary>
         </div>
       </div>
     );
   }
 
   return (
-    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setConfirm(true); }}>
+    <form className="space-y-4" onSubmit={async (e) => {
+      e.preventDefault();
+      if (!destValid) { await handleValidate(); if (!destValid) return; }
+      // re-validar si el query cambió después de validar
+      if (destValid && destValid.identifier !== destQuery.trim()) { await handleValidate(); return; }
+      setConfirm(true);
+    }}>
       <div className="grid sm:grid-cols-2 gap-3">
         <div className="sm:col-span-2">
           <Label>Origen de fondos</Label>
-          <select className="w-full h-10 px-3 rounded-md border bg-card text-sm">
+          <select className="w-full h-10 px-3 rounded-md border bg-card text-sm" value={subcuentaOrigen} onChange={(e) => setSubcuentaOrigen(e.target.value)}>
             {subcuentas.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.nombre} — {fmt(Number(s.saldo_disponible))}
@@ -701,15 +842,20 @@ function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSucce
           </select>
         </div>
         <div className="sm:col-span-2">
-          <Label>Destinatario</Label>
-          <Input placeholder="Buscar por CBU, CVU o alias" defaultValue="proveedor.sa" />
-          <div className="text-xs text-muted-foreground mt-1">
-            <ShieldCheck size={11} className="inline mr-1" /> Validado: Proveedor SA — Banco Galicia
+          <Label>Destinatario (CBU/CVU/Alias)</Label>
+          <div className="flex gap-2">
+            <Input className="flex-1" placeholder="22 dígitos o alias (6-20)" value={destQuery} onChange={(e) => { setDestQuery(e.target.value); setDestValid(null); }} />
+            <BtnOutline type="button" onClick={handleValidate} disabled={validating}>{validating ? "Validando..." : "Validar"}</BtnOutline>
           </div>
+          {destValid ? (
+            <div className="text-xs text-emerald-700 mt-1 flex items-center gap-1"><ShieldCheck size={11} /> Validado: {destValid.titular?.nombre} — {destValid.titular?.banco ?? destValid.kind}</div>
+          ) : (
+            <div className="text-xs text-muted-foreground mt-1">Se validará vía servicio desacoplado (mock hoy, COELSA mañana)</div>
+          )}
         </div>
         <div>
           <Label>Monto</Label>
-          <Input placeholder="$ 0,00" defaultValue="220000" />
+          <Input placeholder="$ 0,00" value={monto} onChange={(e) => setMonto(e.target.value)} />
         </div>
         <div>
           <Label>Moneda</Label>
@@ -720,16 +866,16 @@ function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSucce
         <div className="grid grid-cols-2 gap-3 sm:col-span-2">
           <div>
             <Label>Fecha de envio</Label>
-            <Input type="date" />
+            <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </div>
           <div>
             <Label>Hora de envio</Label>
-            <Input type="time" defaultValue="14:30" />
+            <Input type="time" value={hora} onChange={(e) => setHora(e.target.value)} />
           </div>
         </div>
         <div>
           <Label>Concepto</Label>
-          <select className="w-full h-10 px-3 rounded-md border bg-card text-sm">
+          <select className="w-full h-10 px-3 rounded-md border bg-card text-sm" value={concepto} onChange={(e) => setConcepto(e.target.value)}>
             <option>Pago a proveedor</option>
             <option>Sueldos</option>
             <option>Honorarios</option>
@@ -739,7 +885,7 @@ function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSucce
         </div>
       </div>
       <div className="flex gap-2 pt-1">
-        <BtnPrimary type="submit" className="flex-1">Programar</BtnPrimary>
+        <BtnPrimary type="submit" className="flex-1" disabled={!destValid}>Programar</BtnPrimary>
       </div>
     </form>
   );

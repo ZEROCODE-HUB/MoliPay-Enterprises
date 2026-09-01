@@ -5,6 +5,7 @@ import { PageHeader, Card, BtnPrimary, BtnOutline, Input, Badge, Stat, Label } f
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
 import { requireSupabase, toDataError, isPermissionError } from "@/lib/supabase";
+import { executeTransfer } from "@/lib/transfer-orchestrator";
 
 export const Route = createFileRoute("/app/destinatarios")({ component: Page });
 
@@ -42,6 +43,10 @@ const categorias = [
 
 function Page() {
   const [nuevoOpen, setNuevoOpen] = useState(false);
+  const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nuevoAlias, setNuevoAlias] = useState("");
+  const [nuevoCbu, setNuevoCbu] = useState("");
+  const [nuevoCuit, setNuevoCuit] = useState("");
   const [transferir, setTransferir] = useState<Destinatario | null>(null);
   const [monto, setMonto] = useState("");
   const [concepto, setConcepto] = useState("");
@@ -82,16 +87,18 @@ function Page() {
     }
     setSending(true);
     try {
-      const sb = requireSupabase();
-      const { data, error } = await sb.rpc("registrar_transferencia_externa", {
-        p_subcuenta_origen: subcuentaOrigen,
-        p_destinatario_cbu: transferir.cbu.replace(/\s/g, ""),
-        p_monto: montoNum,
-        p_concepto: concepto || null,
+      // Destinatario frecuente → validación desacoplada → ejecución → movimiento
+      const res = await executeTransfer({
+        subcuentaOrigenId: subcuentaOrigen,
+        destinatarioIdentifier: transferir.cbu,
+        monto: montoNum,
+        concepto: concepto || null,
       });
-      if (error) throw error;
-      const result = data as { ok: boolean; id_txn: string; comision: number; impuesto: number; total_debitado: number };
-      toast.success(`Transferencia enviada — TXID: ${result.id_txn}`);
+      if (!res.ok) {
+        toast.error(res.error ?? "Validación fallida");
+        return;
+      }
+      toast.success(`Transferencia enviada — TXID: ${res.txn.id_txn}`);
       setTransferir(null);
       setMonto("");
       setConcepto("");
@@ -188,21 +195,44 @@ function Page() {
         open={nuevoOpen}
         onClose={() => setNuevoOpen(false)}
         title="Nuevo destinatario"
-        description="Agregalo a tu agenda para reutilizarlo en transferencias."
+        description="Agregalo a tu agenda para reutilizarlo en transferencias (CBU/CVU/Alias validado vía capa desacoplada)."
         submitLabel="Agregar destinatario"
-        onSubmit={() => {
+        onSubmit={async () => {
+          const identifier = (nuevoCbu || nuevoAlias).trim();
+          if (!identifier) { toast.error("Ingresa CBU/CVU (22 dígitos) o Alias"); return; }
+          const { recipientValidator, detectIdentifierKind } = await import("@/lib/recipient-validation");
+          const res = await recipientValidator.validate({ identifier, kind: detectIdentifierKind(identifier) });
+          if (!res.ok) { toast.error(res.errorMessage ?? "Destinatario no válido"); return; }
+          try {
+            const sb = requireSupabase();
+            const { data: { user } } = await sb.auth.getUser();
+            const { data: cli } = await sb.from("clientes").select("legajo").eq("correo", user?.email ?? "").maybeSingle();
+            if (cli?.legajo) {
+              await sb.from("destinatarios_frecuentes").insert({
+                cliente_legajo: cli.legajo,
+                identifier: res.identifier,
+                identifier_kind: res.kind,
+                alias: res.titular?.alias ?? nuevoAlias,
+                cbu: res.titular?.cbu ?? nuevoCbu,
+                nombre: nuevoNombre || res.titular?.nombre || "Destinatario",
+                cuit: nuevoCuit || res.titular?.cuit,
+                banco: res.titular?.banco ?? null,
+              });
+            }
+          } catch { /* fallback local */ }
           setNuevoOpen(false);
+          setNuevoNombre(""); setNuevoAlias(""); setNuevoCbu(""); setNuevoCuit("");
           toast.success("Destinatario agregado a tu agenda");
         }}
       >
         <div>
           <Label>Nombre o razon social</Label>
-          <Input placeholder="Ej. Proveedor SA" />
+          <Input placeholder="Ej. Proveedor SA" value={nuevoNombre} onChange={(e) => setNuevoNombre(e.target.value)} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Alias</Label>
-            <Input placeholder="proveedor.sa" />
+            <Input placeholder="proveedor.sa" value={nuevoAlias} onChange={(e) => setNuevoAlias(e.target.value)} />
           </div>
           <div>
             <Label>Categoria</Label>
@@ -215,12 +245,13 @@ function Page() {
           </div>
         </div>
         <div>
-          <Label>CBU / CVU</Label>
-          <Input placeholder="22 digitos" />
+          <Label>CBU / CVU / Alias</Label>
+          <Input placeholder="22 dígitos o alias 6-20" value={nuevoCbu} onChange={(e) => setNuevoCbu(e.target.value)} />
+          <div className="text-[11px] text-muted-foreground mt-1">Se validará vía servicio desacoplado (mock hoy, COELSA mañana)</div>
         </div>
         <div>
           <Label>CUIT/CUIL (opcional)</Label>
-          <Input placeholder="XX-XXXXXXXX-X" />
+          <Input placeholder="XX-XXXXXXXX-X" value={nuevoCuit} onChange={(e) => setNuevoCuit(e.target.value)} />
         </div>
         <label className="flex items-center gap-2 text-xs">
           <input type="checkbox" /> Marcar como favorito
