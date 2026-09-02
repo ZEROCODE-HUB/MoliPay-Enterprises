@@ -131,13 +131,25 @@ function Page() {
   const [buscarTxid, setBuscarTxid] = useState("");
   const [buscarTitular, setBuscarTitular] = useState("");
   const [page, setPage] = useState(1);
-  const pageSize = 5;
+  const pageSize = 25;
   const serie = "RP-EMP-2026-" + Math.floor(100000 + Math.random() * 899999);
 
   const [movimientos, setMovimientos] = useState<Mov[]>([]);
-  const [subcuentas, setSubcuentas] = useState<{ nombre: string }[]>([]);
+  const [subcuentas, setSubcuentas] = useState<{ nombre: string; cbu: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [sinSubcuentas, setSinSubcuentas] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const categoriaToTipos = (cat: string): string[] | null => {
+    if (cat === "Todas") return null;
+    if (cat === "Ingresos") return ["deposito"];
+    if (cat === "Egresos") return ["transferencia", "retiro"];
+    if (cat === "Comisiones") return ["comision"];
+    if (cat === "Cobros con Tarjeta") return ["cobro_link", "tarjeta"];
+    if (cat === "Cobros con QR") return ["cobro_pct"];
+    if (cat === "Pagos con QR") return ["pago_pct"];
+    return null;
+  };
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -154,13 +166,52 @@ function Page() {
         setMovimientos([]);
         setSubcuentas([]);
         setSinSubcuentas(true);
+        setTotalCount(0);
         return;
       }
-      const { data: movs } = await sb
+
+      const { data: subs } = await sb
+        .from("subcuentas")
+        .select("nombre, cbu")
+        .eq("cliente_legajo", legajo)
+        .order("nombre", { ascending: true });
+      const lista = (subs ?? []).map((s: any) => ({ nombre: s.nombre || "Sin nombre", cbu: s.cbu ?? null }));
+      setSubcuentas(lista);
+      setSinSubcuentas(lista.length === 0);
+      if (lista.length > 0 && !sub) setSub(lista[0].nombre);
+
+      const hasFilters = !!(desde || hasta || categoria !== "Todas" || subFiltro !== "Todas");
+      const countMode = hasFilters ? "exact" as const : "estimated" as const;
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      let query: any = sb
         .from("movimientos")
-        .select("id_txn, tipo, cvu, monto_operacion, fecha, legajo, estados_movimiento(codigo, nombre)")
+        .select("id_txn, tipo, cvu, monto_operacion, fecha, legajo, estados_movimiento(codigo, nombre)", { count: countMode })
         .eq("legajo", legajo)
-        .order("fecha", { ascending: false });
+        .order("fecha", { ascending: false })
+        .range(from, to);
+
+      if (desde) query = query.gte("fecha", new Date(desde + "T00:00:00").toISOString());
+      if (hasta) query = query.lte("fecha", new Date(hasta + "T23:59:59").toISOString());
+
+      const tipos = categoriaToTipos(categoria);
+      if (tipos) {
+        query = tipos.length === 1 ? query.eq("tipo", tipos[0]) : query.in("tipo", tipos);
+      }
+
+      if (subFiltro !== "Todas") {
+        const match = lista.find((s) => s.nombre === subFiltro);
+        if (match?.cbu) query = query.eq("cvu", match.cbu);
+      }
+
+      if (buscarCbu) query = query.ilike("cvu", `%${buscarCbu}%`);
+      if (buscarTxid) query = query.ilike("id_txn", `%${buscarTxid}%`);
+      if (buscarTitular) query = query.ilike("legajo", `%${buscarTitular}%`);
+      if (buscarCuit) query = query.ilike("legajo", `%${buscarCuit}%`);
+
+      const { data: movs, count, error } = await query;
+      if (error) throw error;
       const filas: MovRow[] = (movs ?? []).map((m: any) => ({
         id_txn: m.id_txn,
         tipo: m.tipo,
@@ -172,46 +223,22 @@ function Page() {
         estado_nombre: m.estados_movimiento?.nombre,
       }));
       setMovimientos(filas.map(mapMov));
-
-      const { data: subs } = await sb
-        .from("subcuentas")
-        .select("nombre")
-        .eq("cliente_legajo", legajo)
-        .order("nombre", { ascending: true });
-      const lista = (subs ?? []).map((s: any) => ({ nombre: s.nombre || "Sin nombre" }));
-      setSubcuentas(lista);
-      setSinSubcuentas(lista.length === 0);
-      if (lista.length > 0 && !sub) setSub(lista[0].nombre);
+      setTotalCount(count ?? filas.length);
     } catch (e) {
       toast.error("No se pudieron cargar los movimientos");
       setMovimientos([]);
-      setSubcuentas([]);
-      setSinSubcuentas(true);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [sub]);
+  }, [page, desde, hasta, categoria, subFiltro, buscarCbu, buscarCuit, buscarTxid, buscarTitular, sub]);
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  const filtered = movimientos.filter((r) => {
-    const rd = r.fecha ? new Date(r.fecha.split(" ")[0].split("/").reverse().join("-") + "T00:00:00") : null;
-    if (desde && rd && rd < new Date(desde + "T00:00:00")) return false;
-    if (hasta && rd && rd > new Date(hasta + "T23:59:59")) return false;
-    if (categoria !== "Todas" && r.categoria !== categoria) return false;
-    if (subFiltro !== "Todas" && r.subcuenta !== subFiltro) return false;
-    if (buscarCbu && !r.cbuCvu.includes(buscarCbu)) return false;
-    if (buscarCuit && !r.cuit.includes(buscarCuit)) return false;
-    if (buscarTxid) {
-      const q = buscarTxid.toLowerCase();
-      if (!r.txid.toLowerCase().includes(q) && !r.numeroOp.toLowerCase().includes(q)) return false;
-    }
-    if (buscarTitular && !r.titular.toLowerCase().includes(buscarTitular.toLowerCase())) return false;
-    return true;
-  });
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+  // Compatibilidad: filtered/paginated ahora reflejan paginación server-side
+  const filtered = movimientos;
+  const paginated = movimientos;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   useEffect(() => { setPage(1); }, [desde, hasta, categoria, subFiltro, buscarCbu, buscarCuit, buscarTxid, buscarTitular]);
 
@@ -411,7 +438,7 @@ function Page() {
 
         <div className="flex justify-between items-center border-t pt-4">
           <div className="text-xs text-muted-foreground">
-            {loading ? "Cargando..." : `${filtered.length} de ${movimientos.length} movimientos`}
+            {loading ? "Cargando..." : `${totalCount} movimientos`}
           </div>
           <div className="flex gap-2">
             <BtnOutline className="h-8 px-4 text-xs" onClick={limpiarFiltros}>
@@ -522,7 +549,7 @@ function Page() {
         </div>
 
         <div className="flex items-center justify-between px-5 py-4 border-t text-xs text-muted-foreground">
-          <div>{filtered.length === 0 ? "0 registros" : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, filtered.length)} de ${filtered.length}`}</div>
+          <div>{totalCount === 0 ? "0 registros" : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, totalCount)} de ${totalCount}`}</div>
           <div className="flex gap-2">
             <BtnOutline className="h-8 px-4 text-xs" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Anterior</BtnOutline>
             <BtnOutline className="h-8 px-4 text-xs" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>Siguiente</BtnOutline>
