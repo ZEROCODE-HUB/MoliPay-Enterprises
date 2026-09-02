@@ -93,7 +93,7 @@ function Dashboard() {
           .lte("fecha", range.end.toISOString());
         if (cancelled) return;
         setMovs(m ?? []);
-        const { data: subs } = await s.from("subcuentas").select("saldo_disponible, saldo_retenido");
+        const { data: subs } = await s.from("subcuentas").select("saldo_disponible, saldo_retenido").eq("cliente_legajo", cli.legajo);
         if (cancelled) return;
         const saldo = (subs ?? []).reduce(
           (a: number, x: any) => a + Number(x.saldo_disponible ?? 0) + Number(x.saldo_retenido ?? 0),

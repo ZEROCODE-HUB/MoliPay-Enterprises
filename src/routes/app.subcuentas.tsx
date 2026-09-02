@@ -103,7 +103,7 @@ function Page() {
     if (!mail) return null;
     const { data: cli } = await s.from("clientes").select("legajo").eq("correo", mail).maybeSingle();
     setClienteLegajo(cli?.legajo ?? null);
-    const { data: rows } = await s.from("subcuentas").select("*");
+    const { data: rows } = await s.from("subcuentas").select("*").eq("cliente_legajo", cli?.legajo ?? "");
     setSubs(mapSubs(rows ?? []));
     return cli;
   };
