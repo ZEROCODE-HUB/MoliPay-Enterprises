@@ -393,11 +393,31 @@ function Page() {
                 maxLength={1}
                 value={d}
                 onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, "").slice(0, 1);
+                  const raw = e.target.value.replace(/\D/g, "");
+                  // Soporta pegar código completo en una sola casilla
+                  if (raw.length > 1) {
+                    const digits = raw.slice(0, 6).split("");
+                    const next = Array(6).fill("").map((_, idx) => digits[idx] ?? "");
+                    setOtp(next);
+                    const last = Math.min(digits.length, 6) - 1;
+                    otpRefs.current[last]?.focus();
+                    return;
+                  }
+                  const val = raw.slice(0, 1);
                   const next = [...otp];
                   next[i] = val;
                   setOtp(next);
                   if (val && i < 5) otpRefs.current[i + 1]?.focus();
+                }}
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+                  if (!pasted) return;
+                  const digits = pasted.split("");
+                  const next = Array(6).fill("").map((_, idx) => digits[idx] ?? "");
+                  setOtp(next);
+                  const focusIdx = Math.min(digits.length, 6) - 1;
+                  otpRefs.current[focusIdx]?.focus();
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Backspace" && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus();
