@@ -81,7 +81,7 @@ function Page() {
     paymentMethods.filter((m) => m.enabled).map((m) => m.id),
   );
   const [linkExpires, setLinkExpires] = useState("");
-  const [linkStatus, setLinkStatus] = useState<string>("Activo");
+  const [linkStatus, setLinkStatus] = useState<string>("Pendiente de aprobación");
   const [linkRef, setLinkRef] = useState("");
   const [linkNotes, setLinkNotes] = useState("");
 
@@ -200,7 +200,7 @@ function Page() {
       comercio_nombre: selProducts.map((p) => p.name).join(", "),
       url,
       monto,
-      estado: linkStatus,
+      estado: "Pendiente de aprobación",
       referencia: linkRef || null,
       notas: linkNotes || null,
       expira_en: linkExpires ? new Date(linkExpires + "T23:59:59").toISOString() : null,
@@ -574,6 +574,7 @@ function Page() {
                   value={linkStatus}
                   onChange={(e) => setLinkStatus(e.target.value)}
                 >
+                    <option value="Pendiente de aprobación">Pendiente de aprobación</option>
                   <option value="Activo">Activo</option>
                   <option value="Inactivo">Inactivo</option>
                 </select>

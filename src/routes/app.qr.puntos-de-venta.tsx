@@ -39,7 +39,7 @@ function Page() {
   const [pageSize, setPageSize] = useState(10);
 
   const [crearOpen, setCrearOpen] = useState(false);
-  const [form, setForm] = useState({ nombre: "", estado: "Activado" as EstadoPdv });
+  const [form, setForm] = useState({ nombre: "", estado: "Activado" as EstadoPdv }); // display only; real insert usa Pendiente de aprobación
   const [editingId, setEditingId] = useState<string | null>(null);
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [detallePd, setDetallePd] = useState<PuntoVenta | null>(null);
@@ -182,9 +182,9 @@ function Page() {
       } else {
         const { error } = await s
           .from("puntos_venta")
-          .insert({ comercio_id: comercioId, nombre: form.nombre.trim(), estado: form.estado });
+          .insert({ comercio_id: comercioId, nombre: form.nombre.trim(), estado: "Pendiente de aprobación" });
         if (error) throw error;
-        toast.success("Punto de venta creado");
+        toast.success("Punto de venta creado (Pendiente de aprobación — Payway lo activará)");
       }
       setCrearOpen(false);
       setEditingId(null);
