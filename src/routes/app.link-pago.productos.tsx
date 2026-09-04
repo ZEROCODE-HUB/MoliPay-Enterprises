@@ -193,7 +193,9 @@ function Page() {
       return;
     }
     const code = "LP-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-    const url = "https://pay.molly.com.ar/l/" + code;
+    // Dominio homologado: usa el origen actual (Vercel) -> /p/<code> . Se cambiara a PAY_DOMAIN cuando exista via VITE_PAY_URL.
+    const baseUrl = (import.meta.env.VITE_PAY_URL as string) || window.location.origin;
+    const url = `${baseUrl.replace(/\/$/, "")}/p/${code}`;
     const monto = selProducts.reduce((a, p) => a + p.price * p.qty, 0);
     const insertLink = {
       cliente_legajo: legajo,
@@ -684,10 +686,7 @@ function Page() {
                           <BtnOutline
                             className="h-7 px-2 text-[11px]"
                             onClick={() => {
-                              const code = l.url.split("/").pop();
-                              navigator.clipboard.writeText(
-                                code ? `${window.location.origin}/p/${code}` : l.url,
-                              );
+                              navigator.clipboard.writeText(l.url);
                               toast.success("Link copiado");
                             }}
                           >
@@ -763,10 +762,7 @@ function Page() {
                 <BtnOutline
                   className="flex-1 text-xs"
                   onClick={() => {
-                    const code = detailLink.url.split("/").pop();
-                    navigator.clipboard.writeText(
-                      code ? `${window.location.origin}/p/${code}` : detailLink.url,
-                    );
+                    navigator.clipboard.writeText(detailLink.url);
                     toast.success("Link copiado");
                   }}
                 >
