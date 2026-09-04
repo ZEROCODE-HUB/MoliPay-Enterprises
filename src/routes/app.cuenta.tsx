@@ -10,6 +10,7 @@ import { MollyLogo } from "@/components/molly-logo";
 import { useOnboarding } from "@/lib/onboarding-store";
 import { requireSupabase, getSignedDocUrls } from "@/lib/supabase";
 import { DocPreviewModal } from "@/components/doc-preview";
+import { ESTADO_LABEL, normalizarEstado, siguientePasoOnboarding } from "@/lib/cliente-estados";
 
 export const Route = createFileRoute("/app/cuenta")({ component: Page });
 
@@ -87,7 +88,9 @@ function Page() {
     ? cliente.tipo_persona === "juridica"
     : tipoCuenta === "juridica";
   const plan = isPJ ? planEmpresa : planPersona;
-  const aprobado = cliente?.estado_onboarding === "aprobado";
+  const estadoNorm = cliente?.estado ? normalizarEstado(cliente.estado as string) : (emailValidado ? "registrado" as const : "pendiente_verificacion" as const);
+  const estadoLabel = ESTADO_LABEL[estadoNorm];
+  const aprobado = estadoNorm === "activado";
 
   const [userNombre, userApellido] = (cliente?.nombre ?? "").split(" ");
   const userEmail = cliente?.correo ?? registro.email ?? "";
@@ -299,7 +302,10 @@ function Page() {
               <div><Label>Email</Label><Input value={userEmail} readOnly /></div>
               <div>
                 <Label>Estado</Label>
-                <div className="pt-1.5"><Badge tone={emailValidado ? "success" : "warn"}>{emailValidado ? "Activo" : "Pendiente"}</Badge></div>
+                <div className="pt-1.5 flex flex-col gap-1">
+                  <Badge tone={estadoNorm === "activado" ? "success" : estadoNorm === "suspendido" || estadoNorm === "eliminado" ? "danger" : estadoNorm === "deshabilitado" ? "neutral" : "warn"}>{estadoLabel}</Badge>
+                  <span className="text-[10px] text-muted-foreground">{siguientePasoOnboarding(estadoNorm)}</span>
+                </div>
               </div>
             </div>
             <hr className="my-4 border-border" />

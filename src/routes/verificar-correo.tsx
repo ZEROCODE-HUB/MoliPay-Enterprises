@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router"
 import { useEffect, useState } from "react";
 import { AuthShell, PrimaryButton, SuccessCard } from "@/components/onboarding";
 import { verifyEmail } from "@/lib/api/onboarding";
+import { useOnboarding } from "@/lib/onboarding-store";
 
 export const Route = createFileRoute("/verificar-correo")({
   validateSearch: (search: Record<string, string | undefined>) => ({
@@ -21,6 +22,7 @@ type Estado = "loading" | "ok" | "error";
 function VerificarCorreo() {
   const { token } = Route.useSearch();
   const nav = useNavigate();
+  const onboarding = useOnboarding();
   const [estado, setEstado] = useState<Estado>("loading");
   const [msg, setMsg] = useState("");
 
@@ -31,7 +33,10 @@ function VerificarCorreo() {
       return;
     }
     verifyEmail(token)
-      .then(() => setEstado("ok"))
+      .then(() => {
+        onboarding.markEmailValidado();
+        setEstado("ok");
+      })
       .catch((e) => {
         setEstado("error");
         setMsg(e instanceof Error ? e.message : "No se pudo verificar el correo.");

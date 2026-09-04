@@ -41,6 +41,8 @@ export type KYC = {
   cp: string;
 };
 
+export type EstadoOnboarding = "pendiente_verificacion" | "registrado" | "preactivado" | "activado" | "suspendido" | "deshabilitado" | "eliminado";
+
 type State = {
   tipoCuenta: TipoCuenta | null;
   registro: Partial<Registro>;
@@ -49,6 +51,8 @@ type State = {
   kyc: Partial<KYC>;
   emailValidado: boolean;
   aprobado: boolean;
+  // Homologado con Admin: estado canonico del flujo
+  estado: EstadoOnboarding;
   setTipo: (t: TipoCuenta) => void;
   setRegistro: (r: Partial<Registro>) => void;
   setDatosPersonales: (d: Partial<DatosPersonales>) => void;
@@ -56,6 +60,7 @@ type State = {
   setKyc: (k: Partial<KYC>) => void;
   markEmailValidado: () => void;
   markAprobado: () => void;
+  setEstado: (e: EstadoOnboarding) => void;
   reset: () => void;
 };
 
@@ -67,6 +72,7 @@ const initial = {
   kyc: {},
   emailValidado: false,
   aprobado: false,
+  estado: "pendiente_verificacion" as EstadoOnboarding,
 };
 
 export const useOnboarding = create<State>()(
@@ -78,8 +84,9 @@ export const useOnboarding = create<State>()(
       setDatosPersonales: (d) => set((s) => ({ datosPersonales: { ...s.datosPersonales, ...d } })),
       setDatosEmpresa: (d) => set((s) => ({ datosEmpresa: { ...s.datosEmpresa, ...d } })),
       setKyc: (k) => set((s) => ({ kyc: { ...s.kyc, ...k } })),
-      markEmailValidado: () => set({ emailValidado: true }),
+      markEmailValidado: () => set({ emailValidado: true, estado: "registrado" }),
       markAprobado: () => set({ aprobado: true }),
+      setEstado: (e) => set({ estado: e }),
       reset: () => set(initial),
     }),
     {
@@ -103,6 +110,7 @@ export const useOnboarding = create<State>()(
         },
         emailValidado: s.emailValidado,
         aprobado: s.aprobado,
+        estado: s.estado,
       }),
     },
   ),

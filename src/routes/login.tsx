@@ -60,10 +60,14 @@ function LoginForm({ onSuccess }: { onSuccess: (estado: "aprobado" | "pendiente"
           try {
             const { data: cli } = await sb
               .from("clientes")
-              .select("estado_onboarding")
+              .select("estado")
               .eq("correo", data.user.email ?? email)
               .maybeSingle();
-            estado = (cli?.estado_onboarding as "aprobado" | "pendiente" | "rechazado") ?? "pendiente";
+            const raw = (cli?.estado as string) ?? "pendiente_verificacion";
+            // homologado: mapear nuevo flujo a compatibilidad con onSuccess existente
+            if (raw === "activado" || raw === "activo") estado = "aprobado";
+            else if (raw === "deshabilitado" || raw === "eliminado" || raw === "rechazado") estado = "rechazado";
+            else estado = "pendiente";
           } catch {
             // si no se puede consultar el estado, seguimos igual con "pendiente"
           }
@@ -235,15 +239,25 @@ function LoginPage() {
       navigate({ to: "/app" });
       return;
     }
+    if (estado === "rechazado") {
+      // deshabilitado/eliminado: mostrar cuenta pero sin operatividad (misma pantalla en-proceso con mensaje)
+      navigate({ to: "/onboarding/en-proceso" });
+      return;
+    }
     try {
       const sb = requireSupabase();
       const { data: cli } = await sb
         .from("clientes")
-        .select("legajo")
+        .select("legajo, estado")
         .eq("correo", email)
         .maybeSingle();
       if (!cli) {
         navigate({ to: "/onboarding/datos-personales" });
+        return;
+      }
+      const raw = (cli.estado as string) ?? "";
+      if (raw === "pendiente_verificacion") {
+        navigate({ to: "/registro/validar-email" });
       } else {
         navigate({ to: "/onboarding/en-proceso" });
       }
