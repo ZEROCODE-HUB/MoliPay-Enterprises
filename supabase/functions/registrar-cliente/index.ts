@@ -64,29 +64,69 @@ Deno.serve(async (req) => {
 
     // Crear fila en clientes con estado inicial pendiente_verificacion para que aparezca en el panel admin.
     // CUIT placeholder único con prefijo 99 (no colisiona con CUITs reales 20/27/30/33).
+    // Si ya existe fila con ese correo (ej: borrado lógico previo con estado deshabilitado/eliminado o intento fallido), reusarla.
     const tipoPersona = tipoCuenta === "juridica" ? "juridica" : "fisica";
     const nombreCompleto = `${nombre} ${apellido}`.trim();
     let clienteLegajo: string | null = null;
-    let lastInsertErr: any = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const placeholderCuit = generatePlaceholderCuit(authId, email, attempt);
-      const { data: cliRow, error: cliInsErr } = await sb.from("clientes").insert({
-        tipo_persona: tipoPersona,
-        correo: email,
-        nombre: nombreCompleto,
-        cuit: placeholderCuit,
-        estado: "pendiente_verificacion",
-        estado_onboarding: "pendiente",
-        email_verificado: false,
-        onboarding_completo: false,
-      }).select("legajo").single();
-      if (!cliInsErr && cliRow) { clienteLegajo = cliRow.legajo; lastInsertErr = null; break; }
-      lastInsertErr = cliInsErr;
-      const msg = cliInsErr?.message ?? "";
-      const isDup = msg.includes("clientes_cuit_key") || msg.includes("clientes_legajo_key") || msg.includes("duplicate");
-      if (!isDup) break;
+    const { data: existente } = await sb.from("clientes").select("legajo").eq("correo", email).maybeSingle();
+    if (existente) {
+      let lastUpdErr: any = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const placeholderCuit = generatePlaceholderCuit(authId, email, attempt);
+        const { data: updRow, error: updErr } = await sb.from("clientes").update({
+          tipo_persona: tipoPersona,
+          nombre: nombreCompleto,
+          cuit: placeholderCuit,
+          estado: "pendiente_verificacion",
+          estado_onboarding: "pendiente",
+          email_verificado: false,
+          onboarding_completo: false,
+        }).eq("correo", email).select("legajo").single();
+        if (!updErr && updRow) { clienteLegajo = updRow.legajo; lastUpdErr = null; break; }
+        lastUpdErr = updErr;
+        const msg = updErr?.message ?? "";
+        const isDup = msg.includes("clientes_cuit_key") || msg.includes("clientes_legajo_key") || msg.includes("duplicate");
+        if (!isDup) break;
+      }
+      if (lastUpdErr) throw lastUpdErr;
+    } else {
+      let lastInsertErr: any = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const placeholderCuit = generatePlaceholderCuit(authId, email, attempt);
+        const { data: cliRow, error: cliInsErr } = await sb.from("clientes").insert({
+          tipo_persona: tipoPersona,
+          correo: email,
+          nombre: nombreCompleto,
+          cuit: placeholderCuit,
+          estado: "pendiente_verificacion",
+          estado_onboarding: "pendiente",
+          email_verificado: false,
+          onboarding_completo: false,
+        }).select("legajo").single();
+        if (!cliInsErr && cliRow) { clienteLegajo = cliRow.legajo; lastInsertErr = null; break; }
+        lastInsertErr = cliInsErr;
+        const msg = cliInsErr?.message ?? "";
+        const isDupCuit = msg.includes("clientes_cuit_key") || msg.includes("clientes_legajo_key") || msg.includes("duplicate");
+        const isDupCorreo = msg.includes("clientes_correo_key");
+        if (isDupCorreo) {
+          // Carrera: otro proceso insertó entre el select y el insert; reintentar como update
+          const { data: retryUpd, error: retryErr } = await sb.from("clientes").update({
+            tipo_persona: tipoPersona,
+            nombre: nombreCompleto,
+            cuit: placeholderCuit,
+            estado: "pendiente_verificacion",
+            estado_onboarding: "pendiente",
+            email_verificado: false,
+            onboarding_completo: false,
+          }).eq("correo", email).select("legajo").single();
+          if (!retryErr && retryUpd) { clienteLegajo = retryUpd.legajo; lastInsertErr = null; break; }
+          lastInsertErr = retryErr;
+          break;
+        }
+        if (!isDupCuit) break;
+      }
+      if (lastInsertErr) throw lastInsertErr;
     }
-    if (lastInsertErr) throw lastInsertErr;
 
     await sendVerificationEmail(email, nombreCompleto, token);
     return json({ ok: true, email, legajo: clienteLegajo });
