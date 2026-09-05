@@ -41,6 +41,12 @@ Deno.serve(async (req) => {
     user_metadata: { admin_via_edge: true, nombre, apellido, tipoCuenta },
   });
   if (authErr || !authData.user) {
+    const raw = (authErr?.message ?? "").toLowerCase();
+    const isDup = (raw.includes("already") && raw.includes("registered")) ||
+      raw.includes("already exists") || raw.includes("duplicate") || raw.includes("already been");
+    if (isDup) {
+      return json({ error: "Ya existe una cuenta con ese correo. Si ya te registraste, iniciá sesión. Si no verificaste tu correo, revisá tu bandeja/spam o usá '¿No te llegó el email de verificación?' en el login para reenviarlo. Si olvidaste la contraseña, usá '¿Olvidaste tu contraseña?'." }, 400);
+    }
     return json({ error: authErr?.message ?? "No se pudo crear el usuario" }, 400);
   }
   const authId = authData.user.id;

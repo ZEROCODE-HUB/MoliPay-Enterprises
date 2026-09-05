@@ -23,7 +23,27 @@ export type RegisterPayload = {
 export async function registerClient(payload: RegisterPayload): Promise<{ ok: boolean; email: string }> {
   const supabase = requireSupabase();
   const { data, error } = await supabase.functions.invoke("registrar-cliente", { body: payload });
-  if (error) throw new Error(error.message || "No se pudo registrar la cuenta");
+  if (error) {
+    let message = (error as unknown as { message?: string })?.message || "No se pudo registrar la cuenta";
+    // Supabase FunctionsHttpError pone el body real en error.context.json()
+    try {
+      const ctx = (error as unknown as { context?: unknown }).context as { json?: () => Promise<{ error?: string }> } | undefined;
+      if (ctx && typeof ctx.json === "function") {
+        const body = await ctx.json();
+        if (body?.error) message = body.error;
+      } else if (typeof (error as unknown as { context?: { body?: string } }).context?.body === "string") {
+        const parsed = JSON.parse((error as unknown as { context: { body: string } }).context.body);
+        if (parsed?.error) message = parsed.error;
+      }
+    } catch {
+      // ignorar, mantener mensaje genérico
+    }
+    // Mapear mensaje técnico en inglés a español si aún no fue traducido por la edge
+    if (/already.*registered/i.test(message)) message = "Ya existe una cuenta con ese correo.";
+    throw new Error(message);
+  }
+  // La edge puede devolver { error } con 200? (no, pero por si acaso)
+  if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
   return data as { ok: boolean; email: string };
 }
 
