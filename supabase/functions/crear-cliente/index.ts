@@ -37,13 +37,20 @@ Deno.serve(async (req) => {
 
   const sb = createClient(url, service, { auth: { autoRefreshToken: false } });
 
-  const { data: cli, error: cliErr } = await sb
-    .from("clientes")
-    .insert({
+  // Si el usuario ya tiene fila en pendiente_verificacion/registrado (creada por registrar-cliente), hacer UPDATE en lugar de INSERT
+  const cuitNorm = String(cuit).replace(/\D/g, "");
+  let legajo: string;
+  let clienteId: string | null = null;
+  const { data: existente } = await sb.from("clientes").select("legajo, cuit, estado, id").eq("correo", email).maybeSingle();
+  const esAltaNueva = !existente;
+
+  if (existente) {
+    const isPlaceholder = existente.cuit.startsWith("99");
+    // Si el registro previo es placeholder, permitimos actualizar CUIT/legajo al real
+    const { data: upd, error: updErr } = await sb.from("clientes").update({
       tipo_persona: tipoPersona,
-      correo: email,
       nombre,
-      cuit: String(cuit).replace(/\D/g, ""),
+      cuit: cuitNorm,
       genero: perfil.genero ?? null,
       cuit_cuil: perfil.cuitCuil ?? null,
       fecha_nacimiento: perfil.fechaNacimiento ?? null,
@@ -60,26 +67,73 @@ Deno.serve(async (req) => {
       provincia: perfil.provincia ?? null,
       cp: perfil.cp ?? null,
       estado_onboarding: "pendiente",
-    })
-    .select("legajo")
-    .single();
+      // Transición homologada: si venía de pendiente_verificacion pasa a registrado tras completar KYC
+      estado: existente.estado === "pendiente_verificacion" ? "registrado" : existente.estado,
+      email_verificado: true,
+      onboarding_completo: true,
+    }).eq("correo", email).select("legajo, id").single();
+    if (updErr || !upd) {
+      const msg = updErr?.message ?? "";
+      const dupLegajo = msg.includes("clientes_legajo_key") || msg.includes("clientes_cuit_key");
+      if (dupLegajo && !isPlaceholder) {
+        return json({ error: "Ya existe una cuenta con ese CUIT" }, 400);
+      }
+      if (dupLegajo) {
+        return json({ error: "Ya existe una cuenta con ese CUIT" }, 400);
+      }
+      return json({ error: msg || "No se pudo actualizar el cliente" }, 400);
+    }
+    legajo = upd.legajo;
+    clienteId = upd.id;
+  } else {
+    const { data: cli, error: cliErr } = await sb
+      .from("clientes")
+      .insert({
+        tipo_persona: tipoPersona,
+        correo: email,
+        nombre,
+        cuit: cuitNorm,
+        genero: perfil.genero ?? null,
+        cuit_cuil: perfil.cuitCuil ?? null,
+        fecha_nacimiento: perfil.fechaNacimiento ?? null,
+        ocupacion: perfil.ocupacion ?? null,
+        origen_fondos: perfil.origenFondos ?? null,
+        es_pep: !!perfil.esPEP,
+        tipo_sociedad: perfil.tipoSociedad ?? null,
+        nombre_legal: perfil.nombreLegal ?? null,
+        nombre_fantasia: perfil.nombreFantasia ?? null,
+        fecha_inscripcion: perfil.fechaInscripcion ?? null,
+        direccion: perfil.direccion ?? null,
+        direccion2: perfil.direccion2 ?? null,
+        ciudad: perfil.ciudad ?? null,
+        provincia: perfil.provincia ?? null,
+        cp: perfil.cp ?? null,
+        estado_onboarding: "pendiente",
+        estado: "registrado",
+        email_verificado: true,
+        onboarding_completo: true,
+      })
+      .select("legajo, id")
+      .single();
 
-  if (cliErr || !cli) {
-    const msg = cliErr?.message ?? "";
-    const dupCorreo = msg.includes("clientes_correo_key");
-    const dupLegajo = msg.includes("clientes_legajo_key");
-    return json(
-      {
-        error: dupCorreo
-          ? "Ya existe una cuenta con ese correo"
-          : dupLegajo
-            ? "Ya existe una cuenta con ese CUIT"
-            : msg || "No se pudo crear el cliente",
-      },
-      400,
-    );
+    if (cliErr || !cli) {
+      const msg = cliErr?.message ?? "";
+      const dupCorreo = msg.includes("clientes_correo_key");
+      const dupLegajo = msg.includes("clientes_legajo_key") || msg.includes("clientes_cuit_key");
+      return json(
+        {
+          error: dupCorreo
+            ? "Ya existe una cuenta con ese correo"
+            : dupLegajo
+              ? "Ya existe una cuenta con ese CUIT"
+              : msg || "No se pudo crear el cliente",
+        },
+        400,
+      );
+    }
+    legajo = cli.legajo;
+    clienteId = (cli as any).id;
   }
-  const legajo = cli.legajo;
 
   try {
     const docTipos: Record<string, string> = {
@@ -116,7 +170,9 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, legajo, email });
   } catch (e: any) {
-    await sb.from("clientes").delete().eq("legajo", legajo);
+    if (esAltaNueva) {
+      await sb.from("clientes").delete().eq("legajo", legajo);
+    }
     return json({ error: e?.message ?? "Error al completar el alta" }, 400);
   }
 });

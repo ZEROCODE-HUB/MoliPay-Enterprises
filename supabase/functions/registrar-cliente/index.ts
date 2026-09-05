@@ -62,9 +62,38 @@ Deno.serve(async (req) => {
     });
     if (tErr) throw tErr;
 
-    await sendVerificationEmail(email, `${nombre} ${apellido}`.trim(), token);
-    return json({ ok: true, email });
+    // Crear fila en clientes con estado inicial pendiente_verificacion para que aparezca en el panel admin.
+    // CUIT placeholder único con prefijo 99 (no colisiona con CUITs reales 20/27/30/33).
+    const tipoPersona = tipoCuenta === "juridica" ? "juridica" : "fisica";
+    const nombreCompleto = `${nombre} ${apellido}`.trim();
+    let clienteLegajo: string | null = null;
+    let lastInsertErr: any = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const placeholderCuit = generatePlaceholderCuit(authId, email, attempt);
+      const { data: cliRow, error: cliInsErr } = await sb.from("clientes").insert({
+        tipo_persona: tipoPersona,
+        correo: email,
+        nombre: nombreCompleto,
+        cuit: placeholderCuit,
+        estado: "pendiente_verificacion",
+        estado_onboarding: "pendiente",
+        email_verificado: false,
+        onboarding_completo: false,
+      }).select("legajo").single();
+      if (!cliInsErr && cliRow) { clienteLegajo = cliRow.legajo; lastInsertErr = null; break; }
+      lastInsertErr = cliInsErr;
+      const msg = cliInsErr?.message ?? "";
+      const isDup = msg.includes("clientes_cuit_key") || msg.includes("clientes_legajo_key") || msg.includes("duplicate");
+      if (!isDup) break;
+    }
+    if (lastInsertErr) throw lastInsertErr;
+
+    await sendVerificationEmail(email, nombreCompleto, token);
+    return json({ ok: true, email, legajo: clienteLegajo });
   } catch (e: any) {
+    // Rollback coordinado: borrar cliente placeholder, token y usuario para permitir reintento limpio
+    try { await sb.from("clientes").delete().eq("correo", email); } catch { /* ignore */ }
+    try { await sb.from("verificaciones_correo").delete().eq("user_id", authId); } catch { /* ignore */ }
     await sb.auth.admin.deleteUser(authId);
     return json({ error: e?.message ?? "No se pudo enviar el correo de verificación" }, 400);
   }
@@ -143,6 +172,19 @@ async function sendVerificationEmail(email: string, nombre: string, token: strin
     const t = await res.text();
     throw new Error("No se pudo enviar el correo: " + t);
   }
+}
+
+function generatePlaceholderCuit(authId: string, email: string, attempt: number): string {
+  // Prefijo 99 no usado en CUITs reales; 9 dígitos restantes pseudo-aleatorios derivados de authId+email+attempt
+  const seed = `${authId}:${email}:${attempt}:${Date.now()}`;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+  const abs = Math.abs(hash);
+  // Mezclar con random para evitar colisión entre reintentos rápidos
+  const rand = Math.floor(Math.random() * 1_000_000_000);
+  const combined = (abs ^ rand) % 1_000_000_000;
+  const nine = String(combined).padStart(9, "0");
+  return `99${nine}`;
 }
 
 function json(payload: unknown, status = 200) {

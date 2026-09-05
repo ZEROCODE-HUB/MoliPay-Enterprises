@@ -40,6 +40,16 @@ Deno.serve(async (req) => {
   const { error: uErr } = await sb.auth.admin.updateUserById(row.user_id, { email_confirm: true });
   if (uErr) return json({ error: uErr.message ?? "No se pudo confirmar el correo" }, 400);
 
+  // Transición de negocio: pendiente_verificacion -> registrado (homologado con admin)
+  try {
+    const { data: cli } = await sb.from("clientes").select("id, estado, email_verificado").eq("correo", row.correo).maybeSingle();
+    if (cli && cli.estado === "pendiente_verificacion") {
+      await sb.from("clientes").update({ estado: "registrado", email_verificado: true }).eq("correo", row.correo);
+    } else if (cli) {
+      await sb.from("clientes").update({ email_verificado: true }).eq("correo", row.correo);
+    }
+  } catch { /* no bloquear verificación si falla el update de negocio */ }
+
   return json({ ok: true });
 });
 
