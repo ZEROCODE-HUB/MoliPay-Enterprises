@@ -119,6 +119,7 @@ function KycWizard() {
       ciudad: addr.ciudad,
       provincia: addr.provincia,
       cp: addr.cp,
+      fechaNacimiento: (registro as any).fechaNac ?? null,
     };
     let cuit: string;
     if (tipoCuenta === "juridica") {
