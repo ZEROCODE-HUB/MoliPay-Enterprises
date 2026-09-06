@@ -37,10 +37,14 @@ function DatosPersonales() {
   });
   const [err, setErr] = useState<Record<string, string>>({});
 
+  const cuitDigits = f.cuitCuil.replace(/\D/g, "");
+  const cuitExcede = cuitDigits.length > 11;
   const validateStep0 = () => {
     const e: Record<string, string> = {};
     if (!f.genero) e.genero = "El genero es requerido";
     if (!f.cuitCuil.trim()) e.cuitCuil = "Ingresa tu CUIT/CUIL";
+    else if (cuitExcede) e.cuitCuil = "Máximo 11 dígitos permitidos. Quita los excedentes.";
+    else if (cuitDigits.length !== 11) e.cuitCuil = "El CUIT/CUIL debe tener exactamente 11 dígitos.";
     if (!f.ocupacion) e.ocupacion = "Selecciona una ocupacion";
     setErr(e);
     return Object.keys(e).length === 0;
@@ -89,7 +93,8 @@ function DatosPersonales() {
             onChange={(e) => setF({ ...f, cuitCuil: e.target.value })}
             placeholder="20-12345678-9"
             className="font-mono"
-            error={err.cuitCuil}
+            error={err.cuitCuil || (cuitExcede ? "Máximo 11 dígitos permitidos" : undefined)}
+            hint={cuitDigits.length > 0 ? `${cuitDigits.length}/11 dígitos` : undefined}
           />
           <SelectField
             label="Ocupacion"

@@ -35,9 +35,13 @@ function DatosEmpresa() {
   });
   const [err, setErr] = useState<Record<string, string>>({});
 
+  const cuitDigits = f.cuit.replace(/\D/g, "");
+  const cuitExcede = cuitDigits.length > 11;
   const validate = () => {
     const e: Record<string, string> = {};
     if (!f.cuit.trim()) e.cuit = "Requerido";
+    else if (cuitExcede) e.cuit = "Máximo 11 dígitos permitidos. Quita los excedentes.";
+    else if (cuitDigits.length !== 11) e.cuit = "El CUIT debe tener exactamente 11 dígitos.";
     if (!f.fechaInscripcion) e.fechaInscripcion = "Requerido";
     if (!f.tipoId) e.tipoId = "Requerido";
     if (!f.nombreLegal.trim()) e.nombreLegal = "Requerido";
@@ -72,7 +76,8 @@ function DatosEmpresa() {
             onChange={(e) => setF({ ...f, cuit: e.target.value })}
             placeholder="30-12345678-9"
             className="font-mono"
-            error={err.cuit}
+            error={err.cuit || (cuitExcede ? "Máximo 11 dígitos permitidos" : undefined)}
+            hint={cuitDigits.length > 0 ? `${cuitDigits.length}/11 dígitos` : undefined}
           />
           <Field
             label="Fecha de inscripcion"
