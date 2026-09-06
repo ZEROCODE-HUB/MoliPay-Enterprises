@@ -374,11 +374,16 @@ export function FileUpload({
 
   useEffect(() => {
     return () => {
-      if (value?.url) URL.revokeObjectURL(value.url);
+      if (value?.url && value.url.startsWith("blob:")) URL.revokeObjectURL(value.url);
     };
-  }, []);
+  }, [value?.url]);
 
-  const isImage = value?.file?.type?.startsWith("image/");
+  const isImage = (() => {
+    if (value?.file?.type?.startsWith("image/")) return true;
+    const n = (value?.name || value?.url || "").toLowerCase();
+    return /\.(png|jpe?g|webp|gif|bmp|heic|avif)$/.test(n);
+  })();
+  const isExisting = !!value?.url && !value?.file;
 
   if (value) {
     return (
@@ -395,8 +400,9 @@ export function FileUpload({
             <FileText size={18} className="text-black-400 shrink-0" />
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-sm truncate text-black-700">{isImage ? "Imagen cargada" : "Documento cargado"}</p>
-            <p className="text-[11px] text-black-400">Listo para enviar</p>
+            <p className="text-sm truncate text-black-700">{isImage ? "Imagen cargada" : "Documento cargado"} {isExisting && <span className="text-[10px] text-black-400">(existente)</span>}</p>
+            <p className="text-[11px] text-black-400">{isExisting ? "Se mantendrá si no la reemplazás" : "Listo para enviar"}</p>
+            <p className="text-[11px] text-black-400 truncate">{value.name}</p>
           </div>
           <button
             type="button"
