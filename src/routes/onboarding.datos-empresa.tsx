@@ -1,5 +1,5 @@
-﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+﻿import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   AuthShell,
   Field,
@@ -34,6 +34,28 @@ function DatosEmpresa() {
     nombreFantasia: datosEmpresa.nombreFantasia ?? "",
   });
   const [err, setErr] = useState<Record<string, string>>({});
+  useEffect(() => {
+    (async () => {
+      try {
+        const { requireSupabase } = await import("@/lib/supabase");
+        const sb = requireSupabase();
+        const { data: u } = await sb.auth.getUser();
+        const mail = u.user?.email;
+        if (!mail) return;
+        const { data: cli } = await sb.from("clientes").select("cuit, fecha_inscripcion, tipo_sociedad, nombre_legal, nombre_fantasia").eq("correo", mail).maybeSingle();
+        if (!cli) return;
+        // No sobrescribir si ya hay valor en store (edición fresca)
+        const realCuit = (cli as any).cuit && !(cli as any).cuit.startsWith("99") ? (cli as any).cuit : "";
+        setF((prev) => ({
+          cuit: prev.cuit || realCuit || "",
+          fechaInscripcion: prev.fechaInscripcion || (cli as any).fecha_inscripcion || "",
+          tipoId: prev.tipoId || (cli as any).tipo_sociedad || "",
+          nombreLegal: prev.nombreLegal || (cli as any).nombre_legal || "",
+          nombreFantasia: prev.nombreFantasia || (cli as any).nombre_fantasia || "",
+        }));
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   const cuitDigits = f.cuit.replace(/\D/g, "");
   const cuitExcede = cuitDigits.length > 11;
@@ -111,6 +133,9 @@ function DatosEmpresa() {
             }}
             nextLabel="Siguiente"
           />
+          <div className="text-center pt-2">
+            <Link to="/login" search={{ register: undefined }} className="text-xs text-black-400 hover:text-red-500 underline underline-offset-2">Volver a inicio de sesión</Link>
+          </div>
         </div>
       )}
 
@@ -138,6 +163,9 @@ function DatosEmpresa() {
             }}
             nextLabel="Registrar empresa"
           />
+          <div className="text-center pt-2">
+            <Link to="/login" search={{ register: undefined }} className="text-xs text-black-400 hover:text-red-500 underline underline-offset-2">Volver a inicio de sesión</Link>
+          </div>
         </div>
       )}
     </AuthShell>

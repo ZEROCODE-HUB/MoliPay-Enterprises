@@ -35,13 +35,26 @@ Deno.serve(async (req) => {
   const admin = createClient(url, service, { auth: { autoRefreshToken: false, persistSession: false } });
   const isAdmin = email.endsWith("@mollypay.com");
 
+  // Batch: traer todos los documentos de una vez para evitar N+1
+  const strPaths = (paths as unknown[]).filter((p): p is string => typeof p === "string");
+  const { data: docs } = await admin.from("documentos").select("url, cliente_legajo").in("url", strPaths);
+  const docMap = new Map<string, string>();
+  for (const d of (docs ?? []) as any[]) docMap.set(d.url, d.cliente_legajo);
+  const legajos = [...new Set([...docMap.values()])];
+  const clienteMap = new Map<string, string>();
+  if (legajos.length > 0) {
+    const { data: clientes } = await admin.from("clientes").select("legajo, correo").in("legajo", legajos);
+    for (const c of (clientes ?? []) as any[]) clienteMap.set(c.legajo, c.correo);
+  }
+
   const out: Record<string, string | null> = {};
-  for (const p of paths as unknown[]) {
-    if (typeof p !== "string") continue;
-    const { data: doc } = await admin.from("documentos").select("cliente_legajo").eq("url", p).maybeSingle();
-    if (doc) {
-      const { data: cli } = await admin.from("clientes").select("correo").eq("legajo", doc.cliente_legajo).maybeSingle();
-      if (cli && cli.correo !== email && !isAdmin) {
+  // Filtrar por permiso antes de firmar
+  const toSign: string[] = [];
+  for (const p of strPaths) {
+    const legajo = docMap.get(p);
+    if (legajo) {
+      const correo = clienteMap.get(legajo);
+      if (correo && correo !== email && !isAdmin) {
         out[p] = null;
         continue;
       }
@@ -49,9 +62,14 @@ Deno.serve(async (req) => {
       out[p] = null;
       continue;
     }
-    const { data: s } = await admin.storage.from("kyc").createSignedUrl(p, 3600);
-    out[p] = s?.signedUrl ?? null;
+    toSign.push(p);
   }
+  // Firmar en paralelo
+  const signed = await Promise.all(toSign.map(async (p) => {
+    const { data: s } = await admin.storage.from("kyc").createSignedUrl(p, 3600);
+    return [p, s?.signedUrl ?? null] as const;
+  }));
+  for (const [p, url] of signed) out[p] = url;
 
   return new Response(JSON.stringify({ urls: out }), { headers });
 });

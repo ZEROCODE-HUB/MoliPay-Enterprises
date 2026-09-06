@@ -1,5 +1,6 @@
 ﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   AuthShell,
   Field,
@@ -36,6 +37,26 @@ function DatosPersonales() {
     esPEP: datosPersonales.esPEP ?? false,
   });
   const [err, setErr] = useState<Record<string, string>>({});
+  useEffect(() => {
+    (async () => {
+      try {
+        const { requireSupabase } = await import("@/lib/supabase");
+        const sb = requireSupabase();
+        const { data: u } = await sb.auth.getUser();
+        const mail = u.user?.email;
+        if (!mail) return;
+        const { data: cli } = await sb.from("clientes").select("genero, cuit_cuil, ocupacion, origen_fondos, es_pep").eq("correo", mail).maybeSingle();
+        if (!cli) return;
+        setF((prev) => ({
+          genero: prev.genero || (cli as any).genero || "",
+          cuitCuil: prev.cuitCuil || (cli as any).cuit_cuil || "",
+          ocupacion: prev.ocupacion || (cli as any).ocupacion || "",
+          origenFondos: prev.origenFondos || (cli as any).origen_fondos || "",
+          esPEP: prev.esPEP || !!(cli as any).es_pep,
+        }));
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   const cuitDigits = f.cuitCuil.replace(/\D/g, "");
   const cuitExcede = cuitDigits.length > 11;
@@ -155,6 +176,9 @@ function DatosPersonales() {
           </div>
         </div>
       )}
+      <div className="text-center pt-4">
+        <Link to="/login" search={{ register: undefined }} className="text-xs text-black-400 hover:text-red-500 underline underline-offset-2">Volver a inicio de sesión</Link>
+      </div>
     </AuthShell>
   );
 }
