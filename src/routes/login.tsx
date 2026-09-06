@@ -3,9 +3,9 @@ import { useState } from "react";
 import { MollyLogo } from "@/components/molly-logo";
 import { useDemoMode } from "@/contexts/demo-mode";
 import { useOnboarding, type TipoCuenta } from "@/lib/onboarding-store";
-import { AuthShell, Field, PasswordField, PrimaryButton, validatePassword } from "@/components/onboarding";
+import { AuthShell, Field, PasswordField, PrimaryButton, SuccessCard, validatePassword } from "@/components/onboarding";
 import { getAuthErrorMessage, requireSupabase } from "@/lib/supabase";
-import { registerClient } from "@/lib/api/onboarding";
+import { registerClient, resendVerification } from "@/lib/api/onboarding";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, string | undefined>) => ({
@@ -26,21 +26,50 @@ function LoginForm({ onSuccess }: { onSuccess: (estado: "aprobado" | "pendiente"
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resendMsg, setResendMsg] = useState<string | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
 
   const reenviarVerificacion = async () => {
-    const destino = email.trim();
+    const destino = (pendingEmail ?? email).trim();
     if (!destino || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(destino)) {
       setResendMsg("Ingresá tu correo arriba para reenviar la verificación.");
       return;
     }
+    setResendLoading(true);
     try {
-      const sb = requireSupabase();
-      await sb.auth.resend({ type: "signup", email: destino });
-    } catch {
-      // noop: el destino se muestra igual
+      await resendVerification(destino);
+      setResendMsg(`Te enviamos el mail de verificación a ${destino}. Revisá tu bandeja y la carpeta de spam.`);
+    } catch (e) {
+      setResendMsg(e instanceof Error ? getAuthErrorMessage(e.message) : "No se pudo reenviar el correo.");
+    } finally {
+      setResendLoading(false);
     }
-    setResendMsg(`Te enviamos el mail de verificación a ${destino}. Revisá tu bandeja y la carpeta de spam.`);
   };
+
+  // Recuadro para pendiente_verificacion en lugar de letras rojas
+  if (pendingEmail) {
+    return (
+      <SuccessCard
+        variant="info"
+        title="Pendiente de verificación de email"
+        body={
+          <>
+            <p>Tu correo aún no está verificado. Revisá tu bandeja de entrada y hacé clic en el enlace para activar tu cuenta.</p>
+            <p className="mt-3 text-xs text-black-400">
+              Si no lo recibís, revisá spam o reenviá el correo. Si tenés algún problema,{" "}
+              <a href="mailto:soporte@molipay.com.ar" className="underline underline-offset-2 hover:text-red-500">contactanos</a>.
+            </p>
+            {resendMsg && <p className="mt-3 text-xs text-green-600">{resendMsg}</p>}
+          </>
+        }
+      >
+        <PrimaryButton onClick={reenviarVerificacion} disabled={resendLoading}>
+          {resendLoading ? "Reenviando…" : "Reenviar correo de verificación"}
+        </PrimaryButton>
+        <button type="button" onClick={() => { setPendingEmail(null); setResendMsg(null); }} className="mt-2 w-full text-xs text-black-400 hover:text-red-500 underline underline-offset-2">Volver al inicio de sesión</button>
+      </SuccessCard>
+    );
+  }
 
   return (
     <form
@@ -53,7 +82,12 @@ function LoginForm({ onSuccess }: { onSuccess: (estado: "aprobado" | "pendiente"
           const sb = requireSupabase();
           const { data, error: authErr } = await sb.auth.signInWithPassword({ email, password: pw });
           if (authErr || !data.user) {
-            setError(getAuthErrorMessage(authErr?.message ?? "No se pudo iniciar sesión"));
+            const raw = authErr?.message ?? "";
+            if (/email not confirmed/i.test(raw)) {
+              setPendingEmail(email.trim());
+              return;
+            }
+            setError(getAuthErrorMessage(raw || "No se pudo iniciar sesión"));
             return;
           }
           let estado: "aprobado" | "pendiente" | "rechazado" = "pendiente";
@@ -248,7 +282,7 @@ function LoginPage() {
       const sb = requireSupabase();
       const { data: cli } = await sb
         .from("clientes")
-        .select("legajo, estado")
+        .select("legajo, estado, onboarding_completo")
         .eq("correo", email)
         .maybeSingle();
       if (!cli) {
@@ -257,10 +291,34 @@ function LoginPage() {
       }
       const raw = (cli.estado as string) ?? "";
       if (raw === "pendiente_verificacion") {
-        navigate({ to: "/registro/validar-email" });
-      } else {
+        // Mostrar recuadro de verificación en lugar de validación simulada
         navigate({ to: "/onboarding/en-proceso" });
+        return;
       }
+      if (raw === "registrado") {
+        // Registrado: si aún no envió documentación -> onboarding, si ya envió -> recuadro en revisión
+        const incompleto = (cli as any).onboarding_completo === false || (cli as any).onboarding_completo === null;
+        if (incompleto) {
+          try {
+            const { data: val } = await sb.from("validaciones").select("id").eq("cliente_legajo", (cli as any).legajo).limit(1).maybeSingle();
+            const { data: doc } = await sb.from("documentos").select("id").eq("cliente_legajo", (cli as any).legajo).limit(1).maybeSingle();
+            if (!val && !doc) {
+              navigate({ to: "/onboarding/datos-personales" });
+              return;
+            }
+            // Tiene docs/validación -> ya envió onboarding, mostrar Registrado en revisión
+            navigate({ to: "/onboarding/en-proceso" });
+            return;
+          } catch {
+            navigate({ to: "/onboarding/en-proceso" });
+            return;
+          }
+        }
+        // onboarding_completo true -> recuadro Registrado en revisión
+        navigate({ to: "/onboarding/en-proceso" });
+        return;
+      }
+      navigate({ to: "/onboarding/en-proceso" });
     } catch {
       navigate({ to: "/onboarding/en-proceso" });
     }
