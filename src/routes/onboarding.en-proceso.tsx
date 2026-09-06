@@ -1,6 +1,6 @@
 ﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AuthShell, PrimaryButton, SuccessCard } from "@/components/onboarding";
+import { AuthShell, PrimaryButton, SecondaryButton, SuccessCard } from "@/components/onboarding";
 import { requireSupabase } from "@/lib/supabase";
 import { ESTADO_LABEL, normalizarEstado, siguientePasoOnboarding } from "@/lib/cliente-estados";
 
@@ -17,6 +17,8 @@ export const Route = createFileRoute("/onboarding/en-proceso")({
 function EnProceso() {
   const nav = useNavigate();
   const [estado, setEstado] = useState<string | null>(null);
+  const [hasDocs, setHasDocs] = useState<boolean | null>(null);
+  const [tipoPersona, setTipoPersona] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -25,8 +27,16 @@ function EnProceso() {
         const { data: u } = await s.auth.getUser();
         const mail = u.user?.email;
         if (!mail) return;
-        const { data: cli } = await s.from("clientes").select("estado").eq("correo", mail).maybeSingle();
+        const { data: cli } = await s.from("clientes").select("estado, onboarding_completo, legajo, tipo_persona").eq("correo", mail).maybeSingle();
         if (cli?.estado) setEstado(cli.estado as string);
+        if ((cli as any)?.tipo_persona) setTipoPersona((cli as any).tipo_persona as string);
+        if (cli && (cli as any).legajo) {
+          try {
+            const { data: val } = await s.from("validaciones").select("id").eq("cliente_legajo", (cli as any).legajo).limit(1).maybeSingle();
+            const { data: doc } = await s.from("documentos").select("id").eq("cliente_legajo", (cli as any).legajo).limit(1).maybeSingle();
+            setHasDocs(!!val || !!doc);
+          } catch { setHasDocs(false); }
+        }
       } catch {
         // noop
       }
@@ -69,9 +79,21 @@ function EnProceso() {
           </>
         }
       >
-        <PrimaryButton onClick={() => nav({ to: norm === "activado" ? "/app" : "/login", search: { register: undefined } })}>
-          {norm === "activado" ? "Ir al dashboard" : "Ir a iniciar sesion"}
-        </PrimaryButton>
+        <div className="flex flex-col gap-2">
+          <PrimaryButton onClick={() => nav({ to: norm === "activado" ? "/app" : "/login", search: { register: undefined } })}>
+            {norm === "activado" ? "Ir al dashboard" : "Ir a iniciar sesion"}
+          </PrimaryButton>
+          {norm === "registrado" && hasDocs && (
+            <SecondaryButton onClick={() => nav({ to: "/onboarding/datos-personales" })}>
+              Editar información y reenviar
+            </SecondaryButton>
+          )}
+          {norm === "pendiente_verificacion" && (
+            <SecondaryButton onClick={() => nav({ to: "/login", search: { register: undefined } })}>
+              Reenviar verificación
+            </SecondaryButton>
+          )}
+        </div>
       </SuccessCard>
     </AuthShell>
   );
