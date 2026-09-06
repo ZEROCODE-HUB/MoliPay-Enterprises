@@ -1,4 +1,4 @@
-import { getAuthErrorMessage, requireSupabase } from "@/lib/supabase";
+import { requireSupabase } from "@/lib/supabase";
 
 export type OnboardingPayload = {
   email: string;
@@ -40,10 +40,10 @@ export async function registerClient(payload: RegisterPayload): Promise<{ ok: bo
     }
     // Mapear mensaje técnico en inglés a español si aún no fue traducido por la edge
     if (/already.*registered/i.test(message)) message = "Ya existe una cuenta con ese correo.";
-    throw new Error(getAuthErrorMessage(message));
+    throw new Error(message);
   }
   // La edge puede devolver { error } con 200? (no, pero por si acaso)
-  if ((data as { error?: string })?.error) throw new Error(getAuthErrorMessage((data as { error: string }).error));
+  if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
   return data as { ok: boolean; email: string };
 }
 
@@ -59,9 +59,9 @@ export async function verifyEmail(token: string): Promise<{ ok: boolean }> {
         if (b?.error) msg = b.error;
       }
     } catch { /* ignore */ }
-    throw new Error(getAuthErrorMessage(msg));
+    throw new Error(msg);
   }
-  if ((data as { error?: string })?.error) throw new Error(getAuthErrorMessage((data as { error: string }).error));
+  if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
   return data as { ok: boolean };
 }
 
@@ -77,9 +77,9 @@ export async function resendVerification(email: string): Promise<{ ok: boolean; 
         if (b?.error) msg = b.error;
       }
     } catch { /* ignore */ }
-    throw new Error(getAuthErrorMessage(msg));
+    throw new Error(msg);
   }
-  if ((data as { error?: string })?.error) throw new Error(getAuthErrorMessage((data as { error: string }).error));
+  if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
   return data as { ok: boolean; email: string };
 }
 
@@ -101,9 +101,9 @@ export async function submitOnboarding(
     } catch {
       /* ignore: keep generic message */
     }
-    throw new Error(getAuthErrorMessage(message));
+    throw new Error(message);
   }
-  if ((data as { error?: string })?.error) throw new Error(getAuthErrorMessage((data as { error: string }).error));
+  if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
   return data as OnboardingResult;
 }
 

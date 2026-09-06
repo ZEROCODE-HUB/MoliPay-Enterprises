@@ -62,7 +62,25 @@ function KycWizard() {
     if (Object.keys(e).length) return;
     setKyc(addr);
 
-    const { tipoCuenta, registro, datosPersonales, datosEmpresa } = store;
+    let { tipoCuenta, registro, datosPersonales, datosEmpresa } = store;
+    // Fallback si el store perdió datos (ej: login directo sin pasar por registro)
+    if (!registro.email || !tipoCuenta) {
+      try {
+        const { requireSupabase } = await import("@/lib/supabase");
+        const sb = requireSupabase();
+        const { data: u } = await sb.auth.getUser();
+        const mail = u.user?.email ?? "";
+        if (mail && !registro.email) registro = { ...registro, email: mail };
+        if (!tipoCuenta) {
+          const metaTipo = (u.user?.user_metadata as any)?.tipoCuenta as string | undefined;
+          if (metaTipo === "juridica" || metaTipo === "fisica") tipoCuenta = metaTipo as any;
+          else {
+            const { data: cli } = await sb.from("clientes").select("tipo_persona").eq("correo", mail).maybeSingle();
+            if ((cli as any)?.tipo_persona) tipoCuenta = (cli as any).tipo_persona === "juridica" ? "juridica" : "fisica";
+          }
+        }
+      } catch { /* ignore fallback */ }
+    }
     const perfil: Record<string, unknown> = {
       direccion: addr.direccion,
       direccion2: addr.direccion2,
