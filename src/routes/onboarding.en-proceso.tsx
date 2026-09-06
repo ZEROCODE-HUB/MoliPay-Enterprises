@@ -17,6 +17,7 @@ export const Route = createFileRoute("/onboarding/en-proceso")({
 function EnProceso() {
   const nav = useNavigate();
   const [estado, setEstado] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [hasDocs, setHasDocs] = useState<boolean | null>(null);
   const [tipoPersona, setTipoPersona] = useState<string | null>(null);
 
@@ -26,7 +27,7 @@ function EnProceso() {
         const s = requireSupabase();
         const { data: u } = await s.auth.getUser();
         const mail = u.user?.email;
-        if (!mail) return;
+        if (!mail) { setLoading(false); return; }
         const { data: cli } = await s.from("clientes").select("estado, onboarding_completo, legajo, tipo_persona").eq("correo", mail).maybeSingle();
         if (cli?.estado) setEstado(cli.estado as string);
         if ((cli as any)?.tipo_persona) setTipoPersona((cli as any).tipo_persona as string);
@@ -39,6 +40,8 @@ function EnProceso() {
         }
       } catch {
         // noop
+      } finally {
+        setLoading(false);
       }
     })();
   }, []);
@@ -46,6 +49,14 @@ function EnProceso() {
   const norm = estado ? normalizarEstado(estado) : null;
   const label = norm ? ESTADO_LABEL[norm] : "En proceso";
   const paso = norm ? siguientePasoOnboarding(norm) : "Tu alta fue registrada y esta siendo validada por nuestro equipo de compliance.";
+
+  if (loading) {
+    return (
+      <AuthShell leftEyebrow="Paso 6 · Revision" leftTitle="Cargando tu estado..." leftBody="Consultando el estado de tu solicitud." step="Cargando...">
+        <SuccessCard variant="loading" title="Cargando..." body={<p>Un momento, estamos verificando tu estado.</p>} />
+      </AuthShell>
+    );
+  }
 
   return (
     <AuthShell
