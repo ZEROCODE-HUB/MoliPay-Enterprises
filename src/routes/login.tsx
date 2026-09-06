@@ -4,7 +4,7 @@ import { MollyLogo } from "@/components/molly-logo";
 import { useDemoMode } from "@/contexts/demo-mode";
 import { useOnboarding, type TipoCuenta } from "@/lib/onboarding-store";
 import { AuthShell, Field, PasswordField, PrimaryButton, validatePassword } from "@/components/onboarding";
-import { requireSupabase } from "@/lib/supabase";
+import { getAuthErrorMessage, requireSupabase } from "@/lib/supabase";
 import { registerClient } from "@/lib/api/onboarding";
 
 export const Route = createFileRoute("/login")({
@@ -53,7 +53,7 @@ function LoginForm({ onSuccess }: { onSuccess: (estado: "aprobado" | "pendiente"
           const sb = requireSupabase();
           const { data, error: authErr } = await sb.auth.signInWithPassword({ email, password: pw });
           if (authErr || !data.user) {
-            setError(authErr?.message ?? "No se pudo iniciar sesión");
+            setError(getAuthErrorMessage(authErr?.message ?? "No se pudo iniciar sesión"));
             return;
           }
           let estado: "aprobado" | "pendiente" | "rechazado" = "pendiente";
@@ -73,7 +73,7 @@ function LoginForm({ onSuccess }: { onSuccess: (estado: "aprobado" | "pendiente"
           }
           onSuccess(estado, data.user.email ?? email);
         } catch (e) {
-          setError(e instanceof Error ? e.message : "No se pudo iniciar sesión");
+          setError(getAuthErrorMessage(e instanceof Error ? e.message : "No se pudo iniciar sesión"));
         } finally {
           setLoading(false);
         }

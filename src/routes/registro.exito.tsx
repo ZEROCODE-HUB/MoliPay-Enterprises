@@ -3,6 +3,7 @@ import { useState } from "react";
 import { AuthShell, PrimaryButton, SecondaryButton, SuccessCard } from "@/components/onboarding";
 import { useOnboarding } from "@/lib/onboarding-store";
 import { resendVerification } from "@/lib/api/onboarding";
+import { getAuthErrorMessage } from "@/lib/supabase";
 
 export const Route = createFileRoute("/registro/exito")({
   head: () => ({
@@ -30,7 +31,7 @@ function RegistroExito() {
       await resendVerification(registro.email);
       setMsg("Reenviamos el correo. Revisá tu bandeja.");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo reenviar el correo");
+      setError(getAuthErrorMessage(e instanceof Error ? e.message : "No se pudo reenviar el correo"));
     } finally {
       setLoading(false);
     }

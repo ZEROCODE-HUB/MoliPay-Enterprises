@@ -1,4 +1,4 @@
-import { requireSupabase } from "@/lib/supabase";
+import { getAuthErrorMessage, requireSupabase } from "@/lib/supabase";
 
 export type OnboardingPayload = {
   email: string;
@@ -40,24 +40,46 @@ export async function registerClient(payload: RegisterPayload): Promise<{ ok: bo
     }
     // Mapear mensaje técnico en inglés a español si aún no fue traducido por la edge
     if (/already.*registered/i.test(message)) message = "Ya existe una cuenta con ese correo.";
-    throw new Error(message);
+    throw new Error(getAuthErrorMessage(message));
   }
   // La edge puede devolver { error } con 200? (no, pero por si acaso)
-  if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+  if ((data as { error?: string })?.error) throw new Error(getAuthErrorMessage((data as { error: string }).error));
   return data as { ok: boolean; email: string };
 }
 
 export async function verifyEmail(token: string): Promise<{ ok: boolean }> {
   const supabase = requireSupabase();
   const { data, error } = await supabase.functions.invoke("verificar-correo", { body: { token } });
-  if (error) throw new Error(error.message || "No se pudo verificar el correo");
+  if (error) {
+    let msg = error.message || "No se pudo verificar el correo";
+    try {
+      const ctx = (error as unknown as { context?: unknown }).context as { json?: () => Promise<{ error?: string }> } | undefined;
+      if (ctx && typeof ctx.json === "function") {
+        const b = await ctx.json();
+        if (b?.error) msg = b.error;
+      }
+    } catch { /* ignore */ }
+    throw new Error(getAuthErrorMessage(msg));
+  }
+  if ((data as { error?: string })?.error) throw new Error(getAuthErrorMessage((data as { error: string }).error));
   return data as { ok: boolean };
 }
 
 export async function resendVerification(email: string): Promise<{ ok: boolean; email: string }> {
   const supabase = requireSupabase();
   const { data, error } = await supabase.functions.invoke("reenviar-verificacion", { body: { email } });
-  if (error) throw new Error(error.message || "No se pudo reenviar el correo");
+  if (error) {
+    let msg = error.message || "No se pudo reenviar el correo";
+    try {
+      const ctx = (error as unknown as { context?: unknown }).context as { json?: () => Promise<{ error?: string }> } | undefined;
+      if (ctx && typeof ctx.json === "function") {
+        const b = await ctx.json();
+        if (b?.error) msg = b.error;
+      }
+    } catch { /* ignore */ }
+    throw new Error(getAuthErrorMessage(msg));
+  }
+  if ((data as { error?: string })?.error) throw new Error(getAuthErrorMessage((data as { error: string }).error));
   return data as { ok: boolean; email: string };
 }
 
@@ -79,8 +101,9 @@ export async function submitOnboarding(
     } catch {
       /* ignore: keep generic message */
     }
-    throw new Error(message);
+    throw new Error(getAuthErrorMessage(message));
   }
+  if ((data as { error?: string })?.error) throw new Error(getAuthErrorMessage((data as { error: string }).error));
   return data as OnboardingResult;
 }
 

@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router"
 import { useEffect, useState } from "react";
 import { AuthShell, PrimaryButton, SuccessCard } from "@/components/onboarding";
 import { verifyEmail } from "@/lib/api/onboarding";
+import { getAuthErrorMessage } from "@/lib/supabase";
 import { useOnboarding } from "@/lib/onboarding-store";
 
 export const Route = createFileRoute("/verificar-correo")({
@@ -39,7 +40,7 @@ function VerificarCorreo() {
       })
       .catch((e) => {
         setEstado("error");
-        setMsg(e instanceof Error ? e.message : "No se pudo verificar el correo.");
+        setMsg(getAuthErrorMessage(e instanceof Error ? e.message : "No se pudo verificar el correo."));
       });
   }, [token]);
 

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AuthShell, PasswordField, PrimaryButton, SuccessCard, FormTitle, validatePassword } from "@/components/onboarding";
-import { requireSupabase } from "@/lib/supabase";
+import { getAuthErrorMessage, requireSupabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
@@ -54,7 +54,7 @@ function ResetPassword() {
       }
       if (err) {
         setMode("error");
-        setErrMsg(err instanceof Error ? err.message : "No pudimos validar el enlace de recuperación.");
+        setErrMsg(getAuthErrorMessage(err instanceof Error ? err.message : "No pudimos validar el enlace de recuperación."));
         return;
       }
       setMode("set");
@@ -75,7 +75,7 @@ function ResetPassword() {
     const sb = requireSupabase();
     const { error: err } = await sb.auth.updateUser({ password: pw });
     if (err) {
-      setError(err.message);
+      setError(getAuthErrorMessage(err.message));
       return;
     }
     setMode("done");
