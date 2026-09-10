@@ -16,6 +16,7 @@ import {
   List,
   ShoppingCart,
   Code2,
+  Landmark,
 } from "lucide-react";
 import { PortalShell, type NavItem } from "@/components/portal-shell";
 import { SupportBot } from "@/components/support-bot";
@@ -59,6 +60,7 @@ const nav: NavItem[] = [
       { to: "/app/cobros/gestion", label: "Gestion de lotes", icon: List },
     ],
   },
+  { to: "/app/liquidaciones", label: "Liquidaciones", icon: Landmark },
   { to: "/app/cuenta", label: "Mi cuenta", icon: UserCog },
   { to: "/app/seguridad", label: "Seguridad", icon: Shield },
   { to: "/app/api-config", label: "Config. APIs Externas", icon: Code2 },

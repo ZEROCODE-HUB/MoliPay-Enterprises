@@ -35,6 +35,7 @@ import { Route as AppSubcuentasRouteImport } from './routes/app.subcuentas'
 import { Route as AppServiciosRouteImport } from './routes/app.servicios'
 import { Route as AppSeguridadRouteImport } from './routes/app.seguridad'
 import { Route as AppQrRouteImport } from './routes/app.qr'
+import { Route as AppLiquidacionesRouteImport } from './routes/app.liquidaciones'
 import { Route as AppLinkPagoRouteImport } from './routes/app.link-pago'
 import { Route as AppHistorialRouteImport } from './routes/app.historial'
 import { Route as AppEcommerceRouteImport } from './routes/app.ecommerce'
@@ -185,6 +186,11 @@ const AppQrRoute = AppQrRouteImport.update({
   path: '/qr',
   getParentRoute: () => AppRoute,
 } as any)
+const AppLiquidacionesRoute = AppLiquidacionesRouteImport.update({
+  id: '/liquidaciones',
+  path: '/liquidaciones',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLinkPagoRoute = AppLinkPagoRouteImport.update({
   id: '/link-pago',
   path: '/link-pago',
@@ -287,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/app/ecommerce': typeof AppEcommerceRoute
   '/app/historial': typeof AppHistorialRoute
   '/app/link-pago': typeof AppLinkPagoRouteWithChildren
+  '/app/liquidaciones': typeof AppLiquidacionesRoute
   '/app/qr': typeof AppQrRouteWithChildren
   '/app/seguridad': typeof AppSeguridadRoute
   '/app/servicios': typeof AppServiciosRoute
@@ -330,6 +337,7 @@ export interface FileRoutesByTo {
   '/app/ecommerce': typeof AppEcommerceRoute
   '/app/historial': typeof AppHistorialRoute
   '/app/link-pago': typeof AppLinkPagoRouteWithChildren
+  '/app/liquidaciones': typeof AppLiquidacionesRoute
   '/app/qr': typeof AppQrRouteWithChildren
   '/app/seguridad': typeof AppSeguridadRoute
   '/app/servicios': typeof AppServiciosRoute
@@ -376,6 +384,7 @@ export interface FileRoutesById {
   '/app/ecommerce': typeof AppEcommerceRoute
   '/app/historial': typeof AppHistorialRoute
   '/app/link-pago': typeof AppLinkPagoRouteWithChildren
+  '/app/liquidaciones': typeof AppLiquidacionesRoute
   '/app/qr': typeof AppQrRouteWithChildren
   '/app/seguridad': typeof AppSeguridadRoute
   '/app/servicios': typeof AppServiciosRoute
@@ -423,6 +432,7 @@ export interface FileRouteTypes {
     | '/app/ecommerce'
     | '/app/historial'
     | '/app/link-pago'
+    | '/app/liquidaciones'
     | '/app/qr'
     | '/app/seguridad'
     | '/app/servicios'
@@ -466,6 +476,7 @@ export interface FileRouteTypes {
     | '/app/ecommerce'
     | '/app/historial'
     | '/app/link-pago'
+    | '/app/liquidaciones'
     | '/app/qr'
     | '/app/seguridad'
     | '/app/servicios'
@@ -511,6 +522,7 @@ export interface FileRouteTypes {
     | '/app/ecommerce'
     | '/app/historial'
     | '/app/link-pago'
+    | '/app/liquidaciones'
     | '/app/qr'
     | '/app/seguridad'
     | '/app/servicios'
@@ -744,6 +756,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQrRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/liquidaciones': {
+      id: '/app/liquidaciones'
+      path: '/liquidaciones'
+      fullPath: '/app/liquidaciones'
+      preLoaderRoute: typeof AppLiquidacionesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/link-pago': {
       id: '/app/link-pago'
       path: '/link-pago'
@@ -921,6 +940,7 @@ interface AppRouteChildren {
   AppEcommerceRoute: typeof AppEcommerceRoute
   AppHistorialRoute: typeof AppHistorialRoute
   AppLinkPagoRoute: typeof AppLinkPagoRouteWithChildren
+  AppLiquidacionesRoute: typeof AppLiquidacionesRoute
   AppQrRoute: typeof AppQrRouteWithChildren
   AppSeguridadRoute: typeof AppSeguridadRoute
   AppServiciosRoute: typeof AppServiciosRoute
@@ -938,6 +958,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppEcommerceRoute: AppEcommerceRoute,
   AppHistorialRoute: AppHistorialRoute,
   AppLinkPagoRoute: AppLinkPagoRouteWithChildren,
+  AppLiquidacionesRoute: AppLiquidacionesRoute,
   AppQrRoute: AppQrRouteWithChildren,
   AppSeguridadRoute: AppSeguridadRoute,
   AppServiciosRoute: AppServiciosRoute,
