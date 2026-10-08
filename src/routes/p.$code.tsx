@@ -7,6 +7,7 @@ import {
   CreditCard,
   AlertCircle,
   ShieldCheck,
+  FlaskConical,
 } from "lucide-react";
 import { Card, BtnPrimary, Input, Label } from "@/components/portal-shell";
 import { MollyLogo } from "@/components/molly-logo";
@@ -63,6 +64,41 @@ const EXTRA_METHODS: Array<{ id: string; label: string; category: "credit" | "de
   { id: "transferencia", label: "Transferencia", category: "other", enabled: true },
   { id: "qr", label: "Código QR", category: "other", enabled: true },
 ];
+
+/**
+ * Cada bandera del comercio puede habilitar mas de un metodo visible (Visa
+ * credito y Visa debito, por ejemplo). Se usa para derivar que ids de metodo
+ * mostrar a partir de las banderas activas y, al simular, para encontrar el
+ * UUID de la bandera que corresponde al metodo elegido.
+ */
+const BANDERA_TO_METHODS: Record<string, string[]> = {
+  "visa": ["visa-cred", "visa-deb"],
+  "visa_débito": ["visa-deb"],
+  "visa_crédito": ["visa-cred"],
+  "visa_prepaga": ["visa-deb"],
+  "mastercard": ["mc-cred", "mc-deb"],
+  "mastercard_débito": ["mc-deb"],
+  "mastercard_crédito": ["mc-cred"],
+  "mastercard_prepaga": ["mc-deb"],
+  "amex": ["amex"],
+  "american_express": ["amex"],
+  "cabal": ["cabal-cred", "cabal-deb"],
+  "cabal_débito": ["cabal-deb"],
+  "cabal_crédito": ["cabal-cred"],
+  "naranja": ["naranja"],
+  "naranja_x": ["naranja"],
+  "diners": ["diners"],
+  "maestro": ["maestro"],
+  "transferencia": ["transferencia"],
+  "qr": ["qr"],
+  "pago_fácil": ["transferencia"],
+  "rapipago": ["transferencia"],
+};
+
+function variantsDeBandera(flag: string): string[] {
+  const lower = flag.toLowerCase();
+  return BANDERA_TO_METHODS[lower] || BANDERA_TO_METHODS[lower.split("_")[0]] || [lower];
+}
 
 function expandMethods(raw: string[] | null | undefined): string[] {
   if (!raw?.length) return [];
@@ -134,8 +170,16 @@ function Checkout() {
     cuotas?: number;
     metodo?: string;
     pagoEn: Date;
+    /** true cuando el cobro fue simulado (no se llamo a la pasarela). */
+    simulado?: boolean;
   } | null>(null);
   const [comercioBanderas, setComercioBanderas] = useState<string[]>([]);
+  /**
+   * Filas de `comercio_banderas` con su UUID. El backend resuelve el metodo
+   * a partir del id de bandera, no del texto visible, asi que hace falta
+   * poder mapear "visa-cred" -> fila concreta del comercio del link.
+   */
+  const [banderasRows, setBanderasRows] = useState<Array<{ id: string; bandera: string }>>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -179,10 +223,11 @@ function Checkout() {
         if (d.comercio_id) {
           const { data: bandas } = await s
             .from("comercio_banderas")
-            .select("bandera")
+            .select("id, bandera")
             .eq("comercio_id", d.comercio_id)
             .eq("estado", "Activo");
           console.log("[Checkout] bandas:", bandas);
+          setBanderasRows((bandas ?? []) as Array<{ id: string; bandera: string }>);
           const flags = (bandas ?? []).map((b: { bandera: string }) => b.bandera.toLowerCase().replace(/\s+/g, "_"));
           console.log("[Checkout] flags:", flags);
           setComercioBanderas(flags);
@@ -215,44 +260,51 @@ function Checkout() {
   };
 
   const metodosDisponibles = useMemo(() => {
-    if (comercioBanderas.length > 0) {
-      const base = [...paymentMethods, ...EXTRA_METHODS];
-      const BANDERA_TO_METHODS: Record<string, string[]> = {
-        "visa": ["visa-cred", "visa-deb"],
-        "visa_débito": ["visa-deb"],
-        "visa_crédito": ["visa-cred"],
-        "visa_prepaga": ["visa-deb"],
-        "mastercard": ["mc-cred", "mc-deb"],
-        "mastercard_débito": ["mc-deb"],
-        "mastercard_crédito": ["mc-cred"],
-        "mastercard_prepaga": ["mc-deb"],
-        "amex": ["amex"],
-        "american_express": ["amex"],
-        "cabal": ["cabal-cred", "cabal-deb"],
-        "cabal_débito": ["cabal-deb"],
-        "cabal_crédito": ["cabal-cred"],
-        "naranja": ["naranja"],
-        "naranja_x": ["naranja"],
-        "diners": ["diners"],
-        "maestro": ["maestro"],
-        "transferencia": ["transferencia"],
-        "qr": ["qr"],
-        "pago_fácil": ["transferencia"],
-        "rapipago": ["transferencia"],
-      };
-      const methodIds = new Set<string>();
-      comercioBanderas.forEach((b) => {
-        const lower = b.toLowerCase();
-        const variants = BANDERA_TO_METHODS[lower] || BANDERA_TO_METHODS[lower.split("_")[0]] || [lower];
-        variants.forEach((v) => methodIds.add(v));
-      });
-      return base.filter((m) => methodIds.has(m.id));
-    }
-    const expanded = expandMethods(data?.metodos_pago);
-    if (!expanded.length) return paymentMethods;
+    // Catálogo completo usado solo como diccionario id -> label. Nada se
+    // muestra sin que el comercio lo habilite: la única fuente de verdad son
+    // las banderas activas del comercio del link (o el `metodos_pago` que quedó
+    // guardado en el link). No hay fallback que vuelque el catálogo entero ni
+    // métodos agregados de forma incondicional.
+    //
+    // Cada bandera del comercio corresponde a UN método visible: si el comercio
+    // tiene 3 banderas (Visa, Mastercard, Amex) se muestran 3 botones, no 6
+    // por la expansión crédito/débito. Quien quiera débito por separado carga
+    // la bandera "visa_débito" explícitamente.
     const base = [...paymentMethods, ...EXTRA_METHODS];
-    return base.filter((m) => expanded.includes(m.id));
+    const methodIds = new Set<string>();
+
+    if (comercioBanderas.length > 0) {
+      // El comercio se resolvió y tiene banderas activas: solo sus métodos.
+      comercioBanderas.forEach((b) => {
+        methodIds.add(getMethodIdFromBandera(b));
+      });
+    } else if (data?.metodos_pago?.length) {
+      // Sin banderas resueltas (link sin comercio o lectura anónima limitada):
+      // usar exactamente lo que guardó el link al crearse.
+      data.metodos_pago.forEach((m) => {
+        if (LOTE_CATEGORY_TO_METHODS[m]) {
+          LOTE_CATEGORY_TO_METHODS[m].forEach((v) => methodIds.add(v));
+          return;
+        }
+        methodIds.add(getMethodIdFromBandera(m));
+      });
+    }
+
+    return base.filter((m) => methodIds.has(m.id));
   }, [data, comercioBanderas]);
+
+  /**
+   * Metodo elegido -> UUID de la fila `comercio_banderas` que lo representa.
+   *
+   * El backend resuelve el metodo_key y la bandera a partir de ese UUID; con
+   * el texto del metodo ("visa-cred") el lookup falla cuando el comercio no
+   * tiene ese metodo_key cargado. Si ninguna bandera cubre el metodo, devuelve
+   * undefined y el backend cae al camino legacy con `method`.
+   */
+  const banderaIdDelMethod = (methodId: string): string | undefined => {
+    if (!methodId) return undefined;
+    return banderasRows.find((b) => variantsDeBandera(b.bandera).includes(methodId))?.id;
+  };
 
   const isAmex = method === "amex";
   const cardDigitsMax = method === "amex" ? 15 : method === "diners" ? 14 : 16;
@@ -401,6 +453,57 @@ function Checkout() {
     }
   };
 
+  /**
+   * Simulacion de pago: mismo camino que `pagar` menos la validacion de los
+   * campos de tarjeta (no se tokeniza nada) y menos la llamada a la pasarela.
+   * El backend registra el cobro via RPC como aprobado, asi que el movimiento
+   * y los lotes quedan en la base igual que con un cobro real.
+   */
+  const simular = async () => {
+    if (!method) {
+      toast.error("Selecciona un metodo de pago");
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      toast.error("Email invalido");
+      return;
+    }
+    const mp = parseFloat(montoPagar.replace(",", "."));
+    if (data && (mp <= 0 || mp > total(data) + 0.001)) {
+      toast.error("Monto a pagar invalido");
+      return;
+    }
+    if (!data) return;
+    setProcessing(true);
+    try {
+      const res = await paymentProcessor.simulate({
+        linkCode: code,
+        metodo: method,
+        banderaId: banderaIdDelMethod(method),
+        monto: mp,
+        pagadorNombre: titular.trim() || "Pago simulado",
+        pagadorEmail: email.trim(),
+        ...(documento.trim() ? { documento: { type: "dni" as const, number: documento.trim() } } : {}),
+      });
+
+      setResult({
+        id: res.id,
+        monto: res.monto ?? mp,
+        ref: data.referencia ?? res.id,
+        paywayPaymentId: res.paywayPaymentId,
+        cuotas: isCardMethod(method) ? 1 : undefined,
+        metodo: metodosDisponibles.find((m) => m.id === method)?.label ?? method,
+        pagoEn: new Date(),
+        simulado: true,
+      });
+      setStatus("success");
+    } catch (e: any) {
+      toast.error(e?.message || "No se pudo simular el pago");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[radial-gradient(120%_120%_at_50%_0%,#fff_40%,#fdecee_100%)] flex flex-col">
       {/* Barra de marca */}
@@ -457,8 +560,20 @@ function Checkout() {
               <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-2">
                 <CheckCircle2 className="text-emerald-600" size={32} />
               </div>
-              <p className="font-bold text-lg">Pago aprobado</p>
-              <p className="text-sm text-muted-foreground mt-1">Gracias, tu operacion fue completada.</p>
+              <p className="font-bold text-lg">
+                {result.simulado ? "Pago simulado" : "Pago aprobado"}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {result.simulado
+                  ? "Simulacion completada: no se realizo ningun cargo."
+                  : "Gracias, tu operacion fue completada."}
+              </p>
+              {result.simulado && (
+                <div className="w-full mt-3 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-[11px] font-semibold text-amber-800 text-left">
+                  Pago simulado — el cobro quedo registrado en la base como aprobado, pero no se
+                  realizo ningun cargo.
+                </div>
+              )}
 
               {/* El comercio y el monto van arriba y en cuerpo grande: es lo
                   unico que el pagador necesita confirmar de un vistazo. */}
@@ -575,6 +690,11 @@ function Checkout() {
               <Card className="p-6 shadow-xl border-0">
                 <div>
                   <Label>Metodo de pago</Label>
+                  {metodosDisponibles.length === 0 ? (
+                    <p className="mt-1.5 rounded-lg border border-black-100 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
+                      No hay metodos de pago habilitados para este link. Contacta al comercio.
+                    </p>
+                  ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
                     {metodosDisponibles.map((m) => (
                       <button
@@ -590,9 +710,10 @@ function Checkout() {
                       </button>
                     ))}
                   </div>
+                  )}
                 </div>
 
-                {isCardMethod(method) ? (
+                {metodosDisponibles.length === 0 ? null : isCardMethod(method) ? (
                   <form
                     ref={cardFormRef}
                     className="mt-6 rounded-lg border border-black-100 bg-[color:var(--brand-soft)] p-4"
@@ -725,7 +846,7 @@ function Checkout() {
                   <Input className="mt-1" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com" />
                 </div>
 
-                <BtnPrimary className="w-full mt-6 h-12 text-sm" onClick={pagar} disabled={processing}>
+                <BtnPrimary className="w-full mt-6 h-12 text-sm" onClick={pagar} disabled={processing || metodosDisponibles.length === 0}>
                   {processing ? (
                     <>
                       <Loader2 size={16} className="animate-spin" /> Procesando…
@@ -734,6 +855,31 @@ function Checkout() {
                     `Pagar ${formatARS(parseFloat(montoPagar.replace(",", ".")))}`
                   )}
                 </BtnPrimary>
+
+                {/*
+                  Boton de simulacion: registra el cobro en la base como
+                  aprobado sin llamar a la pasarela, para probar el flujo
+                  completo (comprobante, movimiento, lotes) sin tarjeta ni
+                  sandbox de Payway. El backend lo responde con 404 en
+                  produccion, asi que aunque aparezca nunca simula un cobro
+                  contra datos reales.
+                */}
+                <button
+                  type="button"
+                  onClick={simular}
+                  disabled={processing}
+                  className="w-full mt-3 h-11 text-sm rounded-lg border-2 border-dashed border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {processing ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" /> Simulando…
+                    </>
+                  ) : (
+                    <>
+                      <FlaskConical size={15} /> Simular pago (solo test)
+                    </>
+                  )}
+                </button>
 
                 <p className="text-[11px] text-center text-muted-foreground mt-3 flex items-center justify-center gap-1">
                   <Lock size={11} /> Tus datos se transmiten cifrados

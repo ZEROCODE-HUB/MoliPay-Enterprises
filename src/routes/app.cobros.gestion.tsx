@@ -20,11 +20,11 @@ import {
   eliminarLoteDB,
   getLegajoUsuario,
   generateId,
-  toResolvableLinkPagoUrl,
   type LoteEstado,
   type Lote,
   type RegistroDeLote,
 } from "@/data/cobros-masivos";
+import { buildResolvableUrl, toResolvableLinkPagoUrl } from "@/lib/pay-url";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -536,7 +536,7 @@ function GestionLotes() {
         const copyLink = async (url: string) => {
           try {
             const code = url.split("/").pop();
-            const resolvable = code ? `${window.location.origin}/p/${code}` : toResolvableLinkPagoUrl(url);
+            const resolvable = code ? buildResolvableUrl(code) : toResolvableLinkPagoUrl(url);
             await navigator.clipboard.writeText(resolvable);
             toast.success("Link copiado al portapapeles");
           } catch {

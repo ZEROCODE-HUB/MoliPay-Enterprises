@@ -30,11 +30,11 @@ import {
   reanudarLoteDB,
   eliminarLoteDB,
   getLegajoUsuario,
-  toResolvableLinkPagoUrl,
   type Lote,
   type RegistroDeLote,
   type MedioPago,
 } from "@/data/cobros-masivos";
+import { buildResolvableUrl, toResolvableLinkPagoUrl } from "@/lib/pay-url";
 import * as XLSX from "xlsx";
 
 export const Route = createFileRoute("/app/cobros/lote/$id")({
@@ -201,10 +201,10 @@ function DetalleLote() {
   };
 
   const copyLink = (url: string) => {
-    // Misma lógica resoluble que Links de Pago → Productos (window.location.origin/p/CODE)
+    // Resoluble real usando @/lib/pay-url (VITE_APP_URL > window.location.origin).
     const code = url.split("/").pop();
-    const resolvable = code ? `${window.location.origin}/p/${code}` : url;
-    navigator.clipboard.writeText(resolvable || toResolvableLinkPagoUrl(url));
+    const resolvable = code ? buildResolvableUrl(code) : toResolvableLinkPagoUrl(url);
+    navigator.clipboard.writeText(resolvable);
     toast.success("Link copiado al portapapeles");
   };
 

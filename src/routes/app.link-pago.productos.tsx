@@ -15,6 +15,7 @@ import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { paymentMethods, formatARS, type Product, type PaymentLink } from "@/data/links-pago";
 import { requireSupabase } from "@/lib/supabase";
+import { buildResolvableUrl } from "@/lib/pay-url";
 
 export const Route = createFileRoute("/app/link-pago/productos")({ component: Page });
 
@@ -247,9 +248,8 @@ function Page() {
     }
     const selectedComercio = userComercios.find(c => c.id === selectedComercioId);
     const code = "LP-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-    // Dominio homologado: usa el origen actual (Vercel) -> /p/<code> . Se cambiara a PAY_DOMAIN cuando exista via VITE_PAY_URL.
-    const baseUrl = (import.meta.env.VITE_PAY_URL as string) || window.location.origin;
-    const url = `${baseUrl.replace(/\/$/, "")}/p/${code}`;
+    // URL resoluble real: VITE_APP_URL > VITE_PAY_URL > window.location.origin (ver @/lib/pay-url).
+    const url = buildResolvableUrl(code);
     const monto = selProducts.reduce((a, p) => a + p.price * p.qty, 0);
     const insertLink = {
       cliente_legajo: legajo,

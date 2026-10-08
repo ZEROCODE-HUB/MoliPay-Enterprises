@@ -13,6 +13,7 @@ import {
   Eye,
   X,
   Percent,
+  CheckCircle2,
 } from "lucide-react";
 import {
   PageHeader,
@@ -66,12 +67,16 @@ type LoteVenta = {
 
 type LoteAcredDetalle = {
   id: string;
+  fullId?: string;
   fecha: string;
+  fechaAcreditacion?: string;
+  fechaCobroReal?: string | null;
   bandera: string;
   cantidadOperaciones: number;
   importeNeto: number;
   comisionCierrePct: number | null;
   comisionCierreMonto: number | null;
+  estado?: string;
 };
 
 type ComisionBandera = {
@@ -131,7 +136,7 @@ function addDays(date: Date, days: number) {
   return d;
 }
 
-type TabSeccion = "calendario" | "tickets" | "lotes-venta" | "comisiones";
+type TabSeccion = "calendario" | "tickets" | "lotes-venta" | "comisiones" | "acreditaciones";
 
 function Liquidaciones() {
   const [loading, setLoading] = useState(true);
@@ -139,10 +144,12 @@ function Liquidaciones() {
   const [porAcreditar, setPorAcreditar] = useState(0);
   const [disponible, setDisponible] = useState(0);
   const [dias, setDias] = useState<DiaAcreditacion[]>([]);
+  const [diasAcreditados, setDiasAcreditados] = useState<DiaAcreditacion[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [lotesVenta, setLotesVenta] = useState<LoteVenta[]>([]);
   const [lotesAcredDetalle, setLotesAcredDetalle] = useState<LoteAcredDetalle[]>([]);
+  const [lotesAcreditados, setLotesAcreditados] = useState<LoteAcredDetalle[]>([]);
   const [comisiones, setComisiones] = useState<ComisionBandera[]>([]);
   const [impuestos, setImpuestos] = useState<Impuesto[]>([]);
   const [excepciones, setExcepciones] = useState<Excepcion[]>([]);
@@ -155,6 +162,8 @@ function Liquidaciones() {
   const [tickPageSize, setTickPageSize] = useState(10);
   const [ventaPage, setVentaPage] = useState(1);
   const [ventaPageSize, setVentaPageSize] = useState(10);
+  const [acredPage, setAcredPage] = useState(1);
+  const [acredPageSize, setAcredPageSize] = useState(10);
 
   // form
   const [open, setOpen] = useState(false);
@@ -175,6 +184,54 @@ function Liquidaciones() {
     (ventaPage - 1) * ventaPageSize,
     ventaPage * ventaPageSize,
   );
+  // "Acreditaciones" lista los lotes ya acreditados con su fecha de
+  // resolución. Ordenamos por fecha de resolución desc para que el más
+  // reciente quede arriba.
+  const acredSorted = useMemo(
+    () =>
+      [...lotesAcreditados].sort((a, b) => {
+        const fa = a.fechaAcreditacion ?? a.fecha;
+        const fb = b.fechaAcreditacion ?? b.fecha;
+        return fb.localeCompare(fa);
+      }),
+    [lotesAcreditados],
+  );
+  const acredTotalPages = Math.max(1, Math.ceil(acredSorted.length / acredPageSize));
+  const acredPaginated = acredSorted.slice(
+    (acredPage - 1) * acredPageSize,
+    acredPage * acredPageSize,
+  );
+
+  /**
+   * Mapa fecha (YYYY-MM-DD) → ticket activo. La UI del calendario lo
+   * usa para pintar el badge "Adelanto en curso" y cambiar el botón
+   * "Adelantar" por "Ver ticket" cuando ya hay un ticket cubriendo
+   * ese lote. Se recomputa solo cuando `tickets` cambia.
+   *
+   * Estados que cuentan como "compromiso en curso" para el lote:
+   *   - Pendiente: el comercio pidió, aún no fue revisado
+   *   - Aprobado:  el admin cargó TEM, falta Acreditar
+   *   - Acreditado: el admin ya pagó, se repone al liquidar el lote
+   *
+   * Si hay más de un ticket para la misma fecha, conservamos el más
+   * "comprometido" (Acreditado > Aprobado > Pendiente) para no perder
+   * estado al re-renderizar.
+   */
+  const ticketPorFecha = useMemo<Record<string, Ticket>>(() => {
+    const mapa: Record<string, Ticket> = {};
+    const orden = { pendiente: 0, aprobado: 1, acreditado: 2 } as Record<string, number>;
+    for (const t of tickets) {
+      const fechaKey = (t.fechaAcreditacion || t.fecha || "").slice(0, 10);
+      if (!fechaKey) continue;
+      const estadoNorm = t.estado.toLowerCase();
+      if (!(estadoNorm in orden)) continue;
+      const previo = mapa[fechaKey];
+      if (!previo || orden[estadoNorm] > (orden[previo.estado.toLowerCase()] ?? -1)) {
+        mapa[fechaKey] = t;
+      }
+    }
+    return mapa;
+  }, [tickets]);
 
   const totalSeleccionado = useMemo(() => {
     if (!selectedDate) return porAcreditar;
@@ -190,7 +247,15 @@ function Liquidaciones() {
         const sb = requireSupabase();
         const { data: u } = await sb.auth.getUser();
         const mail = u.user?.email ?? null;
+
+        // 0) Resolver el legajo y el comercioId del usuario logueado.
+        //    Traemos ambos valores de una vez: clientes.legajo para
+        //    las tablas indexadas por legajo, y comercios.id (UUID)
+        //    para las indexadas por comercio_id. Las RLS no siempre
+        //    restringen por usuario en estas tablas, así que el
+        //    filtrado en el front es obligatorio.
         let legajo: string | null = null;
+        let comercioId: string | null = null;
         if (mail) {
           const { data: cli } = await sb
             .from("clientes")
@@ -198,9 +263,19 @@ function Liquidaciones() {
             .eq("correo", mail)
             .maybeSingle();
           legajo = cli?.legajo ?? null;
+
+          if (legajo) {
+            const { data: com } = await sb
+              .from("comercios")
+              .select("id")
+              .eq("legajo", legajo)
+              .maybeSingle();
+            comercioId = com?.id ?? null;
+          }
         }
 
-        // 1) Falta cobrar: suma de lote_registros pendientes/vencidos del cliente
+        // 1) Falta cobrar: suma de lote_registros pendientes/vencidos
+        //    del cliente. Filtra por legajo (ya estaba bien).
         let falta = 0;
         if (legajo) {
           const { data: lotes } = await sb
@@ -222,30 +297,46 @@ function Liquidaciones() {
           }
         }
 
-        // 2) Por acreditar: lotes_acreditacion no resueltos del comercio.
-        //    importe_neto ya neto de impuestos y comisiones. RLS filtra por
-        //    comercio del usuario autenticado.
+        // 2) Lotes de acreditación del comercio logueado. Filtramos
+        //    por comercio_id explícitamente (no por RLS) y separamos
+        //    los pendientes (calendario futuro) de los ya Acreditados
+        //    (historial), porque un lote Acreditado no es "por acreditar".
         let acreditar = 0;
         let disp = 0;
         const ticketsReal: Ticket[] = [];
         const porDia: Record<string, { monto: number; cantidad: number }> = {};
+        const porDiaAcreditado: Record<string, { monto: number; cantidad: number }> = {};
         let acredDetalle: LoteAcredDetalle[] = [];
+        let acredListado: LoteAcredDetalle[] = [];
 
-        if (mail) {
+        if (comercioId) {
           const { data: loteRows } = await sb
             .from("lotes_acreditacion")
             .select(
-              "id, fecha, cantidad_operaciones, importe_neto, estado, comision_cierre_lote_pct, comision_cierre_lote_monto, bandera",
-            );
-          const pendientes = (loteRows ?? []).filter(
-            (l: any) => l.estado !== "Acreditado" && l.estado !== "Rechazado",
-          );
-          acreditar = pendientes.reduce((s: number, l: any) => s + Number(l.importe_neto ?? 0), 0);
+              "id, fecha, cantidad_operaciones, importe_neto, estado, comision_cierre_lote_pct, comision_cierre_lote_monto, bandera, fecha_resolucion, fecha_cobro_real",
+            )
+            .eq("comercio_id", comercioId);
 
-          // Detalle de lotes de acreditación (para comisión de cierre)
-          acredDetalle = (loteRows ?? []).map((l: any) => ({
+          const rows = (loteRows ?? []) as any[];
+          const pendientes = rows.filter(
+            (l) => l.estado !== "Acreditado" && l.estado !== "Rechazado" && l.estado !== "Cancelado",
+          );
+          const acreditados = rows.filter((l) => l.estado === "Acreditado");
+          // KPI "Por acreditar": solo los pendientes (los Acreditados ya están pagados).
+          acreditar = pendientes.reduce((s, l) => s + Number(l.importe_neto ?? 0), 0);
+
+          // Detalle completo de TODOS los lotes (para que el operador
+          // pueda ver también el historial de los Acreditados al
+          // seleccionar una fecha).
+          acredDetalle = rows.map((l) => ({
             id: String(l.id).slice(0, 8).toUpperCase(),
+            fullId: l.id,
             fecha: (l.fecha ?? "").slice(0, 10),
+            fechaAcreditacion:
+              l.fecha_resolucion != null
+                ? new Date(l.fecha_resolucion).toISOString().slice(0, 10)
+                : "",
+            fechaCobroReal: l.fecha_cobro_real ?? null,
             bandera: l.bandera ?? "—",
             cantidadOperaciones: Number(l.cantidad_operaciones ?? 0),
             importeNeto: Number(l.importe_neto ?? 0),
@@ -253,32 +344,60 @@ function Liquidaciones() {
               l.comision_cierre_lote_pct != null ? Number(l.comision_cierre_lote_pct) : null,
             comisionCierreMonto:
               l.comision_cierre_lote_monto != null ? Number(l.comision_cierre_lote_monto) : null,
+            estado: l.estado,
           }));
+          acredListado = acredDetalle.filter((l) => l.estado === "Acreditado");
 
-          // Calendario real: fecha de cada lote pendiente
-          pendientes.forEach((l: any) => {
+          // Calendario de próximas acreditaciones.
+          pendientes.forEach((l) => {
             const fecha = (l.fecha ?? "").slice(0, 10);
             if (!fecha) return;
             if (!porDia[fecha]) porDia[fecha] = { monto: 0, cantidad: 0 };
             porDia[fecha].monto += Number(l.importe_neto ?? 0);
             porDia[fecha].cantidad += Number(l.cantidad_operaciones ?? 0);
           });
+          // Calendario de acreditaciones pasadas (para mostrar el
+          // historial de pagos confirmados).
+          acreditados.forEach((l) => {
+            const fecha = (l.fecha ?? "").slice(0, 10);
+            if (!fecha) return;
+            if (!porDiaAcreditado[fecha]) porDiaAcreditado[fecha] = { monto: 0, cantidad: 0 };
+            porDiaAcreditado[fecha].monto += Number(l.importe_neto ?? 0);
+            porDiaAcreditado[fecha].cantidad += Number(l.cantidad_operaciones ?? 0);
+          });
 
-          // 3) Adelantos del comercio (RLS): historial + monto reservado
+          // 3) Adelantos del propio comercio. Filtro por comercio_id.
           const { data: adelRows } = await sb
             .from("adelantos")
             .select(
-              "id, monto_solicitado, monto_por_acreditar, fecha_acreditacion, estado, motivo, fecha_solicitud, created_at, tasa_interes_pct, plazo_adelantado_dias",
+              "id, monto_solicitado, monto_por_acreditar, fecha_acreditacion, estado, motivo, fecha_solicitud, created_at, tasa_interes_pct, plazo_adelantado_dias, fecha_resolucion",
+            )
+            .eq("comercio_id", comercioId);
+
+          // El "Disponible para adelanto" sale de la RPC `fn_calcular_tope_disponible`
+          // (fuente única de verdad). Si la RPC no existe todavía (migración
+          // no aplicada), caemos al cálculo JS para no romper la pantalla.
+          try {
+            const { data: topeRpc, error: rpcError } = await sb.rpc(
+              "fn_calcular_tope_disponible",
+              { p_comercio_id: comercioId },
             );
-          const reservado = (adelRows ?? []).reduce(
-            (s: number, a: any) =>
-              s +
-              (a.estado === "Pendiente" || a.estado === "Aprobado"
-                ? Number(a.monto_solicitado ?? 0)
-                : 0),
-            0,
-          );
-          disp = Math.max(0, acreditar - reservado);
+            if (!rpcError) {
+              disp = Math.max(0, Number(topeRpc ?? 0));
+            } else {
+              throw new Error(rpcError.message);
+            }
+          } catch {
+            const reservado = (adelRows ?? []).reduce(
+              (s: number, a: any) =>
+                s +
+                (a.estado === "Pendiente" || a.estado === "Aprobado"
+                  ? Number(a.monto_solicitado ?? 0)
+                  : 0),
+              0,
+            );
+            disp = Math.max(0, acreditar - reservado);
+          }
 
           ticketsReal.push(
             ...((adelRows ?? []) as any[]).map((r: any) => ({
@@ -286,9 +405,9 @@ function Liquidaciones() {
               fullId: r.id,
               fecha: (r.fecha_solicitud ?? r.created_at ?? "").slice(0, 10),
               montoSolicitado: Number(r.monto_solicitado ?? 0),
-              montoPorAcreditar: Number(r.monto_por_acreditar ?? acreditar),
+              montoPorAcreditar: Number(r.monto_por_acreditar ?? 0),
               fechaAcreditacion: (r.fecha_acreditacion ?? "").slice(0, 10),
-              estado: (r.estado ?? "pendiente").toLowerCase() as TicketEstado,
+              estado: ((r.estado ?? "pendiente") as string).toLowerCase() as TicketEstado,
               motivo: r.motivo ?? undefined,
               tasaInteres: r.tasa_interes_pct != null ? Number(r.tasa_interes_pct) : null,
               plazoAdelantado:
@@ -297,13 +416,12 @@ function Liquidaciones() {
           );
         }
 
-        // 4) Lotes de venta (vista v_lotes_venta) — solo lectura
+        // 4) Lotes de venta — filtrado por comercio_id.
         let ventaRows: LoteVenta[] = [];
         try {
-          const { data: vRows } = await sb
-            .from("v_lotes_venta")
-            .select("*")
-            .order("fecha", { ascending: false });
+          let q = sb.from("v_lotes_venta").select("*").order("fecha", { ascending: false });
+          if (comercioId) q = q.eq("comercio_id", comercioId);
+          const { data: vRows } = await q;
           ventaRows = (vRows ?? []).map((r: any) => ({
             id: String(r.id ?? "")
               .slice(0, 8)
@@ -317,15 +435,13 @@ function Liquidaciones() {
             montoCobrado: Number(r.monto_cobrado ?? 0),
           }));
         } catch {
-          // v_lotesuede no existir aún; se muestra vacío
+          // v_lotes_venta puede no existir aún; se muestra vacío
         }
 
-        // 5) Comisiones por bandera y cuota (solo lectura)
+        // 5) Comisiones por bandera y cuota (filtradas por legajo,
+        //    ya estaba bien).
         let comisionesData: ComisionBandera[] = [];
         try {
-          // Filtrar por cliente_legajo del usuario logueado
-          // Basado en: detalle_reunion_revision_plataforma.md Seccion 3
-          // "El comercio debe poder ver sus propias tasas por bandeira/cuota"
           const { data: cbRows } = await sb
             .from("comercio_banderas")
             .select("id, bandera, estado")
@@ -345,7 +461,7 @@ function Liquidaciones() {
             }));
           }
         } catch {
-          // Tablas aún no creadas (pendiente Prompt A)
+          // Tablas aún no creadas
         }
 
         // 6) Impuestos externos + excepciones del comercio
@@ -366,7 +482,6 @@ function Liquidaciones() {
             estado: r.estado ?? "Activo",
           }));
 
-          // Excepciones activas del comercio
           if (legajo) {
             const { data: excRows } = await sb
               .from("dc_excepciones")
@@ -390,6 +505,7 @@ function Liquidaciones() {
         setPorAcreditar(acreditar);
         setDisponible(disp);
         setLotesAcredDetalle(acredDetalle);
+        setLotesAcreditados(acredListado);
         setLotesVenta(ventaRows);
         setComisiones(comisionesData);
         setImpuestos(impuestosData);
@@ -403,6 +519,15 @@ function Liquidaciones() {
             cantidad: v.cantidad,
           }));
         setDias(diasArr);
+        const acredArr: DiaAcreditacion[] = Object.entries(porDiaAcreditado)
+          .sort(([a], [b]) => b.localeCompare(a)) // más reciente primero
+          .map(([date, v]) => ({
+            date,
+            label: fmtDate(date),
+            monto: v.monto,
+            cantidad: v.cantidad,
+          }));
+        setDiasAcreditados(acredArr);
         setTickets(ticketsReal);
       } catch (e) {
         console.error(e);
@@ -511,39 +636,6 @@ function Liquidaciones() {
       toast.success("Adelanto cancelado correctamente");
     } catch (e: any) {
       toast.error(e?.message ?? "No se pudo cancelar el adelantar");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAceptar = async (adelantoId?: string) => {
-    if (!adelantoId) {
-      toast.error("No se pudo identificar el adelanto");
-      return;
-    }
-    setSaving(true);
-    try {
-      const sb = requireSupabase();
-      const { data, error } = await sb.rpc("confirmar_adelanto", {
-        p_adelanto_id: adelantoId,
-      });
-      if (error) throw new Error(error.message);
-      const row = data as any;
-      setTickets((prev) =>
-        prev.map((t) =>
-          t.fullId === adelantoId
-            ? { ...t, estado: (row?.estado ?? "acreditado").toLowerCase() as TicketEstado }
-            : t,
-        ),
-      );
-      setDetalle((prev) =>
-        prev && prev.fullId === adelantoId
-          ? { ...prev, estado: (row?.estado ?? "acreditado").toLowerCase() as TicketEstado }
-          : null,
-      );
-      toast.success("Oferta aceptada — el adelanto pasa a estado Acreditado");
-    } catch (e: any) {
-      toast.error(e?.message ?? "No se pudo aceptar el adelantar");
     } finally {
       setSaving(false);
     }
@@ -710,8 +802,8 @@ function Liquidaciones() {
           </div>
         </Card>
         <Card className="bg-gradient-to-br from-navy-50 to-card border-navy-100">
-          <div className="flex items-start justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
               <div className="text-xs uppercase tracking-wider text-navy-600 flex items-center gap-1.5">
                 <CalendarDays size={12} /> Disponible para adelanto
               </div>
@@ -721,6 +813,41 @@ function Liquidaciones() {
               <div className="text-xs text-muted-foreground mt-1">
                 Por acreditar menos adelantos en curso
               </div>
+              {/* Resta transparente: muestra cómo se compone el disponible */}
+              {(() => {
+                const totalTicketsActivos = tickets
+                  .filter((t) => {
+                    const e = t.estado.toLowerCase();
+                    return e === "pendiente" || e === "aprobado";
+                  })
+                  .reduce((s, t) => s + t.montoSolicitado, 0);
+                if (porAcreditar <= 0 && totalTicketsActivos <= 0) return null;
+                return (
+                  <div className="mt-2 text-[11px] text-navy-700/80 space-y-0.5 border-t border-navy-100 pt-2">
+                    <div className="flex justify-between">
+                      <span>Por acreditar total</span>
+                      <span className="font-mono">{formatARS(porAcreditar)}</span>
+                    </div>
+                    {totalTicketsActivos > 0 && (
+                      <div className="flex justify-between">
+                        <span>
+                          (-) Adelantos en curso{" "}
+                          <span className="text-muted-foreground">
+                            ({tickets.filter((t) => ["pendiente", "aprobado"].includes(t.estado.toLowerCase())).length})
+                          </span>
+                        </span>
+                        <span className="font-mono text-amber-700">
+                          - {formatARS(totalTicketsActivos)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t border-navy-100 pt-0.5 font-semibold">
+                      <span>Disponible real</span>
+                      <span className="font-mono">{formatARS(disponible)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
             <BtnPrimary className="shrink-0" onClick={openGeneral}>
               <ArrowUpRight size={14} /> Solicitar
@@ -755,6 +882,21 @@ function Liquidaciones() {
             {tickets.length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 rounded-full bg-muted text-[10px] font-semibold">
                 {tickets.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("acreditaciones")}
+            className={`flex-1 px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+              activeTab === "acreditaciones"
+                ? "border-b-2 border-primary text-primary bg-muted/30"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
+            }`}
+          >
+            <CheckCircle2 size={15} /> Acreditaciones
+            {lotesAcreditados.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold">
+                {lotesAcreditados.length}
               </span>
             )}
           </button>
@@ -819,6 +961,30 @@ function Liquidaciones() {
                   {calPaginated.map((d) => {
                     const active = selectedDate === d.date;
                     const pct = porAcreditar > 0 ? Math.round((d.monto / porAcreditar) * 100) : 0;
+                    const ticketActivo = ticketPorFecha[d.date];
+                    const estadoTkt = ticketActivo?.estado.toLowerCase();
+                    // Tonos según el estado del ticket que cubre este día
+                    const tktTone: "sky" | "amber" | "emerald" | null =
+                      estadoTkt === "acreditado"
+                        ? "emerald"
+                        : estadoTkt === "aprobado"
+                          ? "amber"
+                          : estadoTkt === "pendiente"
+                            ? "sky"
+                            : null;
+                    const tktLabel =
+                      estadoTkt === "acreditado"
+                        ? "Adelanto Acreditado"
+                        : estadoTkt === "aprobado"
+                          ? "Adelanto Aprobado"
+                          : estadoTkt === "pendiente"
+                            ? "Adelanto Pendiente"
+                            : null;
+                    // Remanente libre: lo que queda del lote después de
+                    // restar el monto del ticket activo.
+                    const remanente = ticketActivo
+                      ? Math.max(0, d.monto - ticketActivo.montoSolicitado)
+                      : d.monto;
                     return (
                       <button
                         key={d.date}
@@ -826,7 +992,13 @@ function Liquidaciones() {
                         className={`text-left rounded-lg border p-3 transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20 ${
                           active
                             ? "bg-navy-50 border-navy-200 ring-1 ring-navy-200"
-                            : "bg-card hover:bg-muted/50"
+                            : tktTone === "emerald"
+                              ? "bg-emerald-50/50 border-emerald-200"
+                              : tktTone === "amber"
+                                ? "bg-amber-50/50 border-amber-200"
+                                : tktTone === "sky"
+                                  ? "bg-sky-50/50 border-sky-200"
+                                  : "bg-card hover:bg-muted/50"
                         }`}
                       >
                         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -849,9 +1021,35 @@ function Liquidaciones() {
                             style={{ width: `${Math.min(100, pct)}%` }}
                           />
                         </div>
-                        <div className="text-[11px] text-primary font-semibold mt-2 flex items-center gap-1">
-                          <Plus size={11} /> Adelantar
-                        </div>
+                        {ticketActivo ? (
+                          <>
+                            <div
+                              className={
+                                "text-[11px] font-semibold mt-2 flex items-center gap-1 " +
+                                (tktTone === "emerald"
+                                  ? "text-emerald-700"
+                                  : tktTone === "amber"
+                                    ? "text-amber-700"
+                                    : "text-sky-700")
+                              }
+                            >
+                              <span>●</span>
+                              <span className="truncate">
+                                {tktLabel} ({formatARS(ticketActivo.montoSolicitado)})
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5">
+                              Remanente libre: {formatARS(remanente)}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground font-semibold mt-1.5 flex items-center gap-1">
+                              <Eye size={11} /> Ver ticket {ticketActivo.id}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-[11px] text-primary font-semibold mt-2 flex items-center gap-1">
+                            <Plus size={11} /> Adelantar
+                          </div>
+                        )}
                       </button>
                     );
                   })}
@@ -997,6 +1195,62 @@ function Liquidaciones() {
               <span className="w-2 h-2 rounded-full bg-amber-500 ml-3" /> Falta cobrar no está en
               este calendario (es previo al cobro)
             </div>
+
+            {/* Historial de días ya acreditados (lotes Acreditado). No son
+                "por acreditar" pero el operador los ve para confirmar
+                que el dinero está en su subcuenta Operativa. */}
+            {diasAcreditados.length > 0 && (
+              <div className="mt-4 border-t pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 size={14} className="text-emerald-600" />
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Historial acreditado
+                    </h4>
+                    <Badge tone="success">{diasAcreditados.length} días</Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Total:{" "}
+                    <span className="font-mono font-semibold text-emerald-700">
+                      {formatARS(
+                        diasAcreditados.reduce((s, d) => s + Number(d.monto ?? 0), 0),
+                      )}
+                    </span>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b text-muted-foreground">
+                        <th className="text-left py-1.5">Fecha estimada</th>
+                        <th className="text-right py-1.5">Operaciones</th>
+                        <th className="text-right py-1.5">Importe neto</th>
+                        <th className="text-center py-1.5">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {diasAcreditados.map((d) => (
+                        <tr key={d.date}>
+                          <td className="py-1.5">{fmtDateFull(d.date)}</td>
+                          <td className="py-1.5 text-right font-mono tabular-nums">
+                            {d.cantidad}
+                          </td>
+                          <td className="py-1.5 text-right font-mono tabular-nums font-semibold text-emerald-700">
+                            {formatARS(d.monto)}
+                          </td>
+                          <td className="py-1.5 text-center">
+                            <Badge tone="success">Acreditado</Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  Estos importes ya fueron depositados en tu subcuenta Operativa.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -1113,6 +1367,140 @@ function Liquidaciones() {
                     className="h-8 px-3 text-xs"
                     disabled={tickPage >= tickTotalPages}
                     onClick={() => setTickPage(tickTotalPages)}
+                  >
+                    Último
+                  </BtnOutline>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab: Acreditaciones (historial de lotes ya Acreditados) */}
+        {activeTab === "acreditaciones" && (
+          <div>
+            <div className="px-5 py-3 border-b flex items-center justify-between gap-3">
+              <div className="text-xs text-muted-foreground">
+                Lotes que ya fueron acreditados a tu subcuenta Operativa (estado{" "}
+                <Badge tone="success">Acreditado</Badge>). Suma:{" "}
+                <span className="font-mono font-semibold text-emerald-700">
+                  {formatARS(
+                    lotesAcreditados.reduce((s, l) => s + Number(l.importeNeto ?? 0), 0),
+                  )}
+                </span>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
+                    <th className="text-left px-5 py-3">Lote</th>
+                    <th className="text-left px-5 py-3">Bandera</th>
+                    <th className="text-right px-5 py-3">Operaciones</th>
+                    <th className="text-right px-5 py-3">Importe neto</th>
+                    <th className="text-left px-5 py-3">Fecha estimada</th>
+                    <th className="text-left px-5 py-3">Cobro real</th>
+                    <th className="text-left px-5 py-3">Acreditado el</th>
+                    <th className="text-center px-5 py-3">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {acredSorted.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={8}
+                        className="px-5 py-10 text-center text-sm text-muted-foreground"
+                      >
+                        Aún no tenés acreditaciones registradas.
+                      </td>
+                    </tr>
+                  ) : (
+                    acredPaginated.map((l) => (
+                      <tr key={l.fullId ?? l.id} className="hover:bg-muted/30">
+                        <td className="px-5 py-3 font-mono font-semibold">{l.id}</td>
+                        <td className="px-5 py-3">
+                          <Badge tone="neutral">{l.bandera}</Badge>
+                        </td>
+                        <td className="px-5 py-3 text-right font-mono tabular-nums">
+                          {l.cantidadOperaciones}
+                        </td>
+                        <td className="px-5 py-3 text-right font-mono tabular-nums font-semibold text-emerald-700">
+                          {formatARS(l.importeNeto)}
+                        </td>
+                        <td className="px-5 py-3 text-xs">{fmtDateFull(l.fecha)}</td>
+                        <td className="px-5 py-3 text-xs">
+                          {l.fechaCobroReal ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono">{fmtDateFull(l.fechaCobroReal)}</span>
+                              <Badge tone="success">real</Badge>
+                            </div>
+                          ) : (
+                            <Badge tone="neutral">est.</Badge>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-xs font-mono">
+                          {l.fechaAcreditacion ? fmtDateFull(l.fechaAcreditacion) : "—"}
+                        </td>
+                        <td className="px-5 py-3 text-center">
+                          <Badge tone="success">Acreditado</Badge>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {acredSorted.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-3 border-t">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>Filas por página:</span>
+                  <select
+                    className="h-8 px-2 rounded border bg-card text-xs"
+                    value={acredPageSize}
+                    onChange={(e) => {
+                      setAcredPageSize(Number(e.target.value));
+                      setAcredPage(1);
+                    }}
+                  >
+                    {ROWS_OPTIONS.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                  <span>
+                    {`${(acredPage - 1) * acredPageSize + 1}–${Math.min(acredPage * acredPageSize, acredSorted.length)} de ${acredSorted.length}`}
+                  </span>
+                </div>
+                <div className="flex gap-1">
+                  <BtnOutline
+                    className="h-8 px-3 text-xs"
+                    disabled={acredPage <= 1}
+                    onClick={() => setAcredPage(1)}
+                  >
+                    Primero
+                  </BtnOutline>
+                  <BtnOutline
+                    className="h-8 px-3 text-xs"
+                    disabled={acredPage <= 1}
+                    onClick={() => setAcredPage((p) => Math.max(1, p - 1))}
+                  >
+                    Anterior
+                  </BtnOutline>
+                  <span className="flex items-center px-3 text-xs text-muted-foreground">
+                    {acredPage} / {acredTotalPages}
+                  </span>
+                  <BtnOutline
+                    className="h-8 px-3 text-xs"
+                    disabled={acredPage >= acredTotalPages}
+                    onClick={() => setAcredPage((p) => Math.min(acredTotalPages, p + 1))}
+                  >
+                    Siguiente
+                  </BtnOutline>
+                  <BtnOutline
+                    className="h-8 px-3 text-xs"
+                    disabled={acredPage >= acredTotalPages}
+                    onClick={() => setAcredPage(acredTotalPages)}
                   >
                     Último
                   </BtnOutline>
@@ -1413,17 +1801,37 @@ function Liquidaciones() {
                       <Wallet size={14} /> Tu adelanto disponible
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Monto máximo para adelantar</span>
+                      <span className="text-muted-foreground">Por acreditar total</span>
+                      <span className="font-mono">{formatARS(porAcreditar)}</span>
+                    </div>
+                    {(() => {
+                      const reservados = tickets
+                        .filter((t) => ["pendiente", "aprobado"].includes(t.estado.toLowerCase()))
+                        .reduce((s, t) => s + t.montoSolicitado, 0);
+                      if (reservados > 0) {
+                        return (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              (-) Adelantos en curso
+                            </span>
+                            <span className="font-mono text-amber-700">
+                              - {formatARS(reservados)}
+                            </span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                    <div className="flex justify-between border-t border-emerald-200 pt-1">
+                      <span className="text-muted-foreground font-semibold">
+                        Disponible real
+                      </span>
                       <span className="font-mono font-bold text-emerald-700 text-sm">
                         {formatARS(disponible)}
                       </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Por acreditar total</span>
-                      <span className="font-mono">{formatARS(porAcreditar)}</span>
-                    </div>
                     {selectedDate && (
-                      <div className="flex justify-between">
+                      <div className="flex justify-between pt-1 border-t border-emerald-200">
                         <span className="text-muted-foreground">Día seleccionado</span>
                         <span className="font-semibold">
                           {fmtDateFull(selectedDate)} · {formatARS(totalSeleccionado)}
@@ -1537,55 +1945,62 @@ function Liquidaciones() {
               {detalle.estado === "aprobado" && (
                 <div className="bg-emerald-50 border border-emerald-200 rounded-md p-3 text-xs space-y-1">
                   <div className="flex items-center gap-1.5 text-emerald-700 font-medium mb-1">
-                    <TrendingUp size={14} /> Condiciones de la oferta
+                    <TrendingUp size={14} /> Oferta del administrador
                   </div>
-                  {detalle.tasaInteres != null && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tasa de interés (TEM)</span>
-                      <span className="font-mono font-bold text-emerald-700">
-                        {detalle.tasaInteres}%
-                      </span>
-                    </div>
-                  )}
-                  {detalle.plazoAdelantado != null && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Plazo adelantado</span>
-                      <span className="font-mono font-semibold">
-                        {detalle.plazoAdelantado} días
-                      </span>
-                    </div>
-                  )}
-                  {detalle.tasaInteres != null && (
-                    <div className="flex justify-between pt-1 border-t border-emerald-200">
-                      <span className="text-muted-foreground">Monto a devolver (est.)</span>
-                      <span className="font-mono font-bold">
-                        {formatARS(detalle.montoSolicitado * (1 + detalle.tasaInteres / 100))}
-                      </span>
-                    </div>
-                  )}
+                  <p className="text-[11px] text-emerald-900/80 mb-2">
+                    Si estás conforme con la tasa, no hace falta confirmar: el
+                    administrador procesará el pago en breve y vas a ver el neto
+                    acreditado en tu Saldo Disponible.
+                  </p>
+                  {detalle.tasaInteres != null && (() => {
+                    // Regla de negocio: TEM = Tasa Efectiva Mensual.
+                    // Interés = monto_solicitado * TEM / 100
+                    // Neto a recibir = monto_solicitado - Interés
+                    const tem = detalle.tasaInteres;
+                    const interes = Math.round(detalle.montoSolicitado * tem) / 100;
+                    const neto = Math.max(0, detalle.montoSolicitado - interes);
+                    const tna = tem * 12;
+                    return (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Monto solicitado</span>
+                          <span className="font-mono font-semibold">
+                            {formatARS(detalle.montoSolicitado)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Tasa de interés (TEM)</span>
+                          <span className="font-mono font-bold text-emerald-700">
+                            {tem}%
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Costo financiero (interés)</span>
+                          <span className="font-mono font-semibold text-red-600">
+                            - {formatARS(interes)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between pt-1 border-t border-emerald-200">
+                          <span className="text-muted-foreground">Neto a recibir</span>
+                          <span className="font-mono font-bold text-emerald-700">
+                            {formatARS(neto)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">TNA equivalente</span>
+                          <span className="font-mono text-muted-foreground">
+                            {tna.toFixed(1)}%
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
               <div className="flex gap-2 pt-4">
                 <BtnOutline className="flex-1" onClick={() => setDetalle(null)}>
                   Cerrar
                 </BtnOutline>
-                {detalle.estado === "aprobado" && (
-                  <button
-                    className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-sm border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm font-semibold cursor-pointer hover:bg-emerald-100 active:bg-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 flex-1"
-                    disabled={saving}
-                    onClick={() => {
-                      if (
-                        confirm(
-                          "¿Confirmás la aceptación de esta oferta? El adelanto pasará a estado Acreditado.",
-                        )
-                      ) {
-                        handleAceptar(detalle.fullId);
-                      }
-                    }}
-                  >
-                    {saving ? "Aceptando…" : "Aceptar oferta"}
-                  </button>
-                )}
                 {(detalle.estado === "pendiente" || detalle.estado === "aprobado") && (
                   <button
                     className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-sm border border-red-200 bg-white text-red-600 text-sm font-semibold cursor-pointer hover:bg-red-50 active:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 flex-1"
@@ -1593,7 +2008,9 @@ function Liquidaciones() {
                     onClick={() => {
                       if (
                         confirm(
-                          "¿Seguro que querés cancelar este adelantado? Esta acción no se puede deshacer.",
+                          detalle.estado === "aprobado"
+                            ? "¿Rechazás la oferta del administrador? El adelanto pasará a Cancelado y se liberará el cupo reservado de tus lotes."
+                            : "¿Seguro que querés cancelar esta solicitud? Esta acción no se puede deshacer.",
                         )
                       ) {
                         handleCancel(detalle.fullId);

@@ -5,6 +5,7 @@ import { Card, Input, Label, BtnPrimary, BtnOutline, Badge, PageHeader } from "@
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
 import { requireSupabase } from "@/lib/supabase";
+import { buildQrPdvUrl } from "@/lib/pay-url";
 import QRCode from "qrcode";
 
 export const Route = createFileRoute("/app/qr/puntos-de-venta")({ component: Page });
@@ -230,7 +231,7 @@ function Page() {
     setDetallePd(p);
     setDetalleOpen(true);
     try {
-      const url = `${window.location.origin}/qr/pdv/${p.id}`;
+      const url = buildQrPdvUrl(p.id);
       const qr = await QRCode.toDataURL(url, { width: 280, margin: 2 });
       setQrDataUrl(qr);
     } catch {

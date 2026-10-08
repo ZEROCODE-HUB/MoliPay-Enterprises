@@ -34,6 +34,7 @@ const nav: NavItem[] = [
   { to: "/app/historial", label: "Historial", icon: History },
   { to: "/app/transferencias", label: "Transferir", icon: ArrowLeftRight },
   { to: "/app/subcuentas", label: "Subcuentas", icon: Wallet },
+  { to: "/app/mis-comercios", label: "Mis comercios", icon: Store },
   {
     label: "Link de pago",
     icon: Link2,

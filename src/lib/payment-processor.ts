@@ -27,6 +27,15 @@ export interface PaymentRequest {
   /** Codigo del link de pago. Es lo unico identificador que el backend acepta. */
   linkCode: string;
   metodo: string;
+  /**
+   * UUID de la fila de `comercio_banderas` que corresponde al metodo elegido.
+   *
+   * El backend resuelve el `metodo_key` (y el `payment_method_id` de Payway)
+   * a partir de este id; con el texto `metodo` solo puede fallar, porque el
+   * mismo metodo visible (ej. "visa-cred") puede no existir como `metodo_key`
+   * en el comercio.
+   */
+  banderaId?: string;
   monto: number;
   pagadorNombre: string;
   pagadorEmail: string;
@@ -68,10 +77,19 @@ export interface PaymentResult {
   paywayPaymentId?: string;
   /** Id del intento que genero este cobro. */
   siteTransactionId?: string;
+  /** true cuando el cobro fue simulado (el backend no llamo a Payway). */
+  simulated?: boolean;
 }
 
 export interface PaymentProcessor {
   process(req: PaymentRequest): Promise<PaymentResult>;
+  /**
+   * Simula un pago aprobado: mismo camino que `process` (mismo
+   * siteTransactionId e idempotencia) pero sin tokenizar ni llamar a la
+   * pasarela. El backend registra el cobro via RPC como si estuviera
+   * aprobado. Solo existe fuera de produccion (404 en prod).
+   */
+  simulate(req: PaymentRequest): Promise<PaymentResult>;
 }
 
 /** Estado especial: el cobro ocurrio pero el registro aun no esta confirmado. */
@@ -286,6 +304,60 @@ export class PaywayProcessor implements PaymentProcessor {
       monto: typeof data.amount === "number" ? data.amount : undefined,
       paywayPaymentId: data.paywayPaymentId != null ? String(data.paywayPaymentId) : undefined,
       siteTransactionId: data.siteTransactionId != null ? String(data.siteTransactionId) : undefined,
+    };
+  }
+
+  async simulate(req: PaymentRequest): Promise<PaymentResult> {
+    const api = backendUrl();
+    const fingerprint = this.fingerprint(req);
+    const session = this.sessionFor(fingerprint, req.linkCode);
+
+    let res: Response;
+    let data: Record<string, unknown>;
+    try {
+      res = await fetch(`${api}/api/payway/simulate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Site-Transaction-Id": session.siteTransactionId,
+        },
+        body: JSON.stringify({
+          linkCode: req.linkCode,
+          // El backend prefiere banderaId (UUID): con el metodo_key resuelve
+          // la bandera dentro del comercio del link. `method` queda como
+          // fallback si no hay bandera mapeada.
+          ...(req.banderaId ? { banderaId: req.banderaId } : { method: req.metodo }),
+          installments: req.cuotas ?? 1,
+          amount: req.monto,
+          siteTransactionId: session.siteTransactionId,
+          cardholder: {
+            name: req.pagadorNombre,
+            email: req.pagadorEmail,
+            ...(req.documento ? { identification: req.documento } : {}),
+          },
+        }),
+      });
+      data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    } catch {
+      this.close(fingerprint, session);
+      throw new Error("No pudimos conectar con el servidor de pagos. Reintenta en unos segundos.");
+    }
+
+    if (res.status === 202 || !res.ok || data.ok !== true) {
+      this.close(fingerprint, session);
+      const err = new Error(String(data.message ?? "No se pudo simular el pago"));
+      (err as Error & { status?: string }).status = String(data.status ?? "");
+      throw err;
+    }
+
+    this.close(fingerprint, session);
+    return {
+      id: String(data.pagoId ?? ""),
+      estado: String(data.status ?? "approved"),
+      monto: typeof data.amount === "number" ? data.amount : undefined,
+      paywayPaymentId: data.paywayPaymentId != null ? String(data.paywayPaymentId) : undefined,
+      siteTransactionId: data.siteTransactionId != null ? String(data.siteTransactionId) : undefined,
+      simulated: true,
     };
   }
 }
