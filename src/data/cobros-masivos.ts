@@ -1,11 +1,4 @@
 import { requireSupabase } from "@/lib/supabase";
-import {
-  buildResolvableUrl,
-  toResolvableLinkPagoUrl as toResolvableLinkPagoUrlShared,
-} from "@/lib/pay-url";
-
-// Re-export para mantener compatibilidad con imports existentes desde este módulo.
-export const toResolvableLinkPagoUrl = toResolvableLinkPagoUrlShared;
 
 // ===== Tipos principales =====
 export type LoteEstado =
@@ -109,8 +102,17 @@ export function formatARS(n: number) {
   }).format(n);
 }
 
-// toResolvableLinkPagoUrl se re-exporta desde @/lib/pay-url arriba.
-// Mantener imports existentes en otros archivos sin cambios.
+// Convierte URL de branding (https://pay.molly.com.ar/l/CODE) en URL resoluble (<origin>/p/CODE)
+// Misma lógica que Links de Pago → Productos (ver app.link-pago.productos.tsx:688)
+export function toResolvableLinkPagoUrl(brandingUrl: string): string {
+  if (!brandingUrl) return brandingUrl;
+  const code = brandingUrl.split("/").pop();
+  if (!code) return brandingUrl;
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}/p/${code}`;
+  }
+  return brandingUrl;
+}
 
 // ===== Catálogo de estados =====
 export const estadoCatalogo: Record<LoteEstado, { label: string; desc: string }> = {
@@ -416,13 +418,14 @@ export async function iniciarLoteDB(
 
     if (regsSinLink.length === 0) return { ok: true, linksCount: 0 };
 
-    // URL resoluble: VITE_APP_URL > VITE_PAY_URL > window.location.origin (ver @/lib/pay-url).
+    // Reutiliza misma lógica de Productos: branding https://pay.molly.com.ar/l/{CODE} con CODE LP-XXXXXX
+    // La URL resoluble real es <origin>/p/{CODE} (ver app.link-pago.productos.tsx y p.$code.tsx)
     const linkRows = regsSinLink.map((r) => {
       const code = "LP-" + Math.random().toString(36).substring(2, 8).toUpperCase();
       return {
         cliente_legajo: legajo,
         comercio_nombre: r.descripcion || r.identificacion_usuario,
-        url: buildResolvableUrl(code),
+        url: `https://pay.molly.com.ar/l/${code}`,
         monto: Number(r.monto),
         estado: "Activo",
         metodos_pago: mediosPago.length > 0 ? mediosPago : ["TRANSFERENCIA"],

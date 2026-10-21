@@ -59,6 +59,48 @@ export function isPermissionError(err: unknown): boolean {
   return PERMISSION_PATTERNS.some((p) => p.test(e.message));
 }
 
+/**
+ * Las Edge Functions devuelven la causa real en el BODY de la respuesta, pero
+ * `functions.invoke` sólo expone el genérico "Edge Function returned a non-2xx
+ * status code". Esto lo recupera para que el toast muestre el motivo verdadero
+ * (por ejemplo, el rechazo de Resend cuando el dominio no está verificado).
+ */
+export async function extraerMensajeEdgeFunction(err: unknown): Promise<string | null> {
+  if (!err || typeof err !== "object") return null;
+  const res = (err as { context?: unknown }).context as Response | undefined;
+  if (!res || typeof res.text !== "function") return null;
+
+  try {
+    const texto = await res.text();
+    if (!texto) return null;
+
+    let cuerpo: unknown = texto;
+    try {
+      cuerpo = JSON.parse(texto);
+    } catch {
+      // no es JSON: se muestra tal cual
+    }
+
+    const obj = (typeof cuerpo === "object" && cuerpo !== null ? cuerpo : {}) as Record<string, unknown>;
+    const mensaje =
+      typeof obj.error === "string"
+        ? obj.error
+        : typeof obj.message === "string"
+          ? obj.message
+          : typeof cuerpo === "string"
+            ? cuerpo
+            : null;
+
+    if (!mensaje) return texto.slice(0, 400);
+    if (/testing emails to your own email|verify a domain/i.test(mensaje)) {
+      return "No se pudo enviar el correo de verificación: Resend no tiene un dominio verificado y sólo permite enviar a la dirección de la cuenta. Verificá el dominio en resend.com/domains y ajustá RESEND_FROM.";
+    }
+    return mensaje;
+  } catch {
+    return null;
+  }
+}
+
 export function isNotConfiguredError(err: unknown): boolean {
   return /Supabase no está configurado/i.test(toDataError(err).message);
 }

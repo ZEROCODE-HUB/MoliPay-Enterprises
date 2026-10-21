@@ -35,7 +35,6 @@ import { Route as AppSubcuentasRouteImport } from './routes/app.subcuentas'
 import { Route as AppServiciosRouteImport } from './routes/app.servicios'
 import { Route as AppSeguridadRouteImport } from './routes/app.seguridad'
 import { Route as AppQrRouteImport } from './routes/app.qr'
-import { Route as AppMisComerciosRouteImport } from './routes/app.mis-comercios'
 import { Route as AppLiquidacionesRouteImport } from './routes/app.liquidaciones'
 import { Route as AppLinkPagoRouteImport } from './routes/app.link-pago'
 import { Route as AppHistorialRouteImport } from './routes/app.historial'
@@ -187,11 +186,6 @@ const AppQrRoute = AppQrRouteImport.update({
   path: '/qr',
   getParentRoute: () => AppRoute,
 } as any)
-const AppMisComerciosRoute = AppMisComerciosRouteImport.update({
-  id: '/mis-comercios',
-  path: '/mis-comercios',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppLiquidacionesRoute = AppLiquidacionesRouteImport.update({
   id: '/liquidaciones',
   path: '/liquidaciones',
@@ -300,7 +294,6 @@ export interface FileRoutesByFullPath {
   '/app/historial': typeof AppHistorialRoute
   '/app/link-pago': typeof AppLinkPagoRouteWithChildren
   '/app/liquidaciones': typeof AppLiquidacionesRoute
-  '/app/mis-comercios': typeof AppMisComerciosRoute
   '/app/qr': typeof AppQrRouteWithChildren
   '/app/seguridad': typeof AppSeguridadRoute
   '/app/servicios': typeof AppServiciosRoute
@@ -345,7 +338,6 @@ export interface FileRoutesByTo {
   '/app/historial': typeof AppHistorialRoute
   '/app/link-pago': typeof AppLinkPagoRouteWithChildren
   '/app/liquidaciones': typeof AppLiquidacionesRoute
-  '/app/mis-comercios': typeof AppMisComerciosRoute
   '/app/qr': typeof AppQrRouteWithChildren
   '/app/seguridad': typeof AppSeguridadRoute
   '/app/servicios': typeof AppServiciosRoute
@@ -393,7 +385,6 @@ export interface FileRoutesById {
   '/app/historial': typeof AppHistorialRoute
   '/app/link-pago': typeof AppLinkPagoRouteWithChildren
   '/app/liquidaciones': typeof AppLiquidacionesRoute
-  '/app/mis-comercios': typeof AppMisComerciosRoute
   '/app/qr': typeof AppQrRouteWithChildren
   '/app/seguridad': typeof AppSeguridadRoute
   '/app/servicios': typeof AppServiciosRoute
@@ -442,7 +433,6 @@ export interface FileRouteTypes {
     | '/app/historial'
     | '/app/link-pago'
     | '/app/liquidaciones'
-    | '/app/mis-comercios'
     | '/app/qr'
     | '/app/seguridad'
     | '/app/servicios'
@@ -487,7 +477,6 @@ export interface FileRouteTypes {
     | '/app/historial'
     | '/app/link-pago'
     | '/app/liquidaciones'
-    | '/app/mis-comercios'
     | '/app/qr'
     | '/app/seguridad'
     | '/app/servicios'
@@ -534,7 +523,6 @@ export interface FileRouteTypes {
     | '/app/historial'
     | '/app/link-pago'
     | '/app/liquidaciones'
-    | '/app/mis-comercios'
     | '/app/qr'
     | '/app/seguridad'
     | '/app/servicios'
@@ -768,13 +756,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppQrRouteImport
       parentRoute: typeof AppRoute
     }
-    '/app/mis-comercios': {
-      id: '/app/mis-comercios'
-      path: '/mis-comercios'
-      fullPath: '/app/mis-comercios'
-      preLoaderRoute: typeof AppMisComerciosRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/app/liquidaciones': {
       id: '/app/liquidaciones'
       path: '/liquidaciones'
@@ -960,7 +941,6 @@ interface AppRouteChildren {
   AppHistorialRoute: typeof AppHistorialRoute
   AppLinkPagoRoute: typeof AppLinkPagoRouteWithChildren
   AppLiquidacionesRoute: typeof AppLiquidacionesRoute
-  AppMisComerciosRoute: typeof AppMisComerciosRoute
   AppQrRoute: typeof AppQrRouteWithChildren
   AppSeguridadRoute: typeof AppSeguridadRoute
   AppServiciosRoute: typeof AppServiciosRoute
@@ -979,7 +959,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppHistorialRoute: AppHistorialRoute,
   AppLinkPagoRoute: AppLinkPagoRouteWithChildren,
   AppLiquidacionesRoute: AppLiquidacionesRoute,
-  AppMisComerciosRoute: AppMisComerciosRoute,
   AppQrRoute: AppQrRouteWithChildren,
   AppSeguridadRoute: AppSeguridadRoute,
   AppServiciosRoute: AppServiciosRoute,

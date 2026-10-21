@@ -161,7 +161,9 @@ function Page() {
         if (error) throw error;
         toast.success("Subcuenta actualizada");
       } else {
-        const cbu = "0000003" + Math.floor(100000000000 + Math.random() * 899999999999);
+        // CBU de 22 dígitos: 8 de entidad + 14 de cuenta (como los reales).
+        // Antes daba 19 dígitos y el banco lo rechazaba como origen.
+        const cbu = "00000031" + Math.floor(10000000000000 + Math.random() * 89999999999999);
         const { error } = await s.from("subcuentas").insert({
           cliente_legajo: clienteLegajo,
           nombre: form.n,
