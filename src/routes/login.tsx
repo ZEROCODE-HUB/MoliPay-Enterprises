@@ -57,7 +57,7 @@ function LoginForm({ onSuccess }: { onSuccess: (estado: "aprobado" | "pendiente"
             <p>Tu correo aún no está verificado. Revisá tu bandeja de entrada y hacé clic en el enlace para activar tu cuenta.</p>
             <p className="mt-3 text-xs text-black-400">
               Si no lo recibís, revisá spam o reenviá el correo. Si tenés algún problema,{" "}
-              <a href="mailto:soporte@molipay.com.ar" className="underline underline-offset-2 hover:text-red-500">contactanos</a>.
+              <a href="mailto:soporte@molipay.com.ar" className="underline underline-offset-2 hover:text-red-500">¿Necesitas ayuda? Soporte</a>.
             </p>
             {resendMsg && <p className="mt-3 text-xs text-green-600">{resendMsg}</p>}
           </>
@@ -135,17 +135,13 @@ function LoginForm({ onSuccess }: { onSuccess: (estado: "aprobado" | "pendiente"
           </Link>
         </p>
         <p>
-          <button
-            type="button"
-            onClick={reenviarVerificacion}
+          <a
+            href="mailto:soporte@molipay.com.ar"
             className="text-black-400 hover:text-red-500 underline underline-offset-2 transition-colors"
           >
-            ¿No te llegó el email de verificación?
-          </button>
+            ¿Necesitas ayuda? Soporte
+          </a>
         </p>
-        {resendMsg && (
-          <p className="text-xs text-muted-foreground">{resendMsg}</p>
-        )}
       </div>
     </form>
   );
