@@ -9,75 +9,55 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as VerificarCorreoRouteImport } from './routes/verificar-correo'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as RegistroRouteImport } from './routes/registro'
-import { Route as RecuperarRouteImport } from './routes/recuperar'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as RecuperarRouteImport } from './routes/recuperar'
+import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as VerificarCorreoRouteImport } from './routes/verificar-correo'
 import { Route as AppIndexRouteImport } from './routes/app.index'
-import { Route as RegistroValidarEmailRouteImport } from './routes/registro.validar-email'
-import { Route as RegistroValidacionExitosaRouteImport } from './routes/registro.validacion-exitosa'
-import { Route as RegistroExitoRouteImport } from './routes/registro.exito'
-import { Route as RegistroEmpresaRouteImport } from './routes/registro.empresa'
-import { Route as PCodeRouteImport } from './routes/p.$code'
-import { Route as OnboardingKycRouteImport } from './routes/onboarding.kyc'
-import { Route as OnboardingEnProcesoRouteImport } from './routes/onboarding.en-proceso'
-import { Route as OnboardingDatosPersonalesRouteImport } from './routes/onboarding.datos-personales'
-import { Route as OnboardingDatosEmpresaRouteImport } from './routes/onboarding.datos-empresa'
-import { Route as LegalesTerminosRouteImport } from './routes/legales.terminos'
-import { Route as LegalesPrivacidadRouteImport } from './routes/legales.privacidad'
-import { Route as LegalesComisionesRouteImport } from './routes/legales.comisiones'
-import { Route as LegalesArrepentimientoRouteImport } from './routes/legales.arrepentimiento'
-import { Route as AppTransferenciasRouteImport } from './routes/app.transferencias'
-import { Route as AppSubcuentasRouteImport } from './routes/app.subcuentas'
-import { Route as AppServiciosRouteImport } from './routes/app.servicios'
-import { Route as AppSeguridadRouteImport } from './routes/app.seguridad'
-import { Route as AppQrRouteImport } from './routes/app.qr'
-import { Route as AppMisComerciosRouteImport } from './routes/app.mis-comercios'
-import { Route as AppLiquidacionesRouteImport } from './routes/app.liquidaciones'
-import { Route as AppLinkPagoRouteImport } from './routes/app.link-pago'
-import { Route as AppHistorialRouteImport } from './routes/app.historial'
-import { Route as AppEcommerceRouteImport } from './routes/app.ecommerce'
-import { Route as AppDestinatariosRouteImport } from './routes/app.destinatarios'
-import { Route as AppCuentaRouteImport } from './routes/app.cuenta'
-import { Route as AppCobrosRouteImport } from './routes/app.cobros'
-import { Route as AppApiConfigRouteImport } from './routes/app.api-config'
 import { Route as AppApiRouteImport } from './routes/app.api'
+import { Route as AppApiConfigRouteImport } from './routes/app.api-config'
+import { Route as AppCobrosRouteImport } from './routes/app.cobros'
+import { Route as AppCuentaRouteImport } from './routes/app.cuenta'
+import { Route as AppDestinatariosRouteImport } from './routes/app.destinatarios'
+import { Route as AppEcommerceRouteImport } from './routes/app.ecommerce'
+import { Route as AppHistorialRouteImport } from './routes/app.historial'
+import { Route as AppLinkPagoRouteImport } from './routes/app.link-pago'
+import { Route as AppLiquidacionesRouteImport } from './routes/app.liquidaciones'
+import { Route as AppMisComerciosRouteImport } from './routes/app.mis-comercios'
+import { Route as AppQrRouteImport } from './routes/app.qr'
+import { Route as AppSeguridadRouteImport } from './routes/app.seguridad'
+import { Route as AppServiciosRouteImport } from './routes/app.servicios'
+import { Route as AppSubcuentasRouteImport } from './routes/app.subcuentas'
+import { Route as AppTransferenciasRouteImport } from './routes/app.transferencias'
+import { Route as LegalesArrepentimientoRouteImport } from './routes/legales.arrepentimiento'
+import { Route as LegalesComisionesRouteImport } from './routes/legales.comisiones'
+import { Route as LegalesPrivacidadRouteImport } from './routes/legales.privacidad'
+import { Route as LegalesTerminosRouteImport } from './routes/legales.terminos'
+import { Route as OnboardingDatosEmpresaRouteImport } from './routes/onboarding.datos-empresa'
+import { Route as OnboardingDatosPersonalesRouteImport } from './routes/onboarding.datos-personales'
+import { Route as OnboardingEnProcesoRouteImport } from './routes/onboarding.en-proceso'
+import { Route as OnboardingKycRouteImport } from './routes/onboarding.kyc'
+import { Route as PCodeRouteImport } from './routes/p.$code'
+import { Route as RegistroEmpresaRouteImport } from './routes/registro.empresa'
+import { Route as RegistroExitoRouteImport } from './routes/registro.exito'
+import { Route as RegistroValidacionExitosaRouteImport } from './routes/registro.validacion-exitosa'
+import { Route as RegistroValidarEmailRouteImport } from './routes/registro.validar-email'
 import { Route as AppCobrosIndexRouteImport } from './routes/app.cobros.index'
-import { Route as AppQrPuntosDeVentaRouteImport } from './routes/app.qr.puntos-de-venta'
-import { Route as AppQrDashboardRouteImport } from './routes/app.qr.dashboard'
-import { Route as AppLinkPagoProductosRouteImport } from './routes/app.link-pago.productos'
-import { Route as AppLinkPagoECommerceRouteImport } from './routes/app.link-pago.e-commerce'
-import { Route as AppLinkPagoDashboardRouteImport } from './routes/app.link-pago.dashboard'
-import { Route as AppCobrosNuevoRouteImport } from './routes/app.cobros.nuevo'
 import { Route as AppCobrosGestionRouteImport } from './routes/app.cobros.gestion'
+import { Route as AppCobrosNuevoRouteImport } from './routes/app.cobros.nuevo'
+import { Route as AppLinkPagoDashboardRouteImport } from './routes/app.link-pago.dashboard'
+import { Route as AppLinkPagoECommerceRouteImport } from './routes/app.link-pago.e-commerce'
+import { Route as AppLinkPagoProductosRouteImport } from './routes/app.link-pago.productos'
+import { Route as AppQrDashboardRouteImport } from './routes/app.qr.dashboard'
+import { Route as AppQrPuntosDeVentaRouteImport } from './routes/app.qr.puntos-de-venta'
 import { Route as AppCobrosLoteIdRouteImport } from './routes/app.cobros.lote.$id'
 
-const VerificarCorreoRoute = VerificarCorreoRouteImport.update({
-  id: '/verificar-correo',
-  path: '/verificar-correo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RegistroRoute = RegistroRouteImport.update({
-  id: '/registro',
-  path: '/registro',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RecuperarRoute = RecuperarRouteImport.update({
-  id: '/recuperar',
-  path: '/recuperar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -85,9 +65,29 @@ const AppRoute = AppRouteImport.update({
   path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecuperarRoute = RecuperarRouteImport.update({
+  id: '/recuperar',
+  path: '/recuperar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistroRoute = RegistroRouteImport.update({
+  id: '/registro',
+  path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerificarCorreoRoute = VerificarCorreoRouteImport.update({
+  id: '/verificar-correo',
+  path: '/verificar-correo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -95,40 +95,104 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const RegistroValidarEmailRoute = RegistroValidarEmailRouteImport.update({
-  id: '/validar-email',
-  path: '/validar-email',
-  getParentRoute: () => RegistroRoute,
+const AppApiRoute = AppApiRouteImport.update({
+  id: '/api',
+  path: '/api',
+  getParentRoute: () => AppRoute,
 } as any)
-const RegistroValidacionExitosaRoute =
-  RegistroValidacionExitosaRouteImport.update({
-    id: '/validacion-exitosa',
-    path: '/validacion-exitosa',
-    getParentRoute: () => RegistroRoute,
-  } as any)
-const RegistroExitoRoute = RegistroExitoRouteImport.update({
-  id: '/exito',
-  path: '/exito',
-  getParentRoute: () => RegistroRoute,
+const AppApiConfigRoute = AppApiConfigRouteImport.update({
+  id: '/api-config',
+  path: '/api-config',
+  getParentRoute: () => AppRoute,
 } as any)
-const RegistroEmpresaRoute = RegistroEmpresaRouteImport.update({
-  id: '/empresa',
-  path: '/empresa',
-  getParentRoute: () => RegistroRoute,
+const AppCobrosRoute = AppCobrosRouteImport.update({
+  id: '/cobros',
+  path: '/cobros',
+  getParentRoute: () => AppRoute,
 } as any)
-const PCodeRoute = PCodeRouteImport.update({
-  id: '/p/$code',
-  path: '/p/$code',
+const AppCuentaRoute = AppCuentaRouteImport.update({
+  id: '/cuenta',
+  path: '/cuenta',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDestinatariosRoute = AppDestinatariosRouteImport.update({
+  id: '/destinatarios',
+  path: '/destinatarios',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEcommerceRoute = AppEcommerceRouteImport.update({
+  id: '/ecommerce',
+  path: '/ecommerce',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppHistorialRoute = AppHistorialRouteImport.update({
+  id: '/historial',
+  path: '/historial',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLinkPagoRoute = AppLinkPagoRouteImport.update({
+  id: '/link-pago',
+  path: '/link-pago',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLiquidacionesRoute = AppLiquidacionesRouteImport.update({
+  id: '/liquidaciones',
+  path: '/liquidaciones',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMisComerciosRoute = AppMisComerciosRouteImport.update({
+  id: '/mis-comercios',
+  path: '/mis-comercios',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQrRoute = AppQrRouteImport.update({
+  id: '/qr',
+  path: '/qr',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSeguridadRoute = AppSeguridadRouteImport.update({
+  id: '/seguridad',
+  path: '/seguridad',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppServiciosRoute = AppServiciosRouteImport.update({
+  id: '/servicios',
+  path: '/servicios',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSubcuentasRoute = AppSubcuentasRouteImport.update({
+  id: '/subcuentas',
+  path: '/subcuentas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTransferenciasRoute = AppTransferenciasRouteImport.update({
+  id: '/transferencias',
+  path: '/transferencias',
+  getParentRoute: () => AppRoute,
+} as any)
+const LegalesArrepentimientoRoute = LegalesArrepentimientoRouteImport.update({
+  id: '/legales/arrepentimiento',
+  path: '/legales/arrepentimiento',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OnboardingKycRoute = OnboardingKycRouteImport.update({
-  id: '/onboarding/kyc',
-  path: '/onboarding/kyc',
+const LegalesComisionesRoute = LegalesComisionesRouteImport.update({
+  id: '/legales/comisiones',
+  path: '/legales/comisiones',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OnboardingEnProcesoRoute = OnboardingEnProcesoRouteImport.update({
-  id: '/onboarding/en-proceso',
-  path: '/onboarding/en-proceso',
+const LegalesPrivacidadRoute = LegalesPrivacidadRouteImport.update({
+  id: '/legales/privacidad',
+  path: '/legales/privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalesTerminosRoute = LegalesTerminosRouteImport.update({
+  id: '/legales/terminos',
+  path: '/legales/terminos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingDatosEmpresaRoute = OnboardingDatosEmpresaRouteImport.update({
+  id: '/onboarding/datos-empresa',
+  path: '/onboarding/datos-empresa',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingDatosPersonalesRoute =
@@ -137,124 +201,60 @@ const OnboardingDatosPersonalesRoute =
     path: '/onboarding/datos-personales',
     getParentRoute: () => rootRouteImport,
   } as any)
-const OnboardingDatosEmpresaRoute = OnboardingDatosEmpresaRouteImport.update({
-  id: '/onboarding/datos-empresa',
-  path: '/onboarding/datos-empresa',
+const OnboardingEnProcesoRoute = OnboardingEnProcesoRouteImport.update({
+  id: '/onboarding/en-proceso',
+  path: '/onboarding/en-proceso',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LegalesTerminosRoute = LegalesTerminosRouteImport.update({
-  id: '/legales/terminos',
-  path: '/legales/terminos',
+const OnboardingKycRoute = OnboardingKycRouteImport.update({
+  id: '/onboarding/kyc',
+  path: '/onboarding/kyc',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LegalesPrivacidadRoute = LegalesPrivacidadRouteImport.update({
-  id: '/legales/privacidad',
-  path: '/legales/privacidad',
+const PCodeRoute = PCodeRouteImport.update({
+  id: '/p/$code',
+  path: '/p/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LegalesComisionesRoute = LegalesComisionesRouteImport.update({
-  id: '/legales/comisiones',
-  path: '/legales/comisiones',
-  getParentRoute: () => rootRouteImport,
+const RegistroEmpresaRoute = RegistroEmpresaRouteImport.update({
+  id: '/empresa',
+  path: '/empresa',
+  getParentRoute: () => RegistroRoute,
 } as any)
-const LegalesArrepentimientoRoute = LegalesArrepentimientoRouteImport.update({
-  id: '/legales/arrepentimiento',
-  path: '/legales/arrepentimiento',
-  getParentRoute: () => rootRouteImport,
+const RegistroExitoRoute = RegistroExitoRouteImport.update({
+  id: '/exito',
+  path: '/exito',
+  getParentRoute: () => RegistroRoute,
 } as any)
-const AppTransferenciasRoute = AppTransferenciasRouteImport.update({
-  id: '/transferencias',
-  path: '/transferencias',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSubcuentasRoute = AppSubcuentasRouteImport.update({
-  id: '/subcuentas',
-  path: '/subcuentas',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppServiciosRoute = AppServiciosRouteImport.update({
-  id: '/servicios',
-  path: '/servicios',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSeguridadRoute = AppSeguridadRouteImport.update({
-  id: '/seguridad',
-  path: '/seguridad',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppQrRoute = AppQrRouteImport.update({
-  id: '/qr',
-  path: '/qr',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMisComerciosRoute = AppMisComerciosRouteImport.update({
-  id: '/mis-comercios',
-  path: '/mis-comercios',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppLiquidacionesRoute = AppLiquidacionesRouteImport.update({
-  id: '/liquidaciones',
-  path: '/liquidaciones',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppLinkPagoRoute = AppLinkPagoRouteImport.update({
-  id: '/link-pago',
-  path: '/link-pago',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppHistorialRoute = AppHistorialRouteImport.update({
-  id: '/historial',
-  path: '/historial',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppEcommerceRoute = AppEcommerceRouteImport.update({
-  id: '/ecommerce',
-  path: '/ecommerce',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDestinatariosRoute = AppDestinatariosRouteImport.update({
-  id: '/destinatarios',
-  path: '/destinatarios',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppCuentaRoute = AppCuentaRouteImport.update({
-  id: '/cuenta',
-  path: '/cuenta',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppCobrosRoute = AppCobrosRouteImport.update({
-  id: '/cobros',
-  path: '/cobros',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppApiConfigRoute = AppApiConfigRouteImport.update({
-  id: '/api-config',
-  path: '/api-config',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppApiRoute = AppApiRouteImport.update({
-  id: '/api',
-  path: '/api',
-  getParentRoute: () => AppRoute,
+const RegistroValidacionExitosaRoute =
+  RegistroValidacionExitosaRouteImport.update({
+    id: '/validacion-exitosa',
+    path: '/validacion-exitosa',
+    getParentRoute: () => RegistroRoute,
+  } as any)
+const RegistroValidarEmailRoute = RegistroValidarEmailRouteImport.update({
+  id: '/validar-email',
+  path: '/validar-email',
+  getParentRoute: () => RegistroRoute,
 } as any)
 const AppCobrosIndexRoute = AppCobrosIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppCobrosRoute,
 } as any)
-const AppQrPuntosDeVentaRoute = AppQrPuntosDeVentaRouteImport.update({
-  id: '/puntos-de-venta',
-  path: '/puntos-de-venta',
-  getParentRoute: () => AppQrRoute,
+const AppCobrosGestionRoute = AppCobrosGestionRouteImport.update({
+  id: '/gestion',
+  path: '/gestion',
+  getParentRoute: () => AppCobrosRoute,
 } as any)
-const AppQrDashboardRoute = AppQrDashboardRouteImport.update({
+const AppCobrosNuevoRoute = AppCobrosNuevoRouteImport.update({
+  id: '/nuevo',
+  path: '/nuevo',
+  getParentRoute: () => AppCobrosRoute,
+} as any)
+const AppLinkPagoDashboardRoute = AppLinkPagoDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
-  getParentRoute: () => AppQrRoute,
-} as any)
-const AppLinkPagoProductosRoute = AppLinkPagoProductosRouteImport.update({
-  id: '/productos',
-  path: '/productos',
   getParentRoute: () => AppLinkPagoRoute,
 } as any)
 const AppLinkPagoECommerceRoute = AppLinkPagoECommerceRouteImport.update({
@@ -262,20 +262,20 @@ const AppLinkPagoECommerceRoute = AppLinkPagoECommerceRouteImport.update({
   path: '/e-commerce',
   getParentRoute: () => AppLinkPagoRoute,
 } as any)
-const AppLinkPagoDashboardRoute = AppLinkPagoDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
+const AppLinkPagoProductosRoute = AppLinkPagoProductosRouteImport.update({
+  id: '/productos',
+  path: '/productos',
   getParentRoute: () => AppLinkPagoRoute,
 } as any)
-const AppCobrosNuevoRoute = AppCobrosNuevoRouteImport.update({
-  id: '/nuevo',
-  path: '/nuevo',
-  getParentRoute: () => AppCobrosRoute,
+const AppQrDashboardRoute = AppQrDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppQrRoute,
 } as any)
-const AppCobrosGestionRoute = AppCobrosGestionRouteImport.update({
-  id: '/gestion',
-  path: '/gestion',
-  getParentRoute: () => AppCobrosRoute,
+const AppQrPuntosDeVentaRoute = AppQrPuntosDeVentaRouteImport.update({
+  id: '/puntos-de-venta',
+  path: '/puntos-de-venta',
+  getParentRoute: () => AppQrRoute,
 } as any)
 const AppCobrosLoteIdRoute = AppCobrosLoteIdRouteImport.update({
   id: '/lote/$id',
@@ -586,39 +586,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/verificar-correo': {
-      id: '/verificar-correo'
-      path: '/verificar-correo'
-      fullPath: '/verificar-correo'
-      preLoaderRoute: typeof VerificarCorreoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/registro': {
-      id: '/registro'
-      path: '/registro'
-      fullPath: '/registro'
-      preLoaderRoute: typeof RegistroRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/recuperar': {
-      id: '/recuperar'
-      path: '/recuperar'
-      fullPath: '/recuperar'
-      preLoaderRoute: typeof RecuperarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -628,11 +600,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recuperar': {
+      id: '/recuperar'
+      path: '/recuperar'
+      fullPath: '/recuperar'
+      preLoaderRoute: typeof RecuperarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registro': {
+      id: '/registro'
+      path: '/registro'
+      fullPath: '/registro'
+      preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verificar-correo': {
+      id: '/verificar-correo'
+      path: '/verificar-correo'
+      fullPath: '/verificar-correo'
+      preLoaderRoute: typeof VerificarCorreoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/': {
@@ -642,186 +642,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/registro/validar-email': {
-      id: '/registro/validar-email'
-      path: '/validar-email'
-      fullPath: '/registro/validar-email'
-      preLoaderRoute: typeof RegistroValidarEmailRouteImport
-      parentRoute: typeof RegistroRoute
-    }
-    '/registro/validacion-exitosa': {
-      id: '/registro/validacion-exitosa'
-      path: '/validacion-exitosa'
-      fullPath: '/registro/validacion-exitosa'
-      preLoaderRoute: typeof RegistroValidacionExitosaRouteImport
-      parentRoute: typeof RegistroRoute
-    }
-    '/registro/exito': {
-      id: '/registro/exito'
-      path: '/exito'
-      fullPath: '/registro/exito'
-      preLoaderRoute: typeof RegistroExitoRouteImport
-      parentRoute: typeof RegistroRoute
-    }
-    '/registro/empresa': {
-      id: '/registro/empresa'
-      path: '/empresa'
-      fullPath: '/registro/empresa'
-      preLoaderRoute: typeof RegistroEmpresaRouteImport
-      parentRoute: typeof RegistroRoute
-    }
-    '/p/$code': {
-      id: '/p/$code'
-      path: '/p/$code'
-      fullPath: '/p/$code'
-      preLoaderRoute: typeof PCodeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding/kyc': {
-      id: '/onboarding/kyc'
-      path: '/onboarding/kyc'
-      fullPath: '/onboarding/kyc'
-      preLoaderRoute: typeof OnboardingKycRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding/en-proceso': {
-      id: '/onboarding/en-proceso'
-      path: '/onboarding/en-proceso'
-      fullPath: '/onboarding/en-proceso'
-      preLoaderRoute: typeof OnboardingEnProcesoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding/datos-personales': {
-      id: '/onboarding/datos-personales'
-      path: '/onboarding/datos-personales'
-      fullPath: '/onboarding/datos-personales'
-      preLoaderRoute: typeof OnboardingDatosPersonalesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding/datos-empresa': {
-      id: '/onboarding/datos-empresa'
-      path: '/onboarding/datos-empresa'
-      fullPath: '/onboarding/datos-empresa'
-      preLoaderRoute: typeof OnboardingDatosEmpresaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/legales/terminos': {
-      id: '/legales/terminos'
-      path: '/legales/terminos'
-      fullPath: '/legales/terminos'
-      preLoaderRoute: typeof LegalesTerminosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/legales/privacidad': {
-      id: '/legales/privacidad'
-      path: '/legales/privacidad'
-      fullPath: '/legales/privacidad'
-      preLoaderRoute: typeof LegalesPrivacidadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/legales/comisiones': {
-      id: '/legales/comisiones'
-      path: '/legales/comisiones'
-      fullPath: '/legales/comisiones'
-      preLoaderRoute: typeof LegalesComisionesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/legales/arrepentimiento': {
-      id: '/legales/arrepentimiento'
-      path: '/legales/arrepentimiento'
-      fullPath: '/legales/arrepentimiento'
-      preLoaderRoute: typeof LegalesArrepentimientoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/transferencias': {
-      id: '/app/transferencias'
-      path: '/transferencias'
-      fullPath: '/app/transferencias'
-      preLoaderRoute: typeof AppTransferenciasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/subcuentas': {
-      id: '/app/subcuentas'
-      path: '/subcuentas'
-      fullPath: '/app/subcuentas'
-      preLoaderRoute: typeof AppSubcuentasRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/servicios': {
-      id: '/app/servicios'
-      path: '/servicios'
-      fullPath: '/app/servicios'
-      preLoaderRoute: typeof AppServiciosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/seguridad': {
-      id: '/app/seguridad'
-      path: '/seguridad'
-      fullPath: '/app/seguridad'
-      preLoaderRoute: typeof AppSeguridadRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/qr': {
-      id: '/app/qr'
-      path: '/qr'
-      fullPath: '/app/qr'
-      preLoaderRoute: typeof AppQrRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/mis-comercios': {
-      id: '/app/mis-comercios'
-      path: '/mis-comercios'
-      fullPath: '/app/mis-comercios'
-      preLoaderRoute: typeof AppMisComerciosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/liquidaciones': {
-      id: '/app/liquidaciones'
-      path: '/liquidaciones'
-      fullPath: '/app/liquidaciones'
-      preLoaderRoute: typeof AppLiquidacionesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/link-pago': {
-      id: '/app/link-pago'
-      path: '/link-pago'
-      fullPath: '/app/link-pago'
-      preLoaderRoute: typeof AppLinkPagoRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/historial': {
-      id: '/app/historial'
-      path: '/historial'
-      fullPath: '/app/historial'
-      preLoaderRoute: typeof AppHistorialRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/ecommerce': {
-      id: '/app/ecommerce'
-      path: '/ecommerce'
-      fullPath: '/app/ecommerce'
-      preLoaderRoute: typeof AppEcommerceRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/destinatarios': {
-      id: '/app/destinatarios'
-      path: '/destinatarios'
-      fullPath: '/app/destinatarios'
-      preLoaderRoute: typeof AppDestinatariosRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/cuenta': {
-      id: '/app/cuenta'
-      path: '/cuenta'
-      fullPath: '/app/cuenta'
-      preLoaderRoute: typeof AppCuentaRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/cobros': {
-      id: '/app/cobros'
-      path: '/cobros'
-      fullPath: '/app/cobros'
-      preLoaderRoute: typeof AppCobrosRouteImport
+    '/app/api': {
+      id: '/app/api'
+      path: '/api'
+      fullPath: '/app/api'
+      preLoaderRoute: typeof AppApiRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/api-config': {
@@ -831,12 +656,187 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppApiConfigRouteImport
       parentRoute: typeof AppRoute
     }
-    '/app/api': {
-      id: '/app/api'
-      path: '/api'
-      fullPath: '/app/api'
-      preLoaderRoute: typeof AppApiRouteImport
+    '/app/cobros': {
+      id: '/app/cobros'
+      path: '/cobros'
+      fullPath: '/app/cobros'
+      preLoaderRoute: typeof AppCobrosRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/app/cuenta': {
+      id: '/app/cuenta'
+      path: '/cuenta'
+      fullPath: '/app/cuenta'
+      preLoaderRoute: typeof AppCuentaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/destinatarios': {
+      id: '/app/destinatarios'
+      path: '/destinatarios'
+      fullPath: '/app/destinatarios'
+      preLoaderRoute: typeof AppDestinatariosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/ecommerce': {
+      id: '/app/ecommerce'
+      path: '/ecommerce'
+      fullPath: '/app/ecommerce'
+      preLoaderRoute: typeof AppEcommerceRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/historial': {
+      id: '/app/historial'
+      path: '/historial'
+      fullPath: '/app/historial'
+      preLoaderRoute: typeof AppHistorialRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/link-pago': {
+      id: '/app/link-pago'
+      path: '/link-pago'
+      fullPath: '/app/link-pago'
+      preLoaderRoute: typeof AppLinkPagoRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/liquidaciones': {
+      id: '/app/liquidaciones'
+      path: '/liquidaciones'
+      fullPath: '/app/liquidaciones'
+      preLoaderRoute: typeof AppLiquidacionesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/mis-comercios': {
+      id: '/app/mis-comercios'
+      path: '/mis-comercios'
+      fullPath: '/app/mis-comercios'
+      preLoaderRoute: typeof AppMisComerciosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/qr': {
+      id: '/app/qr'
+      path: '/qr'
+      fullPath: '/app/qr'
+      preLoaderRoute: typeof AppQrRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/seguridad': {
+      id: '/app/seguridad'
+      path: '/seguridad'
+      fullPath: '/app/seguridad'
+      preLoaderRoute: typeof AppSeguridadRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/servicios': {
+      id: '/app/servicios'
+      path: '/servicios'
+      fullPath: '/app/servicios'
+      preLoaderRoute: typeof AppServiciosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/subcuentas': {
+      id: '/app/subcuentas'
+      path: '/subcuentas'
+      fullPath: '/app/subcuentas'
+      preLoaderRoute: typeof AppSubcuentasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/transferencias': {
+      id: '/app/transferencias'
+      path: '/transferencias'
+      fullPath: '/app/transferencias'
+      preLoaderRoute: typeof AppTransferenciasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/legales/arrepentimiento': {
+      id: '/legales/arrepentimiento'
+      path: '/legales/arrepentimiento'
+      fullPath: '/legales/arrepentimiento'
+      preLoaderRoute: typeof LegalesArrepentimientoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legales/comisiones': {
+      id: '/legales/comisiones'
+      path: '/legales/comisiones'
+      fullPath: '/legales/comisiones'
+      preLoaderRoute: typeof LegalesComisionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legales/privacidad': {
+      id: '/legales/privacidad'
+      path: '/legales/privacidad'
+      fullPath: '/legales/privacidad'
+      preLoaderRoute: typeof LegalesPrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legales/terminos': {
+      id: '/legales/terminos'
+      path: '/legales/terminos'
+      fullPath: '/legales/terminos'
+      preLoaderRoute: typeof LegalesTerminosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/datos-empresa': {
+      id: '/onboarding/datos-empresa'
+      path: '/onboarding/datos-empresa'
+      fullPath: '/onboarding/datos-empresa'
+      preLoaderRoute: typeof OnboardingDatosEmpresaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/datos-personales': {
+      id: '/onboarding/datos-personales'
+      path: '/onboarding/datos-personales'
+      fullPath: '/onboarding/datos-personales'
+      preLoaderRoute: typeof OnboardingDatosPersonalesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/en-proceso': {
+      id: '/onboarding/en-proceso'
+      path: '/onboarding/en-proceso'
+      fullPath: '/onboarding/en-proceso'
+      preLoaderRoute: typeof OnboardingEnProcesoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/kyc': {
+      id: '/onboarding/kyc'
+      path: '/onboarding/kyc'
+      fullPath: '/onboarding/kyc'
+      preLoaderRoute: typeof OnboardingKycRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$code': {
+      id: '/p/$code'
+      path: '/p/$code'
+      fullPath: '/p/$code'
+      preLoaderRoute: typeof PCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registro/empresa': {
+      id: '/registro/empresa'
+      path: '/empresa'
+      fullPath: '/registro/empresa'
+      preLoaderRoute: typeof RegistroEmpresaRouteImport
+      parentRoute: typeof RegistroRoute
+    }
+    '/registro/exito': {
+      id: '/registro/exito'
+      path: '/exito'
+      fullPath: '/registro/exito'
+      preLoaderRoute: typeof RegistroExitoRouteImport
+      parentRoute: typeof RegistroRoute
+    }
+    '/registro/validacion-exitosa': {
+      id: '/registro/validacion-exitosa'
+      path: '/validacion-exitosa'
+      fullPath: '/registro/validacion-exitosa'
+      preLoaderRoute: typeof RegistroValidacionExitosaRouteImport
+      parentRoute: typeof RegistroRoute
+    }
+    '/registro/validar-email': {
+      id: '/registro/validar-email'
+      path: '/validar-email'
+      fullPath: '/registro/validar-email'
+      preLoaderRoute: typeof RegistroValidarEmailRouteImport
+      parentRoute: typeof RegistroRoute
     }
     '/app/cobros/': {
       id: '/app/cobros/'
@@ -845,25 +845,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCobrosIndexRouteImport
       parentRoute: typeof AppCobrosRoute
     }
-    '/app/qr/puntos-de-venta': {
-      id: '/app/qr/puntos-de-venta'
-      path: '/puntos-de-venta'
-      fullPath: '/app/qr/puntos-de-venta'
-      preLoaderRoute: typeof AppQrPuntosDeVentaRouteImport
-      parentRoute: typeof AppQrRoute
+    '/app/cobros/gestion': {
+      id: '/app/cobros/gestion'
+      path: '/gestion'
+      fullPath: '/app/cobros/gestion'
+      preLoaderRoute: typeof AppCobrosGestionRouteImport
+      parentRoute: typeof AppCobrosRoute
     }
-    '/app/qr/dashboard': {
-      id: '/app/qr/dashboard'
+    '/app/cobros/nuevo': {
+      id: '/app/cobros/nuevo'
+      path: '/nuevo'
+      fullPath: '/app/cobros/nuevo'
+      preLoaderRoute: typeof AppCobrosNuevoRouteImport
+      parentRoute: typeof AppCobrosRoute
+    }
+    '/app/link-pago/dashboard': {
+      id: '/app/link-pago/dashboard'
       path: '/dashboard'
-      fullPath: '/app/qr/dashboard'
-      preLoaderRoute: typeof AppQrDashboardRouteImport
-      parentRoute: typeof AppQrRoute
-    }
-    '/app/link-pago/productos': {
-      id: '/app/link-pago/productos'
-      path: '/productos'
-      fullPath: '/app/link-pago/productos'
-      preLoaderRoute: typeof AppLinkPagoProductosRouteImport
+      fullPath: '/app/link-pago/dashboard'
+      preLoaderRoute: typeof AppLinkPagoDashboardRouteImport
       parentRoute: typeof AppLinkPagoRoute
     }
     '/app/link-pago/e-commerce': {
@@ -873,26 +873,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLinkPagoECommerceRouteImport
       parentRoute: typeof AppLinkPagoRoute
     }
-    '/app/link-pago/dashboard': {
-      id: '/app/link-pago/dashboard'
-      path: '/dashboard'
-      fullPath: '/app/link-pago/dashboard'
-      preLoaderRoute: typeof AppLinkPagoDashboardRouteImport
+    '/app/link-pago/productos': {
+      id: '/app/link-pago/productos'
+      path: '/productos'
+      fullPath: '/app/link-pago/productos'
+      preLoaderRoute: typeof AppLinkPagoProductosRouteImport
       parentRoute: typeof AppLinkPagoRoute
     }
-    '/app/cobros/nuevo': {
-      id: '/app/cobros/nuevo'
-      path: '/nuevo'
-      fullPath: '/app/cobros/nuevo'
-      preLoaderRoute: typeof AppCobrosNuevoRouteImport
-      parentRoute: typeof AppCobrosRoute
+    '/app/qr/dashboard': {
+      id: '/app/qr/dashboard'
+      path: '/dashboard'
+      fullPath: '/app/qr/dashboard'
+      preLoaderRoute: typeof AppQrDashboardRouteImport
+      parentRoute: typeof AppQrRoute
     }
-    '/app/cobros/gestion': {
-      id: '/app/cobros/gestion'
-      path: '/gestion'
-      fullPath: '/app/cobros/gestion'
-      preLoaderRoute: typeof AppCobrosGestionRouteImport
-      parentRoute: typeof AppCobrosRoute
+    '/app/qr/puntos-de-venta': {
+      id: '/app/qr/puntos-de-venta'
+      path: '/puntos-de-venta'
+      fullPath: '/app/qr/puntos-de-venta'
+      preLoaderRoute: typeof AppQrPuntosDeVentaRouteImport
+      parentRoute: typeof AppQrRoute
     }
     '/app/cobros/lote/$id': {
       id: '/app/cobros/lote/$id'

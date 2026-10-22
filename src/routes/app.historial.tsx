@@ -8,6 +8,9 @@ import { PageHeader, Card, Input, BtnOutline, BtnPrimary, Badge } from "@/compon
 import { toast } from "sonner";
 import { MollyLogo } from "@/components/molly-logo";
 import { requireSupabase } from "@/lib/supabase";
+import { descargarComprobantePdf } from "@/lib/comprobante-pdf";
+import { compartirComprobante } from "@/lib/comprobante-imagen";
+import type { DatosComprobante } from "@/lib/comprobante";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -24,7 +27,7 @@ const formatFecha = (f: string | null) => {
   return d.toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
 
-type Categoria = "Ingresos" | "Egresos" | "Comisiones" | "Cobros con Tarjeta" | "Pagos con QR" | "Cobros con QR";
+type Categoria = "Ingresos" | "Egresos" | "Transferencias" | "Comisiones" | "Cobros con Tarjeta" | "Pagos con QR" | "Cobros con QR";
 
 type Mov = {
   txid: string;
@@ -34,7 +37,11 @@ type Mov = {
   cuit: string;
   cbuCvu: string;
   fecha: string;
+  /** Fecha cruda (ISO) para el comprobante, que la formatea él mismo. */
+  fechaISO: string;
   monto: number;
+  comision: number;
+  impuesto: number;
   estado: "Acreditado" | "Pendiente" | "Rechazado";
   medio: string;
   referencia: string;
@@ -48,6 +55,16 @@ type Mov = {
   receiverName: string;
   receiverCuit: string;
   receiverCbu: string;
+  receiverBanco: string;
+  /**
+   * La contraparte del movimiento, sin importar el sentido: en un egreso es el
+   * destinatario y en un ingreso es quien transfirio.
+   */
+  contraparteNombre: string;
+  contraparteCuit: string;
+  contraparteBanco: string;
+  /** CBU/CVU de la cuenta PROPIA que intervino (la de origen en un egreso). */
+  subcuentaCbu: string;
 };
 
 type MovRow = {
@@ -55,9 +72,17 @@ type MovRow = {
   tipo: string;
   cvu: string | null;
   monto_operacion: number;
+  comision?: number | null;
+  impuesto?: number | null;
   fecha: string | null;
   estado_codigo?: string;
   estado_nombre?: string;
+  destinatario_nombre?: string | null;
+  destinatario_cuit?: string | null;
+  destinatario_banco?: string | null;
+  /** Subcuenta del cliente que intervino (migracion 1020). */
+  subcuenta_id?: string | null;
+  subcuentas?: { cbu: string | null } | { cbu: string | null }[] | null;
   legajo: string;
 };
 
@@ -77,11 +102,14 @@ function mapMov(r: MovRow): Mov {
   const tipo = /cobro|deposito|ingreso/.test(r.tipo) ? "ingreso" : "egreso";
   const categoria = prettyTipo(r.tipo);
   const nombreEstado = (r.estado_nombre ?? r.estado_codigo ?? "Pendiente").toLowerCase();
-  const estado: Mov["estado"] = nombreEstado.includes("acredit")
-    ? "Acreditado"
-    : nombreEstado.includes("rechaz")
-      ? "Rechazado"
-      : "Pendiente";
+  // APROBADO = la operacion se completo (lo usa el banco y nuestras RPC), asi que
+  // tambien cuenta como acreditado: antes quedaba como "Pendiente".
+  const estado: Mov["estado"] =
+    nombreEstado.includes("acredit") || nombreEstado.includes("aprob")
+      ? "Acreditado"
+      : nombreEstado.includes("rechaz")
+        ? "Rechazado"
+        : "Pendiente";
   return {
     txid: r.id_txn,
     tipo,
@@ -90,7 +118,10 @@ function mapMov(r: MovRow): Mov {
     cuit: "—",
     cbuCvu: r.cvu ?? "—",
     fecha: formatFecha(r.fecha),
+    fechaISO: r.fecha ?? "",
     monto: Number(r.monto_operacion) || 0,
+    comision: Number(r.comision) || 0,
+    impuesto: Number(r.impuesto) || 0,
     estado,
     medio: categoria,
     referencia: r.id_txn,
@@ -101,9 +132,46 @@ function mapMov(r: MovRow): Mov {
     senderName: tipo === "ingreso" ? r.legajo : "MoliPay",
     senderCuit: "—",
     senderCbu: r.cvu ?? "—",
-    receiverName: tipo === "ingreso" ? "MoliPay" : r.legajo,
-    receiverCuit: "—",
+    receiverName: tipo === "ingreso" ? "MoliPay" : r.destinatario_nombre ?? "",
+    receiverCuit: tipo === "ingreso" ? "—" : r.destinatario_cuit ?? "",
     receiverCbu: r.cvu ?? "—",
+    receiverBanco: tipo === "ingreso" ? "" : r.destinatario_banco ?? "",
+    // Mismo dato sin importar el sentido: el comprobante lo usa para la contraparte.
+    contraparteNombre: r.destinatario_nombre ?? "",
+    contraparteCuit: r.destinatario_cuit ?? "",
+    contraparteBanco: r.destinatario_banco ?? "",
+    subcuentaCbu: (Array.isArray(r.subcuentas) ? r.subcuentas[0]?.cbu : r.subcuentas?.cbu) ?? "",
+  };
+}
+
+/**
+ * Datos del comprobante de un movimiento del historial.
+ *
+ * Solo se completan los datos que realmente tenemos: la contraparte de una
+ * transferencia (nombre y CUIT del destinatario) no se guarda en `movimientos`,
+ * así que va vacía — nunca se inventa.
+ */
+function comprobanteDeMov(m: Mov, cliente: { nombre: string; cuit: string; cbu: string }): DatosComprobante {
+  const esEgreso = m.tipo === "egreso";
+  // La cuenta propia sale del movimiento (migracion 1020); si es viejo y no la
+  // tiene, se usa el CBU del cliente que se pudo resolver.
+  const yo = { nombre: cliente.nombre, cuit: cliente.cuit, cbu: m.subcuentaCbu || cliente.cbu };
+  const otro = {
+    nombre: m.contraparteNombre,
+    cuit: m.contraparteCuit,
+    cbu: m.cbuCvu === "—" ? "" : m.cbuCvu,
+    banco: m.contraparteBanco || undefined,
+  };
+  return {
+    fecha: m.fechaISO,
+    monto: m.monto,
+    comision: m.comision,
+    impuesto: m.impuesto,
+    estado: m.estado,
+    txid: m.txid,
+    // "Yo" es el dueño de la cuenta: en un egreso soy el origen, en un ingreso el destino.
+    desde: esEgreso ? yo : otro,
+    hacia: esEgreso ? otro : yo,
   };
 }
 
@@ -111,6 +179,7 @@ const CATEGORIAS: Array<{ k: string; l: string }> = [
   { k: "Todas", l: "Todas" },
   { k: "Ingresos", l: "Ingresos" },
   { k: "Egresos", l: "Egresos" },
+  { k: "Transferencias", l: "Transferencias" },
   { k: "Comisiones", l: "Comisiones" },
   { k: "Cobros con Tarjeta", l: "Cobros con Tarjeta" },
   { k: "Pagos con QR", l: "Pagos con QR" },
@@ -139,11 +208,16 @@ function Page() {
   const [loading, setLoading] = useState(true);
   const [sinSubcuentas, setSinSubcuentas] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [clienteNombre, setClienteNombre] = useState("");
+  const [clienteCuit, setClienteCuit] = useState("");
+  /** CBU/CVU de la cuenta del cliente (para el comprobante). */
+  const [clienteCbu, setClienteCbu] = useState("");
 
   const categoriaToTipos = (cat: string): string[] | null => {
     if (cat === "Todas") return null;
     if (cat === "Ingresos") return ["deposito"];
     if (cat === "Egresos") return ["transferencia", "retiro"];
+    if (cat === "Transferencias") return ["transferencia"];
     if (cat === "Comisiones") return ["comision"];
     if (cat === "Cobros con Tarjeta") return ["cobro_link", "tarjeta"];
     if (cat === "Cobros con QR") return ["cobro_pct"];
@@ -158,10 +232,12 @@ function Page() {
       const { data: { user } } = await sb.auth.getUser();
       const { data: cli } = await sb
         .from("clientes")
-        .select("legajo, tipo_persona, nombre, cuit, correo")
+        .select("legajo, tipo_persona, nombre, cuit, cuit_cuil, correo")
         .eq("correo", user?.email ?? "")
         .maybeSingle();
       const legajo = cli?.legajo;
+      setClienteNombre(String(cli?.nombre ?? ""));
+      setClienteCuit(String(cli?.cuit ?? "") || String(cli?.cuit_cuil ?? ""));
       if (!legajo) {
         setMovimientos([]);
         setSubcuentas([]);
@@ -178,6 +254,11 @@ function Page() {
       const lista = (subs ?? []).map((s: any) => ({ nombre: s.nombre || "Sin nombre", cbu: s.cbu ?? null }));
       setSubcuentas(lista);
       setSinSubcuentas(lista.length === 0);
+      // CBU para el comprobante: si el cliente tiene una sola cuenta (o todas con
+      // el mismo CVU, como en el sandbox) se usa esa; si tiene varias distintas no
+      // se puede saber cual se uso, asi que queda vacio (el movimiento no la guarda).
+      const cbues = [...new Set(lista.map((s) => s.cbu).filter(Boolean))];
+      setClienteCbu(cbues.length === 1 ? String(cbues[0]) : "");
       if (lista.length > 0 && !sub) setSub(lista[0].nombre);
 
       const hasFilters = !!(desde || hasta || categoria !== "Todas" || subFiltro !== "Todas");
@@ -185,42 +266,62 @@ function Page() {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
-      let query: any = sb
-        .from("movimientos")
-        .select("id_txn, tipo, cvu, monto_operacion, fecha, legajo, estados_movimiento(codigo, nombre)", { count: countMode })
-        .eq("legajo", legajo)
-        .order("fecha", { ascending: false })
-        .range(from, to);
+      // `subcuenta_id` / `subcuentas(cbu)` llegan con la migracion 1020. Si todavia
+      // no corrio, se reintenta SIN esas columnas para no romper el historial.
+      const COLS_CON_CVU =
+        "id_txn, tipo, cvu, monto_operacion, comision, impuesto, fecha, legajo, destinatario_nombre, destinatario_cuit, destinatario_banco, subcuenta_id, subcuentas(cbu), estados_movimiento(codigo, nombre)";
+      const COLS_BASE =
+        "id_txn, tipo, cvu, monto_operacion, comision, impuesto, fecha, legajo, destinatario_nombre, destinatario_cuit, destinatario_banco, estados_movimiento(codigo, nombre)";
 
-      if (desde) query = query.gte("fecha", new Date(desde + "T00:00:00").toISOString());
-      if (hasta) query = query.lte("fecha", new Date(hasta + "T23:59:59").toISOString());
+      const construirQuery = (cols: string) => {
+        let q: any = sb
+          .from("movimientos")
+          .select(cols, { count: countMode })
+          .eq("legajo", legajo)
+          .order("fecha", { ascending: false })
+          .range(from, to);
 
-      const tipos = categoriaToTipos(categoria);
-      if (tipos) {
-        query = tipos.length === 1 ? query.eq("tipo", tipos[0]) : query.in("tipo", tipos);
-      }
+        if (desde) q = q.gte("fecha", new Date(desde + "T00:00:00").toISOString());
+        if (hasta) q = q.lte("fecha", new Date(hasta + "T23:59:59").toISOString());
 
-      if (subFiltro !== "Todas") {
-        const match = lista.find((s) => s.nombre === subFiltro);
-        if (match?.cbu) query = query.eq("cvu", match.cbu);
-      }
+        const tipos = categoriaToTipos(categoria);
+        if (tipos) q = tipos.length === 1 ? q.eq("tipo", tipos[0]) : q.in("tipo", tipos);
 
-      if (buscarCbu) query = query.ilike("cvu", `%${buscarCbu}%`);
-      if (buscarTxid) query = query.ilike("id_txn", `%${buscarTxid}%`);
-      if (buscarTitular) query = query.ilike("legajo", `%${buscarTitular}%`);
-      if (buscarCuit) query = query.ilike("legajo", `%${buscarCuit}%`);
+        if (subFiltro !== "Todas") {
+          const match = lista.find((s) => s.nombre === subFiltro);
+          if (match?.cbu) q = q.eq("cvu", match.cbu);
+        }
 
-      const { data: movs, count, error } = await query;
+        if (buscarCbu) q = q.ilike("cvu", `%${buscarCbu}%`);
+        if (buscarTxid) q = q.ilike("id_txn", `%${buscarTxid}%`);
+        if (buscarTitular) q = q.ilike("legajo", `%${buscarTitular}%`);
+        if (buscarCuit) q = q.ilike("legajo", `%${buscarCuit}%`);
+        return q;
+      };
+
+      let respuesta = await construirQuery(COLS_CON_CVU);
+      if (respuesta.error) respuesta = await construirQuery(COLS_BASE);
+
+      const { data: movs, count, error } = respuesta;
       if (error) throw error;
       const filas: MovRow[] = (movs ?? []).map((m: any) => ({
         id_txn: m.id_txn,
         tipo: m.tipo,
         cvu: m.cvu,
         monto_operacion: m.monto_operacion,
+        comision: m.comision,
+        impuesto: m.impuesto,
         fecha: m.fecha,
         legajo: m.legajo,
         estado_codigo: m.estados_movimiento?.codigo,
         estado_nombre: m.estados_movimiento?.nombre,
+        destinatario_nombre: m.destinatario_nombre,
+        destinatario_cuit: m.destinatario_cuit,
+        destinatario_banco: m.destinatario_banco,
+        // La subcuenta propia (con su CBU): sin esto el comprobante no puede
+        // mostrar el CVU de origen (venia del select pero se perdia aca).
+        subcuenta_id: m.subcuenta_id,
+        subcuentas: m.subcuentas,
       }));
       setMovimientos(filas.map(mapMov));
       setTotalCount(count ?? filas.length);
@@ -521,14 +622,23 @@ function Page() {
                       </button>
                       <button
                         title="Descargar comprobante"
-                        onClick={() => toast.success(`Comprobante ${r.txid} descargado`)}
+                        onClick={() => {
+                          descargarComprobantePdf(comprobanteDeMov(r, { nombre: clienteNombre, cuit: clienteCuit, cbu: clienteCbu }));
+                          toast.success("Comprobante descargado");
+                        }}
                         className="h-9 w-9 inline-flex items-center justify-center rounded-lg border bg-card hover:bg-accent hover:border-primary/40 transition"
                       >
                         <FileText size={14} />
                       </button>
                       <button
-                        title="Compartir"
-                        onClick={() => toast.success(`Enlace de comprobante ${r.txid} copiado`)}
+                        title="Compartir comprobante"
+                        onClick={async () => {
+                          const res = await compartirComprobante(comprobanteDeMov(r, { nombre: clienteNombre, cuit: clienteCuit, cbu: clienteCbu }));
+                          if (res === "compartido") toast.success("Comprobante compartido");
+                          else if (res === "descargado")
+                            toast.info("Tu navegador no comparte archivos: se descargó el comprobante para adjuntarlo.");
+                          else if (res === "error") toast.error("No se pudo compartir el comprobante");
+                        }}
                         className="h-9 w-9 inline-flex items-center justify-center rounded-lg border bg-card hover:bg-accent hover:border-primary/40 transition"
                       >
                         <Share2 size={14} />
@@ -625,10 +735,11 @@ function Page() {
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
                   <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Hacia</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-sm">
                   <div><div className="text-xs text-muted-foreground">Nombre</div><div className="font-medium truncate">{detalle.receiverName}</div></div>
                   <div><div className="text-xs text-muted-foreground">CUIT</div><div className="font-mono text-xs">{detalle.receiverCuit}</div></div>
                   <div><div className="text-xs text-muted-foreground">CBU / CVU</div><div className="font-mono text-xs truncate">{detalle.receiverCbu}</div></div>
+                  <div><div className="text-xs text-muted-foreground">Banco</div><div className="font-medium truncate">{detalle.receiverBanco || "—"}</div></div>
                 </div>
               </div>
 
@@ -642,10 +753,25 @@ function Page() {
               </div>
 
               <div className="flex gap-3 pt-4 border-t">
-                <BtnPrimary className="flex-1" onClick={() => { toast.success(`Comprobante ${detalle.txid} descargado`); }}>
+                <BtnPrimary
+                  className="flex-1"
+                  onClick={() => {
+                    descargarComprobantePdf(comprobanteDeMov(detalle, { nombre: clienteNombre, cuit: clienteCuit, cbu: clienteCbu }));
+                    toast.success("Comprobante descargado");
+                  }}
+                >
                   <Download size={15} /> Descargar comprobante
                 </BtnPrimary>
-                <BtnOutline className="flex-1" onClick={() => { toast.success(`Enlace de comprobante ${detalle.txid} copiado al portapapeles`); }}>
+                <BtnOutline
+                  className="flex-1"
+                  onClick={async () => {
+                    const res = await compartirComprobante(comprobanteDeMov(detalle, { nombre: clienteNombre, cuit: clienteCuit, cbu: clienteCbu }));
+                    if (res === "compartido") toast.success("Comprobante compartido");
+                    else if (res === "descargado")
+                      toast.info("Tu navegador no comparte archivos: se descargó el comprobante para adjuntarlo.");
+                    else if (res === "error") toast.error("No se pudo compartir el comprobante");
+                  }}
+                >
                   <Share2 size={15} /> Compartir comprobante
                 </BtnOutline>
               </div>

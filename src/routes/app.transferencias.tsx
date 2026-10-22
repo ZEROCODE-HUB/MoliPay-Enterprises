@@ -1,26 +1,205 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowUpRight, Calendar, Clock, ShieldCheck, Star, Trash2, Edit3, Play, FileText, Save, Users, X, Plus, KeyRound } from "lucide-react";
+import { ArrowUpRight, Calendar, Clock, ShieldCheck, Star, Trash2, Edit3, Play, FileText, Save, Users, X, Plus, KeyRound, Download, Share2 } from "lucide-react";
 import { PageHeader, Input, Label, BtnPrimary, BtnOutline, Badge } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
-import { requireSupabase, toDataError, isPermissionError } from "@/lib/supabase";
-import { recipientValidator, detectIdentifierKind } from "@/lib/recipient-validation";
+import { requireSupabase, toDataError, isPermissionError, extraerMensajeEdgeFunction } from "@/lib/supabase";
+import { detectIdentifierKind, type RecipientTitular } from "@/lib/recipient-validation";
+import { validateRecipient } from "@/lib/recipient-bdc";
+import { descargarComprobantePdf } from "@/lib/comprobante-pdf";
+import { compartirComprobante } from "@/lib/comprobante-imagen";
+import { type DatosComprobante } from "@/lib/comprobante";
 import { executeTransfer } from "@/lib/transfer-orchestrator";
+import { createBdcClient, canTransferBdc, type BdcAccount } from "@/lib/bdc";
+import {
+  type Draft as Draft,
+  type Scheduled as Scheduled,
+  type FrequentRecipient,
+  type Template,
+  listDrafts,
+  createDraft,
+  deleteDraft,
+  listScheduledTransfers,
+  createScheduledTransfer,
+  updateScheduledTransfer,
+  cancelScheduledTransfer,
+  markScheduledExecuted,
+  listFrequentRecipients,
+  createFrequentRecipient,
+  deleteFrequentRecipient,
+  listTemplates,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  registerBdcTransfer,
+} from "@/lib/transfer-store";
 
 export const Route = createFileRoute("/app/transferencias")({ component: Page });
 
 type Tab = "unica" | "programar" | "borradores" | "programadas" | "destinatarios";
 
-type Draft = { id: string; destinatario: string; alias: string; monto: string; concepto: string; ref: string; fecha: string; cbu?: string; subcuentaOrigen?: string; montoNum?: number };
-type Scheduled = { id: string; destinatario: string; alias: string; monto: string; fecha: string; hora: string; estado: string; concepto: string; cbu?: string; subcuentaOrigen?: string; montoNum?: number };
-type CoelsaResult = { nombre: string; cuit: string; cbu: string; alias: string };
+// Drafts and scheduled transfers are persisted in Supabase (`transfer-store`):
+// their types live there and are re-exported here with the names this screen uses.
+type CoelsaResult = {
+  nombre: string;
+  cuit: string;
+  cbu: string;
+  alias: string;
+  /** Detalle extra que devuelve el banco al validar; puede venir vacío. */
+  banco?: string;
+  bancoCodigo?: string;
+  tipoCuenta?: string;
+  moneda?: string;
+  activa?: boolean;
+  tipoPersona?: string;
+  tipoDoc?: string;
+};
 type Destinatario = CoelsaResult & { banco: string };
+
+/**
+ * Datos del comprobante a partir del resultado del envío y del destinatario
+ * validado. Devuelve null si todavía no hay una transferencia enviada.
+ */
+function comprobanteDe(
+  t: TransferSuccess | null,
+  titular: RecipientTitular | null | undefined,
+  clienteNombre: string,
+  clienteCuit: string,
+): DatosComprobante | null {
+  if (!t || t.monto == null) return null;
+  return {
+    fecha: t.fecha ?? new Date().toISOString(),
+    monto: t.monto,
+    concepto: t.concepto,
+    comision: t.comision,
+    impuesto: t.impuesto,
+    estado: t.estado,
+    txid: t.txid,
+    desde: { nombre: clienteNombre, cuit: clienteCuit, cbu: t.origenCbu ?? "" },
+    hacia: {
+      nombre: titular?.nombre ?? "",
+      cuit: titular?.cuit ?? "",
+      cbu: titular?.cbu ?? t.destino ?? "",
+      banco: titular?.banco,
+      alias: titular?.alias,
+      tipoCuenta: titular?.tipoCuenta,
+    },
+  };
+}
+
+/**
+ * Ficha del destinatario validado contra el banco: muestra todo lo que devuelve
+ * `/accounts/info` (titular, CUIT/CUIL, banco, tipo de cuenta, moneda, estado).
+ * Los destinatarios guardados (agenda/plantillas) no traen el detalle extra, así
+ * que solo se muestran los datos disponibles.
+ */
+function FilaDestinatario({
+  label,
+  value,
+  strong,
+  mono,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex justify-between gap-2">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={`truncate ${strong ? "font-semibold" : "font-medium"} ${mono ? "font-mono" : ""}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function DestinatarioValidadoCard({ d }: { d: CoelsaResult }) {
+  const kind = detectIdentifierKind(d.cbu);
+  const tipo = kind === "ALIAS" ? "Alias" : d.cbu.startsWith("000") ? "CVU" : "CBU";
+  const banco = [d.banco, d.bancoCodigo ? `(${d.bancoCodigo})` : ""].filter(Boolean).join(" ");
+
+  return (
+    <div className="mt-2 border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 rounded-lg p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <ShieldCheck size={14} className="text-green-600" />
+        <span className="text-[11px] font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">
+          Validado — {tipo}
+        </span>
+        {d.activa !== undefined && (
+          <span
+            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+              d.activa
+                ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+            }`}
+          >
+            {d.activa ? "Cuenta activa" : "Cuenta inactiva"}
+          </span>
+        )}
+      </div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+        <FilaDestinatario label="Nombre" value={d.nombre} strong />
+        <FilaDestinatario label={d.tipoDoc || "CUIT"} value={d.cuit || "—"} />
+        {banco && <FilaDestinatario label="Banco" value={banco} />}
+        {d.tipoCuenta && <FilaDestinatario label="Tipo de cuenta" value={d.tipoCuenta} />}
+        {d.moneda && <FilaDestinatario label="Moneda" value={d.moneda} />}
+        {d.tipoPersona && <FilaDestinatario label="Persona" value={d.tipoPersona} />}
+        <FilaDestinatario label="CBU/CVU" value={d.cbu} mono />
+        <FilaDestinatario label="Alias" value={d.alias ? `@${d.alias}` : "—"} />
+      </div>
+    </div>
+  );
+}
+
+type TransferPayload = {
+  subcuentaOrigen: string;
+  destinatarioCbu: string;
+  destinatarioCuit: string;
+  destinatarioNombre: string;
+  destinatarioAlias: string;
+  /** Destinatario completo (detalle que devolvió el banco) para el comprobante. */
+  destinatario?: CoelsaResult;
+  monto: number;
+  concepto: string;
+};
+
+/**
+ /**
+  * 2FA (email OTP) to confirm a single transfer.
+ */
+const OTP_ENABLED: boolean = false;
+
+type TransferSuccess = {
+  txid: string;
+  estado?: string;
+  mensaje?: string;
+  /** Comprobante de la operación (se completa al enviar). */
+  monto?: number;
+  concepto?: string;
+  origenNombre?: string;
+  origenCbu?: string;
+  destino?: string;
+  comision?: number;
+  impuesto?: number;
+  fecha?: string;
+};
 
 type Subcuenta = { id: string; nombre: string; cbu: string | null; saldo_disponible: number; tipo: string };
 
 const fmt = (n: number) => `$ ${n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const digitsOnly = (v?: string | null) => (v ?? "").replace(/\D/g, "");
+
+/** Badge color per scheduled-transfer status (executed = green). */
+const STATUS_TONE: Record<string, "neutral" | "success" | "warn" | "danger"> = {
+  Scheduled: "warn",
+  Ejecutada: "success",
+  Cancelada: "neutral",
+  Error: "danger",
+};
 
 function Page() {
   const [tab, setTab] = useState<Tab>("unica");
@@ -28,10 +207,20 @@ function Page() {
   const [destAlias, setDestAlias] = useState("");
   const [saveDestOpen, setSaveDestOpen] = useState(false);
   const [destValidation, setDestValidation] = useState<import("@/lib/recipient-validation").RecipientValidationResult | null>(null);
+  const [transferSuccess, setTransferSuccess] = useState<TransferSuccess | null>(null);
   const [prefilledDestinatario, setPrefilledDestinatario] = useState<CoelsaResult | undefined>(undefined);
-  const [plantillaOpen, setPlantillaOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  /** Scheduled que se esta editando en la pestana "Programar" (null = nueva). */
+  const [editingScheduled, setEditingScheduled] = useState<Scheduled | null>(null);
+  /** Real template list (table `plantillas_transferencia`, migration 1016). */
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
+  /** Template picked: it prefills the form and is cleared afterwards. */
+  const [templatePrefill, setTemplatePrefill] = useState<Template | null>(null);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const [scheduled, setScheduled] = useState<Scheduled[]>([]);
+  const [frecuentes, setFrecuentes] = useState<FrequentRecipient[]>([]);
+  const [listasError, setListasError] = useState<string | null>(null);
   const [otpOpen, setOtpOpen] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -41,6 +230,8 @@ function Page() {
   } | null>(null);
 
   const [subcuentas, setSubcuentas] = useState<Subcuenta[]>([]);
+  const [clienteCuit, setClienteCuit] = useState("");
+  const [clienteNombre, setClienteNombre] = useState("");
   const [totalDisponible, setTotalDisponible] = useState(0);
   const [enviadoMes, setEnviadoMes] = useState({ monto: 0, ops: 0 });
   const [loading, setLoading] = useState(true);
@@ -51,10 +242,12 @@ function Page() {
       const { data: { user } } = await sb.auth.getUser();
       const { data: cli } = await sb
         .from("clientes")
-        .select("legajo")
+        .select("legajo, nombre, cuit, cuit_cuil")
         .eq("correo", user?.email ?? "")
         .maybeSingle();
       if (!cli?.legajo) return;
+      setClienteCuit(digitsOnly(cli.cuit) || digitsOnly(cli.cuit_cuil));
+      setClienteNombre(String(cli.nombre ?? ""));
 
       const { data: subs } = await sb
         .from("subcuentas")
@@ -86,6 +279,108 @@ function Page() {
 
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
 
+  /**
+     /**
+      * Drafts, scheduled transfers and frequent recipients live in Supabase: they are
+      * reloaded on mount so they survive a reload / another tab / another device.
+   */
+  const cargarListas = useCallback(async () => {
+    setListasError(null);
+    try {
+      const [b, p, f] = await Promise.all([
+        listDrafts(),
+        listScheduledTransfers(),
+        listFrequentRecipients(),
+      ]);
+      setDrafts(b);
+      setScheduled(p);
+      setFrecuentes(f);
+      // Templates (migration 1016) load separately on purpose: if the table
+      // does not exist yet it must not break the other lists.
+      try {
+        setTemplates(await listTemplates());
+        setTemplatesError(null);
+      } catch (e) {
+        setTemplatesError(toDataError(e).message);
+      }
+    } catch (e) {
+      setListasError(toDataError(e).message);
+    }
+  }, []);
+
+  useEffect(() => { void cargarListas(); }, [cargarListas]);
+
+  /** Refreshes scheduled transfers only (when opening that tab), in case the worker ran one. */
+  const refreshScheduledTransfers = useCallback(async () => {
+    try {
+      setScheduled(await listScheduledTransfers());
+    } catch {
+      // el error de listas ya se muestra en la pantalla
+    }
+  }, []);
+
+  /** Closes the dialog, switches tab and prefills the form. */
+  const applyTemplate = (p: Template) => {
+    setTemplatesOpen(false);
+    setTab(p.tipo);
+    setTemplatePrefill(p);
+    toast.success(
+      p.destinatario
+        ? `Template "${p.nombre}" cargada`
+        : `Template "${p.nombre}" cargada${p.monto != null ? ` — ${fmt(p.monto)}` : ""}. Elegi el CBU/CVU/alias del destinatario.`,
+    );
+  };
+
+  const handleDeleteTemplate = async (p: Template) => {
+    try {
+      await deleteTemplate(p.id);
+      setTemplates((prev) => prev.filter((x) => x.id !== p.id));
+      toast.success(`Template "${p.nombre}" eliminada`);
+    } catch (e) {
+      toast.error(toDataError(e).message);
+    }
+  };
+
+  /** Creates a generic template (no recipient) from the templates modal. */
+  const createTemplateQuick = async (input: {
+    nombre: string;
+    monto?: number;
+    subcuentaOrigen?: string;
+    concepto?: string;
+  }): Promise<boolean> => {
+    try {
+      const fila = await createTemplate({
+        nombre: input.nombre,
+        tipo: "unica",
+        monto: input.monto,
+        subcuentaOrigen: input.subcuentaOrigen,
+        concepto: input.concepto,
+      });
+      setTemplates((prev) => [...prev.filter((x) => x.id !== fila.id), fila].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      toast.success(`Template "${fila.nombre}" guardada`);
+      return true;
+    } catch (e) {
+      toast.error(toDataError(e).message);
+      return false;
+    }
+  };
+
+  /** Updates a template from the modal (name, amount, origin and concept). */
+  const editTemplate = async (
+    id: string,
+    input: { nombre: string; monto?: number; subcuentaOrigen?: string; concepto?: string },
+  ): Promise<boolean> => {
+    try {
+      const fila = await updateTemplate(id, input);
+      setTemplates((prev) => [...prev.filter((x) => x.id !== fila.id), fila].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+      toast.success(`Template "${fila.nombre}" actualizada`);
+      return true;
+    } catch (e) {
+      toast.error(toDataError(e).message);
+      return false;
+    }
+  };
+
   const [otpSending, setOtpSending] = useState(false);
 
   const resetOtp = () => {
@@ -103,7 +398,7 @@ function Page() {
       toast.success("Código enviado a tu correo");
       return true;
     } catch (e) {
-      const msg = toDataError(e).message;
+      const msg = (await extraerMensajeEdgeFunction(e)) || toDataError(e).message;
       toast.error(msg || "No se pudo enviar el código. Intenta reenviar.");
       return false;
     } finally {
@@ -111,19 +406,15 @@ function Page() {
     }
   };
 
-  const openOtp = async () => {
+  const openOtp = async (payload: TransferPayload) => {
+    setTransferPayload(payload);
     resetOtp();
     setOtpOpen(true);
     // Envía el código por Resend al correo autenticado (credenciales RESEND_API_KEY / RESEND_FROM)
     await enviarOtpCorreo();
   };
 
-  const [transferPayload, setTransferPayload] = useState<{
-    subcuentaOrigen: string;
-    destinatarioCbu: string;
-    monto: number;
-    concepto: string;
-  } | null>(null);
+  const [transferPayload, setTransferPayload] = useState<TransferPayload | null>(null);
 
   const [otpVerifying, setOtpVerifying] = useState(false);
 
@@ -145,7 +436,7 @@ function Page() {
       if (data?.error) throw new Error(data.error);
       if (!data?.ok) throw new Error("Código no válido");
     } catch (e) {
-      const msg = toDataError(e).message;
+      const msg = (await extraerMensajeEdgeFunction(e)) || toDataError(e).message;
       toast.error(msg || "Código incorrecto o expirado");
       setOtpVerifying(false);
       return;
@@ -153,13 +444,136 @@ function Page() {
     setOtpVerifying(false);
     setOtpOpen(false);
     setConfirm(false);
+    const payloadTrasOtp = transferPayload;
+    if (payloadTrasOtp) await ejecutarTransferencia(payloadTrasOtp);
+  };
+
+  /**
+   * Runs the transfer with the payload already built (bank + record in `movimientos`).
+   * It is separate from the OTP check so it can be skipped when `OTP_ENABLED` is false.
+   */
+  const ejecutarTransferencia = async (payload: TransferPayload) => {
     try {
+      /** Subcuenta de origen (para el comprobante). */
+      const origenDe = (id: string) => subcuentas.find((x) => x.id === id);
+
+      if (canTransferBdc()) {
+        const bdc = createBdcClient();
+        const sub = subcuentas.find((s) => s.id === payload.subcuentaOrigen);
+
+        const cbuOrigen = sub?.cbu ?? "";
+        const cuitOrigen = digitsOnly(clienteCuit);
+        if (!cbuOrigen) throw new Error("La subcuenta seleccionada no tiene CBU/CVU de origen configurado.");
+        if (!cuitOrigen) throw new Error("El cliente/empresa no tiene CUIT cargado. No se puede enviar la transferencia al banco.");
+
+        const desde: BdcAccount = {
+          address: cbuOrigen,
+          personId: cuitOrigen,
+        };
+        const cuitDestino = digitsOnly(payload.destinatarioCuit);
+        if (!cuitDestino) throw new Error("El destinatario no tiene CUIT validado por el banco.");
+        const hasta: BdcAccount = {
+          address: payload.destinatarioCbu,
+          personId: cuitDestino,
+        };
+
+        const originId = `MOLI${Date.now()}`; // BDC exige <=22 chars y solo [a-zA-Z0-9]
+        await bdc.autenticar();
+        const envio = await bdc.transferir({
+          originId,
+          desde,
+          hasta,
+          importe: payload.monto,
+          descripcion: payload.concepto || "Transferencia MoliPlay",
+        });
+
+        let estado = "";
+        try {
+          const consulta = await bdc.consultarTransferencia(originId);
+          estado = consulta?.data?.estado ?? "";
+        } catch {
+          // la consulta de estado es informativa: no frená la operación
+        }
+
+        // The bank already accepted the operation: it must be recorded in `movimientos`,
+        // `movimientos`, igual que el flujo interno (RPC 1010). Si esto falla
+        // NO se revierte el envío (el dinero ya se movió); se avisa para que
+        // same as the internal flow. The RPC is idempotent by TXID.
+        // El comprobante se arma con lo que devuelve el registro. La comisión y el
+        // IVA los calcula la RPC según el CVU de origen; si la operación ya estaba
+        // registrada (reintento) no vienen, y ahí se muestran como "—".
+        let comision: number | undefined;
+        let impuesto: number | undefined;
+        try {
+          const registro = await registerBdcTransfer({
+            subcuentaOrigen: payload.subcuentaOrigen,
+            originId,
+            destinatarioCbu: payload.destinatarioCbu,
+            destinatarioNombre: payload.destinatarioNombre,
+            destinatarioCuit: payload.destinatarioCuit,
+            destinatarioBanco: payload.destinatario?.banco ?? null,
+            monto: payload.monto,
+            concepto: payload.concepto || null,
+            estadoBdc: estado || null,
+          });
+          if (registro.comision != null) {
+            comision = Number(registro.comision);
+            impuesto = Number(registro.impuesto ?? 0);
+          }
+          if (registro.saldo_insuficiente) {
+            toast.info(
+              "La transferencia salió bien, pero la subcuenta de origen no tenía saldo suficiente para reflejarla internamente.",
+            );
+          }
+        } catch (e) {
+          toast.error(
+            `Transferencia enviada al banco, pero no se pudo registrar en el historial: ${toDataError(e).message}`,
+          );
+        }
+
+        toast.success(
+          `Transferencia enviada al banco — TXID: ${originId}${estado ? ` · ${estado}` : ""}`,
+        );
+        setTransferSuccess({
+          txid: originId,
+          estado,
+          mensaje: envio.message ?? "Transferencia creada con exito",
+          monto: payload.monto,
+          concepto: payload.concepto,
+          origenNombre: origenDe(payload.subcuentaOrigen)?.nombre,
+          origenCbu: origenDe(payload.subcuentaOrigen)?.cbu ?? undefined,
+          destino: payload.destinatarioCbu,
+          comision,
+          impuesto,
+          fecha: new Date().toISOString(),
+        });
+        setDestAlias(payload.destinatarioAlias || payload.destinatarioNombre || payload.destinatarioCbu.slice(0, 10) + "...");
+        setDestValidation({
+          status: "valid",
+          ok: true,
+          kind: detectIdentifierKind(payload.destinatarioCbu),
+          identifier: payload.destinatarioCbu,
+          provider: "bdc",
+          titular: payload.destinatario ?? {
+            nombre: payload.destinatarioNombre,
+            cuit: payload.destinatarioCuit,
+            cbu: payload.destinatarioCbu,
+            alias: payload.destinatarioAlias,
+          },
+          validatedAt: new Date().toISOString(),
+        });
+        setSaveDestOpen(true);
+        setTransferPayload(null);
+        await cargarDatos();
+        return;
+      }
+
       // Flujo desacoplado: validación → ejecución → movimiento
       const result = await executeTransfer({
-        subcuentaOrigenId: transferPayload.subcuentaOrigen,
-        destinatarioIdentifier: transferPayload.destinatarioCbu,
-        monto: transferPayload.monto,
-        concepto: transferPayload.concepto || null,
+        subcuentaOrigenId: payload.subcuentaOrigen,
+        destinatarioIdentifier: payload.destinatarioCbu,
+        monto: payload.monto,
+        concepto: payload.concepto || null,
       });
       if (!result.ok) {
         const msg =
@@ -174,7 +588,19 @@ function Page() {
         return;
       }
       toast.success(`Transferencia enviada — TXID: ${result.txn.id_txn}`);
-      setDestAlias(result.validation.titular?.alias ?? transferPayload.destinatarioCbu.slice(0, 10) + "...");
+      setTransferSuccess({
+        txid: result.txn.id_txn,
+        mensaje: "Transferencia registrada correctamente",
+        monto: payload.monto,
+        concepto: payload.concepto,
+        origenNombre: origenDe(payload.subcuentaOrigen)?.nombre,
+        origenCbu: origenDe(payload.subcuentaOrigen)?.cbu ?? undefined,
+        destino: payload.destinatarioCbu,
+        comision: result.txn.comision,
+        impuesto: result.txn.impuesto,
+        fecha: new Date().toISOString(),
+      });
+      setDestAlias(result.validation.titular?.alias ?? payload.destinatarioCbu.slice(0, 10) + "...");
       setDestValidation(result.validation);
       setSaveDestOpen(true);
       setTransferPayload(null);
@@ -202,8 +628,14 @@ function Page() {
       <PageHeader
         title="Transferir"
         description="Envios inmediatos, programados y a CBU, CVU o alias."
-        action={<BtnOutline onClick={() => setPlantillaOpen(true)}><FileText size={14} /> Plantillas</BtnOutline>}
+        action={<BtnOutline onClick={() => setTemplatesOpen(true)}><FileText size={14} /> Plantillas</BtnOutline>}
       />
+
+      {listasError && (
+        <div className="mb-4 rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          No se pudieron cargar tus listas guardadas: {listasError}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="bg-card border rounded-lg p-3">
@@ -233,7 +665,13 @@ function Page() {
             {tabs.map((t) => (
               <button
                 key={t.key}
-                onClick={() => setTab(t.key)}
+                onClick={() => {
+                  // Al salir de "Programar" se cancela cualquier edicion abierta.
+                  if (t.key !== "programar") setEditingScheduled(null);
+                  // Refresh when entering the scheduled tab: the worker may have run something.
+                  if (t.key === "programadas") void refreshScheduledTransfers();
+                  setTab(t.key);
+                }}
                 className={`shrink-0 px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 md:border-b-0 md:border-l-2 md:text-left transition-colors ${
                   tab === t.key
                     ? "border-primary text-primary bg-[color:var(--brand-soft)]/50 md:bg-[color:var(--brand-soft)]/40"
@@ -249,23 +687,62 @@ function Page() {
               <Unica
                 confirm={confirm}
                 setConfirm={setConfirm}
-                onOtpRequired={openOtp}
+                onOtpRequired={async (payload) => {
+                  // 2FA disabled (OTP_ENABLED = false): the transfer runs straight away.
+                  // To restore the OTP step set OTP_ENABLED to true at the top of this file.
+                  //
+                  if (OTP_ENABLED) {
+                    await openOtp(payload);
+                    return;
+                  }
+                  setConfirm(false);
+                  await ejecutarTransferencia(payload);
+                }}
                 subcuentas={subcuentas}
                 onTransferPayload={setTransferPayload}
-                onSaveDraft={(d) => {
-                  setDrafts((prev) => [...prev, d]);
-                  toast.success("Borrador guardado");
+                frecuentes={frecuentes}
+                onSaveDraft={async (d) => {
+                  try {
+                    const fila = await createDraft({
+                      destinatario: {
+                        nombre: d.destinatario,
+                        alias: d.alias,
+                        cbu: d.cbu ?? "",
+                        cuit: d.cuit,
+                        banco: d.banco,
+                      },
+                      subcuentaOrigen: d.subcuentaOrigen,
+                      monto: d.montoNum ?? 0,
+                      concepto: d.concepto,
+                    });
+                    setDrafts((prev) => [fila, ...prev.filter((x) => x.id !== fila.id)]);
+                    toast.success("Borrador guardado");
+                  } catch (e) {
+                    toast.error(toDataError(e).message);
+                  }
                 }}
                 prefilledDestinatario={prefilledDestinatario}
                 onClearPrefill={() => setPrefilledDestinatario(undefined)}
+                template={templatePrefill}
+                onClearTemplate={() => setTemplatePrefill(null)}
               />
             )}
             {tab === "programar" && (
               <Programar
                 subcuentas={subcuentas}
+                frecuentes={frecuentes}
+                programada={editingScheduled}
+                onCancelarEdicion={() => { setEditingScheduled(null); setTab("programadas"); }}
+                template={templatePrefill}
+                onClearTemplate={() => setTemplatePrefill(null)}
                 onSuccess={(s) => {
-                  setScheduled((prev) => [...prev, s]);
-                  toast.success("Transferencia programada");
+                  const editando = editingScheduled?.id === s.id;
+                  setScheduled((prev) =>
+                    (prev.some((x) => x.id === s.id) ? prev.map((x) => (x.id === s.id ? s : x)) : [s, ...prev])
+                      .sort((a, b) => `${a.fechaISO ?? ""}${a.hora}`.localeCompare(`${b.fechaISO ?? ""}${b.hora}`)),
+                  );
+                  setEditingScheduled(null);
+                  toast.success(editando ? "Transferencia programada actualizada" : "Transferencia programada");
                   setTab("programadas");
                 }}
               />
@@ -276,7 +753,7 @@ function Page() {
                 onDelete={(id) => setConfirmarEliminacion({ tipo: "borrador", id })}
                 onEdit={(id) => {
                   const d = drafts.find((x) => x.id === id);
-                  if (d?.cbu) setPrefilledDestinatario({ nombre: d.destinatario, cuit: "", cbu: d.cbu!, alias: d.alias });
+                  if (d?.cbu) setPrefilledDestinatario({ nombre: d.destinatario, cuit: d.cuit ?? "", cbu: d.cbu, alias: d.alias });
                   setTab("unica");
                   toast.success("Borrador cargado en el formulario");
                 }}
@@ -286,8 +763,10 @@ function Page() {
                   try {
                     const res = await executeTransfer({ subcuentaOrigenId: d.subcuentaOrigen!, destinatarioIdentifier: d.cbu!, monto: d.montoNum!, concepto: d.concepto });
                     if (!res.ok) { toast.error(res.error ?? "Validación fallida"); return; }
-                    toast.success(`Borrador ejecutado — TXID: ${res.txn.id_txn}`);
+                    // Executed: the draft no longer exists (the movement stays in `movimientos`).
+                    await deleteDraft(id);
                     setDrafts((prev) => prev.filter((x) => x.id !== id));
+                    toast.success(`Draft ejecutado — TXID: ${res.txn.id_txn}`);
                     await cargarDatos();
                   } catch (e) { toast.error(toDataError(e).message); }
                 }}
@@ -296,79 +775,80 @@ function Page() {
             {tab === "programadas" && (
               <Programadas
                 items={scheduled}
-                onCancel={(id) => setConfirmarEliminacion({ tipo: "programada", id })}
-                onEdit={(id) => toast.success("Editando transferencia programada")}
+                onCancel={(id) => {
+                  const s = scheduled.find((x) => x.id === id);
+                  if (!s) { toast.error("No se encontro la programada"); return; }
+                  if (s.estado !== "Programada") {
+                    toast.error(`Esta transferencia ya esta ${s.estado.toLowerCase()}`);
+                    return;
+                  }
+                  setConfirmarEliminacion({ tipo: "programada", id });
+                }}
+                onEdit={(id) => {
+                  const s = scheduled.find((x) => x.id === id);
+                  if (!s) { toast.error("No se encontro la programada"); return; }
+                  if (s.estado !== "Programada") {
+                    toast.error(`No se puede editar una transferencia ${s.estado.toLowerCase()}`);
+                    return;
+                  }
+                  // Same as drafts and frequent recipients: it loads into the "Programar"
+                  // form and is saved from there.
+                  setEditingScheduled(s);
+                  setTab("programar");
+                  toast.success("Programada cargada en el formulario");
+                }}
                 onExecute={async (id) => {
                   const s = scheduled.find((x) => x.id === id);
-                  if (!s?.cbu || !s.montoNum || !s.subcuentaOrigen) { toast.error("Programada incompleta"); return; }
+                  if (!s) { toast.error("No se encontro la programada"); return; }
+                  // A scheduled transfer that already ran (or was cancelled) never runs again.
+                  if (s.estado !== "Programada") {
+                    toast.error(`Esta transferencia ya esta ${s.estado.toLowerCase()} y no se puede volver a ejecutar`);
+                    return;
+                  }
+                  if (!s.cbu || !s.montoNum || !s.subcuentaOrigen) { toast.error("Programada incompleta"); return; }
                   try {
                     const res = await executeTransfer({ subcuentaOrigenId: s.subcuentaOrigen!, destinatarioIdentifier: s.cbu!, monto: s.montoNum!, concepto: s.concepto, kind: "programada" });
                     if (!res.ok) { toast.error(res.error ?? "Validación fallida"); return; }
-                    toast.success(`Programada ejecutada — TXID: ${res.txn.id_txn}`);
+                    await markScheduledExecuted(id);
                     setScheduled((prev) => prev.map((x) => x.id === id ? { ...x, estado: "Ejecutada" } : x));
+                    toast.success(`Scheduled ejecutada — TXID: ${res.txn.id_txn}`);
                     await cargarDatos();
                   } catch (e) { toast.error(toDataError(e).message); }
                 }}
               />
             )}
             {tab === "destinatarios" && (
-              <DestinatariosList onSelect={(d) => {
-                setPrefilledDestinatario(d);
-                setTab("unica");
-                toast.success("Destinatario cargado");
-              }} />
+              <DestinatariosList
+                items={frecuentes}
+                onSelect={(d) => {
+                  setPrefilledDestinatario(d);
+                  setTab("unica");
+                  toast.success("Destinatario cargado");
+                }}
+                onDelete={async (id) => {
+                  try {
+                    await deleteFrequentRecipient(id);
+                    setFrecuentes((prev) => prev.filter((x) => x.id !== id));
+                    toast.success("Destinatario eliminado");
+                  } catch (e) { toast.error(toDataError(e).message); }
+                }}
+              />
             )}
           </div>
         </div>
       </div>
 
-      <FormDialog
-        open={plantillaOpen}
-        onClose={() => setPlantillaOpen(false)}
-        title="Plantillas de transferencia"
-        description="Selecciona una plantilla para precargar el formulario."
-        submitLabel="Crear nueva plantilla"
-        size="lg"
-        onSubmit={() => {
-          setPlantillaOpen(false);
-          toast.success("Nueva plantilla creada");
-        }}
-      >
-        <div className="divide-y border rounded-md max-h-64 overflow-y-auto">
-          {[
-            { n: "Sueldos mensuales", d: "18 empleados", m: "$ 4.820.000", t: "unica" as const },
-            { n: "Pago proveedor SA", d: "Mensual · dia 10", m: "$ 220.000", t: "unica" as const },
-            { n: "Honorarios estudio Rios", d: "Mensual · dia 12", m: "$ 145.000", t: "unica" as const },
-            { n: "Alquiler oficina", d: "Mensual · dia 5", m: "$ 380.000", t: "programar" as const },
-          ].map((p) => (
-            <div key={p.n} className="flex items-center justify-between p-3 hover:bg-muted/50 cursor-pointer"
-              onClick={() => {
-                setPlantillaOpen(false);
-                setTab(p.t);
-                toast.success(`Plantilla "${p.n}" cargada`);
-              }}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-md bg-[color:var(--brand-soft)] flex items-center justify-center shrink-0">
-                  <Star size={14} className="text-[color:var(--brand-dark)]" />
-                </div>
-                <div className="min-w-0">
-                  <div className="font-semibold text-sm truncate">{p.n}</div>
-                  <div className="text-xs text-muted-foreground truncate">{p.d}</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-sm font-semibold">{p.m}</span>
-                <button type="button" className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-accent text-muted-foreground"><Trash2 size={13} /></button>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="pt-2">
-          <Label>Nombre de la nueva plantilla</Label>
-          <Input placeholder="Ej. Pago proveedor mensual" />
-        </div>
-      </FormDialog>
+      <PlantillasDialog
+        open={templatesOpen}
+        onClose={() => setTemplatesOpen(false)}
+        templates={templates}
+        error={templatesError}
+        subcuentas={subcuentas}
+        onAplicar={applyTemplate}
+        onBorrar={handleDeleteTemplate}
+        onCrear={createTemplateQuick}
+        onEditar={editTemplate}
+      />
 
       <FormDialog
         open={otpOpen}
@@ -439,39 +919,100 @@ function Page() {
 
       <FormDialog
         open={saveDestOpen}
-        onClose={() => setSaveDestOpen(false)}
-        title="¿Deseas guardar este destinatario como frecuente?"
-        description={`Podes agendar a ${destAlias} en tu lista de destinatarios frecuentes para reutilizarlo.`}
+        onClose={() => { setSaveDestOpen(false); setTransferSuccess(null); }}
+        title={transferSuccess ? "Transferencia enviada correctamente" : "¿Deseas guardar este destinatario como frecuente?"}
+        description={
+          transferSuccess
+            ? `¿Deseas agendar a ${destAlias} como destinatario frecuente?`
+            : `Podes agendar a ${destAlias} en tu lista de destinatarios frecuentes para reutilizarlo.`
+        }
         submitLabel="Si, guardar destinatario"
         onSubmit={async () => {
           try {
             if (destValidation?.titular) {
-              const sb = requireSupabase();
-              const { data: { user } } = await sb.auth.getUser();
-              const { data: cli } = await sb.from("clientes").select("legajo").eq("correo", user?.email ?? "").maybeSingle();
-              if (cli?.legajo) {
-                await sb.from("destinatarios_frecuentes").insert({
-                  cliente_legajo: cli.legajo,
-                  identifier: destValidation.identifier,
-                  identifier_kind: destValidation.kind,
-                  alias: destValidation.titular.alias,
-                  cbu: destValidation.titular.cbu,
-                  nombre: destValidation.titular.nombre,
-                  cuit: destValidation.titular.cuit,
-                  banco: destValidation.titular.banco ?? null,
-                });
-              }
+              await createFrequentRecipient({
+                identifier: destValidation.identifier,
+                nombre: destValidation.titular.nombre,
+                alias: destValidation.titular.alias,
+                cbu: destValidation.titular.cbu,
+                cuit: destValidation.titular.cuit,
+                banco: destValidation.titular.banco,
+              });
+              const lista = await listFrequentRecipients();
+              setFrecuentes(lista);
+              toast.success("Destinatario agregado a frecuentes");
+            } else {
+              toast.info("No hay datos del destinatario para agendar");
             }
-            toast.success(`Destinatario agregado a frecuentes`);
-          } catch {
-            toast.success(`Destinatario agregado a frecuentes (local)`);
+          } catch (e) {
+            toast.error(toDataError(e).message);
           } finally {
             setSaveDestOpen(false);
+            setTransferSuccess(null);
             setDestValidation(null);
           }
         }}
       >
-        <div className="text-xs text-muted-foreground">
+        {transferSuccess && (
+          <div className="mb-3 rounded-md border border-emerald-300/70 bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+            <div className="font-semibold">{transferSuccess.mensaje ?? "Transferencia enviada correctamente"}</div>
+            <div className="mt-1 font-mono break-all">TXID: {transferSuccess.txid}</div>
+            {transferSuccess.estado && <div className="mt-1">Estado: {transferSuccess.estado}</div>}
+          </div>
+        )}
+
+        {transferSuccess && (
+          <div className="mb-3 border rounded-md divide-y">
+            {(
+              [
+                ["Fecha", transferSuccess.fecha ? new Date(transferSuccess.fecha).toLocaleString("es-AR") : "—"],
+                [
+                  "Origen",
+                  [transferSuccess.origenNombre, transferSuccess.origenCbu].filter(Boolean).join(" — ") || "—",
+                ],
+                ["Destino", transferSuccess.destino || destValidation?.titular?.cbu || "—"],
+                ["Monto", transferSuccess.monto != null ? fmt(transferSuccess.monto) : "—"],
+                ["Concepto", transferSuccess.concepto || "—"],
+                ["Comisión", transferSuccess.comision != null ? fmt(transferSuccess.comision) : "—"],
+                ["IVA", transferSuccess.impuesto != null ? fmt(transferSuccess.impuesto) : "—"],
+              ] as [string, string][]
+            ).map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-3 py-2 px-3 text-sm">
+                <span className="text-muted-foreground shrink-0">{k}</span>
+                <span className="font-mono tabular-nums font-semibold text-right break-all">{v}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {destValidation?.titular && <DestinatarioValidadoCard d={destValidation.titular} />}
+
+        {(() => {
+          const c = comprobanteDe(transferSuccess, destValidation?.titular, clienteNombre, clienteCuit);
+          if (!c) return null;
+          return (
+            <div className="flex flex-wrap gap-2 mt-3">
+              <BtnOutline type="button" onClick={() => descargarComprobantePdf(c)} className="flex-1">
+                <Download size={14} /> Descargar comprobante
+              </BtnOutline>
+              <BtnOutline
+                type="button"
+                className="flex-1"
+                onClick={async () => {
+                  const r = await compartirComprobante(c);
+                  if (r === "compartido") toast.success("Comprobante compartido");
+                  else if (r === "descargado")
+                    toast.info("Tu navegador no comparte archivos: se descargó el comprobante para adjuntarlo.");
+                  else if (r === "error") toast.error("No se pudo compartir el comprobante");
+                }}
+              >
+                <Share2 size={14} /> Compartir comprobante
+              </BtnOutline>
+            </div>
+          );
+        })()}
+
+        <div className="text-xs text-muted-foreground mt-3">
           Los destinatarios ya no se guardan automaticamente. Solo se agendan si confirmas aqui.
         </div>
       </FormDialog>
@@ -486,13 +1027,23 @@ function Page() {
         description="Esta accion no se puede deshacer."
         confirmLabel={confirmarEliminacion?.tipo === "borrador" ? "Eliminar" : "Cancelar"}
         onClose={() => setConfirmarEliminacion(null)}
-        onConfirm={() => {
-          if (confirmarEliminacion?.tipo === "borrador") {
-            setDrafts((prev) => prev.filter((d) => d.id !== confirmarEliminacion.id));
-            toast.success("Borrador eliminado");
-          } else if (confirmarEliminacion?.tipo === "programada") {
-            setScheduled((prev) => prev.filter((s) => s.id !== confirmarEliminacion.id));
-            toast.success("Transferencia cancelada");
+        onConfirm={async () => {
+          const pendiente = confirmarEliminacion;
+          setConfirmarEliminacion(null);
+          if (!pendiente) return;
+          try {
+            if (pendiente.tipo === "borrador") {
+              await deleteDraft(pendiente.id);
+              setDrafts((prev) => prev.filter((d) => d.id !== pendiente.id));
+              toast.success("Borrador eliminado");
+            } else {
+              // No se borra: queda `cancelada` en la tabla para auditoria.
+              await cancelScheduledTransfer(pendiente.id);
+              setScheduled((prev) => prev.map((s) => s.id === pendiente.id ? { ...s, estado: "Cancelada" } : s));
+              toast.success("Transferencia cancelada");
+            }
+          } catch (e) {
+            toast.error(toDataError(e).message);
           }
         }}
       />
@@ -502,6 +1053,189 @@ function Page() {
 
 /* ===== Transferencia unica ===== */
 
+/* ===== Plantillas ===== */
+/**
+  * Templates dialog: list, apply, create, edit and delete. Templates are generic
+  * (name + amount, no recipient): the CBU/CVU/alias is chosen when applying them.
+ * CBU/CVU/alias de la persona.
+ */
+function PlantillasDialog({ open, onClose, templates, error, subcuentas, onAplicar, onBorrar, onCrear, onEditar }: {
+  open: boolean;
+  onClose: () => void;
+  templates: Template[];
+  /** Shown when the table does not exist yet (migration 1016). */
+  error?: string | null;
+  subcuentas: Subcuenta[];
+  onAplicar: (p: Template) => void;
+  onBorrar: (p: Template) => void | Promise<void>;
+  onCrear: (input: { nombre: string; monto?: number; subcuentaOrigen?: string; concepto?: string }) => Promise<boolean>;
+  onEditar: (id: string, input: { nombre: string; monto?: number; subcuentaOrigen?: string; concepto?: string }) => Promise<boolean>;
+}) {
+  const [nombre, setNombre] = useState("");
+  const [monto, setMonto] = useState("");
+  const [subcuentaOrigen, setSubcuentaOrigen] = useState("");
+  const [concepto, setConcepto] = useState("Pago a proveedor");
+  const [creando, setCreando] = useState(false);
+  /** Template being edited (null = creating a new one). */
+  const [editando, setEditando] = useState<Template | null>(null);
+
+  const guardar = async () => {
+    if (creando) return;
+    if (!nombre.trim()) { toast.error("Ponele un nombre a la plantilla"); return; }
+    const montoNum = monto.trim() ? Number(monto.trim().replace(/\./g, "").replace(",", ".")) : undefined;
+    if (monto.trim() && (!montoNum || Number.isNaN(montoNum) || montoNum <= 0)) {
+      toast.error("Ingresa un monto valido o dejalo vacio");
+      return;
+    }
+    setCreando(true);
+    try {
+      const datos = {
+        nombre: nombre.trim(),
+        monto: montoNum,
+        subcuentaOrigen: subcuentaOrigen || undefined,
+        concepto: concepto || undefined,
+      };
+      const ok = editando ? await onEditar(editando.id, datos) : await onCrear(datos);
+      if (ok) { setNombre(""); setMonto(""); setSubcuentaOrigen(""); setConcepto("Pago a proveedor"); setEditando(null); }
+    } finally {
+      setCreando(false);
+    }
+  };
+
+  return (
+    <FormDialog
+      open={open}
+      onClose={() => { setEditando(null); setNombre(""); setMonto(""); setSubcuentaOrigen(""); onClose(); }}
+      title="Plantillas de transferencia"
+      description="Selecciona una plantilla para precargar el formulario."
+      submitLabel={creando ? "Guardando..." : editando ? "Guardar cambios" : "Crear plantilla"}
+      size="lg"
+      onSubmit={() => { void guardar(); }}
+    >
+      {error && (
+        <div className="mb-3 rounded-md border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          {error}
+        </div>
+      )}
+      <div className="divide-y border rounded-md max-h-64 overflow-y-auto">
+        {templates.length === 0 ? (
+          <div className="p-5 text-center text-sm text-muted-foreground">
+            Todavia no tenes templates. Crea una abajo o guardala desde el formulario de transferencia.
+          </div>
+        ) : templates.map((p) => {
+          const origen = p.subcuentaOrigen
+            ? subcuentas.find((s) => s.id === p.subcuentaOrigen)?.nombre
+            : undefined;
+          return (
+          <div
+            key={p.id}
+            className="flex items-center justify-between gap-2 p-3 hover:bg-muted/50 cursor-pointer"
+            onClick={() => onAplicar(p)}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-md bg-[color:var(--brand-soft)] flex items-center justify-center shrink-0">
+                <Star size={14} className="text-[color:var(--brand-dark)]" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold text-sm truncate">{p.nombre}</div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {p.destinatario
+                    ? `${p.destinatario.nombre}${p.destinatario.alias ? ` · @${p.destinatario.alias}` : ""}`
+                    : p.monto != null
+                      ? fmt(p.monto)
+                      : "Sin monto"}
+                  {p.concepto ? ` · ${p.concepto}` : ""}
+                  {origen ? ` · ${origen}` : ""}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-sm font-semibold">{p.monto != null ? fmt(p.monto) : "—"}</span>
+              <button
+                type="button"
+                title="Editar plantilla"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditando(p);
+                  setNombre(p.nombre);
+                  setMonto(p.monto != null ? String(p.monto) : "");
+                  setSubcuentaOrigen(p.subcuentaOrigen ?? "");
+                  setConcepto(p.concepto || "Pago a proveedor");
+                }}
+                className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-accent text-muted-foreground"
+              >
+                <Edit3 size={13} />
+              </button>
+              <button
+                type="button"
+                title="Eliminar plantilla"
+                onClick={(e) => { e.stopPropagation(); void onBorrar(p); }}
+                className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 text-muted-foreground hover:text-red-600"
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
+          </div>
+          );
+        })}
+      </div>
+
+      <div className="pt-3 space-y-2">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>{editando ? "Nombre" : "Nueva plantilla"}</Label>
+            <Input
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Ej. Sueldos mensuales"
+            />
+          </div>
+          <div>
+            <Label>Monto ($)</Label>
+            <Input
+              value={monto}
+              onChange={(e) => setMonto(e.target.value)}
+              placeholder="Ej. 482000"
+              inputMode="decimal"
+            />
+          </div>
+          <div>
+            <Label>Origen de fondos (opcional)</Label>
+            <select
+              className="w-full h-10 px-3 rounded-md border bg-card text-sm"
+              value={subcuentaOrigen}
+              onChange={(e) => setSubcuentaOrigen(e.target.value)}
+            >
+              <option value="">Sin especificar</option>
+              {subcuentas.map((s) => (
+                <option key={s.id} value={s.id}>{s.nombre} — {fmt(Number(s.saldo_disponible))}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label>Concepto</Label>
+            <select
+              className="w-full h-10 px-3 rounded-md border bg-card text-sm"
+              value={concepto}
+              onChange={(e) => setConcepto(e.target.value)}
+            >
+              <option>Pago a proveedor</option>
+              <option>Sueldos</option>
+              <option>Honorarios</option>
+              <option>Servicios</option>
+              <option>Devolucion</option>
+            </select>
+          </div>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Al usar la template se precargan el monto, el concepto y el origen. El destinatario
+          (CBU/CVU/alias) lo elegis en ese momento.
+        </p>
+      </div>
+    </FormDialog>
+  );
+}
+
 function Unica({
   confirm,
   setConfirm,
@@ -509,17 +1243,23 @@ function Unica({
   subcuentas,
   onTransferPayload,
   onSaveDraft,
+  frecuentes,
   prefilledDestinatario,
   onClearPrefill,
+  template,
+  onClearTemplate,
 }: {
   confirm: boolean;
   setConfirm: (v: boolean) => void;
-  onOtpRequired: () => void | Promise<void>;
+  onOtpRequired: (payload: TransferPayload) => void | Promise<void>;
   subcuentas: Subcuenta[];
-  onTransferPayload: (p: { subcuentaOrigen: string; destinatarioCbu: string; monto: number; concepto: string }) => void;
-  onSaveDraft: (d: Draft) => void;
+  onTransferPayload: (p: TransferPayload) => void;
+  onSaveDraft: (d: Draft) => void | Promise<void>;
+  frecuentes: FrequentRecipient[];
   prefilledDestinatario?: CoelsaResult;
   onClearPrefill?: () => void;
+  template?: Template | null;
+  onClearTemplate?: () => void;
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
@@ -540,75 +1280,114 @@ function Unica({
   useEffect(() => {
     if (prefilledDestinatario) {
       onClearPrefill?.();
+      setSearchQuery(prefilledDestinatario.cbu);
       setSelectedDestinatario(prefilledDestinatario);
+      // El frecuente guarda solo nombre/CUIT/CBU/alias: se revalida contra el banco
+      // para traer el resto del detalle (banco, tipo de cuenta, moneda, estado) sin
+      // que haya que apretar "Validar".
+      void handleSearch(prefilledDestinatario.cbu);
     }
   }, [prefilledDestinatario, onClearPrefill]);
 
-  const saveAsDraft = () => {
-    if (!selectedDestinatario) return;
-    // Borrador no genera movimiento; al ejecutar pasa por validación → ejecución → movimiento
-    onSaveDraft({
+  // Template picked in the dialog: prefills recipient, amount, concept and subaccount.
+  // Declared AFTER the effect that sets the first subaccount, so this one wins.
+  //
+  useEffect(() => {
+    if (!template) return;
+    const d = template.destinatario;
+    if (d?.cbu) {
+      setSearchQuery(d.cbu);
+      setSelectedDestinatario({ nombre: d.nombre, cuit: d.cuit ?? "", cbu: d.cbu, alias: d.alias ?? "" });
+      // Misma idea que con los frecuentes: revalidar para tener el detalle del banco.
+      void handleSearch(d.cbu);
+    }
+    // Generic template (e.g. "Sueldos"): the recipient is NOT touched. If one is already
+    // picked it is kept; otherwise the user searches for each person.
+    if (template.monto != null) setMonto(String(template.monto));
+    if (template.concepto) setConcepto(template.concepto);
+    if (template.subcuentaOrigen) setSubcuentaOrigen(template.subcuentaOrigen);
+    onClearTemplate?.();
+  }, [template, onClearTemplate]);
+
+  const saveAsDraft = async () => {
+    // Mismo criterio que "Continuar": si el destinatario no esta validado se
+    // valida aca (antes hacia un return silencioso y parecia que no guardaba).
+    const dest = selectedDestinatario ?? (await handleSearch());
+    if (!dest) return;
+
+    const amount = Number(monto) || 0;
+    if (!amount || amount <= 0) { toast.error("Ingresa un monto valido para guardar el borrador"); return; }
+    if (!subcuentaOrigen) { toast.error("Selecciona una subcuenta de origen"); return; }
+
+    // The draft is persisted in `transferencias_borrador` (via transfer-store);
+    // here the row is only assembled. It creates no movement: when executed it goes
+    // through validation -> execution -> movement.
+    await onSaveDraft({
       id: `d${Date.now()}`,
-      destinatario: selectedDestinatario.nombre,
-      alias: selectedDestinatario.alias,
-      cbu: selectedDestinatario.cbu,
+      destinatario: dest.nombre,
+      alias: dest.alias,
+      cbu: dest.cbu,
+      cuit: dest.cuit,
       subcuentaOrigen,
-      montoNum: Number(monto) || 0,
-      monto: `$ ${Number(monto).toLocaleString("es-AR")}`,
+      montoNum: amount,
+      monto: `$ ${amount.toLocaleString("es-AR")}`,
       concepto,
       ref: "",
       fecha: new Date().toLocaleDateString("es-AR"),
     });
-    // También persistir en DB para historial/auditoría sin movimiento ejecutado
-    (async () => {
-      try {
-        const sb = requireSupabase();
-        const { data: { user } } = await sb.auth.getUser();
-        const { data: cli } = await sb.from("clientes").select("legajo").eq("correo", user?.email ?? "").maybeSingle();
-        if (cli?.legajo) {
-          await sb.from("transferencias_borrador").insert({
-            cliente_legajo: cli.legajo,
-            subcuenta_origen: subcuentaOrigen || null,
-            destinatario_identifier: selectedDestinatario.cbu,
-            destinatario_kind: detectIdentifierKind(selectedDestinatario.cbu),
-            monto: Number(monto) || 0,
-            concepto,
-          });
-        }
-      } catch { /* silencioso: fallback local */ }
-    })();
   };
 
-  const handleSearch = async () => {
-    const q = searchQuery.trim();
-    if (!q) return;
+  /** Vuelve el formulario a cero (para salir sin guardar nada). */
+  const resetForm = () => {
+    setSelectedDestinatario(null);
+    setSearchQuery("");
+    setMonto("");
+    setConcepto("Pago a proveedor");
+    setConfirm(false);
+    toast.success("Formulario limpiado");
+  };
+
+  /** Validates the recipient typed in the field. Returns the holder or null. */
+  const handleSearch = async (identifier?: string): Promise<CoelsaResult | null> => {
+    const q = (identifier ?? searchQuery).trim();
+    if (!q) { toast.error("Ingresa el CBU/CVU o alias del destinatario"); return null; }
     setSearching(true);
     try {
-      const res = await recipientValidator.validate({ identifier: q, kind: detectIdentifierKind(q) });
+      const res = await validateRecipient(q, detectIdentifierKind(q));
       if (res.ok && res.titular) {
         onClearPrefill?.();
-        setSelectedDestinatario({
+        const titular: CoelsaResult = {
           nombre: res.titular.nombre,
           cuit: res.titular.cuit,
           cbu: res.titular.cbu,
           alias: res.titular.alias,
-        });
-        if (res.provider === "mock") {
-          // mock acepta cualquier CBU/CVU/Alias sintácticamente válido para pruebas
+          banco: res.titular.banco,
+          bancoCodigo: res.titular.bancoCodigo,
+          tipoCuenta: res.titular.tipoCuenta,
+          moneda: res.titular.moneda,
+          activa: res.titular.activa,
+          tipoPersona: res.titular.tipoPersona,
+          tipoDoc: res.titular.tipoDoc,
+        };
+        setSelectedDestinatario(titular);
+        if (res.provider === "bdc") {
+          toast.success("Titular verificado por Banco de Comercio");
         }
-      } else {
-        const msg =
-          res.status === "invalid_format"
-            ? "Formato inválido: CBU/CVU 22 dígitos o Alias 6-20 caracteres"
-            : res.status === "not_found"
-              ? "Destinatario no encontrado"
-              : res.status === "rejected"
-                ? "Validación rechazada"
-                : res.errorMessage ?? "No se pudo validar el destinatario";
-        toast.error(msg);
+        return titular;
       }
+      const msg =
+        res.status === "invalid_format"
+          ? "Formato inválido: CBU/CVU 22 dígitos o Alias 6-20 caracteres"
+          : res.status === "not_found"
+            ? "Destinatario no encontrado"
+            : res.status === "rejected"
+              ? "Validación rechazada"
+              : res.errorMessage ?? "No se pudo validar el destinatario";
+      toast.error(msg);
+      return null;
     } catch {
       toast.error("Error validando destinatario");
+      return null;
     } finally {
       setSearching(false);
     }
@@ -626,7 +1405,15 @@ function Unica({
             ["Origen", subcuentaSeleccionada?.nombre ?? "—"],
             ["CBU Origen", subcuentaSeleccionada?.cbu ?? "—"],
             ["Destinatario", selectedDestinatario?.nombre ?? "-"],
-            ["CBU Destino", selectedDestinatario?.cbu ?? "-"],
+            [selectedDestinatario?.tipoDoc || "CUIT", selectedDestinatario?.cuit || "—"],
+            ["CBU/CVU Destino", selectedDestinatario?.cbu ?? "-"],
+            [
+              "Banco",
+              [selectedDestinatario?.banco, selectedDestinatario?.bancoCodigo ? `(${selectedDestinatario.bancoCodigo})` : ""]
+                .filter(Boolean)
+                .join(" ") || "—",
+            ],
+            ["Tipo de cuenta", selectedDestinatario?.tipoCuenta || "—"],
             ["Monto", fmt(montoNum)],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between py-2.5 px-3 text-sm">
@@ -635,117 +1422,78 @@ function Unica({
             </div>
           ))}
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground p-3 bg-muted rounded">
-          <ShieldCheck size={14} /> Se solicitara 2FA al confirmar.
-        </div>
+        {OTP_ENABLED && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground p-3 bg-muted rounded">
+            <ShieldCheck size={14} /> Se solicitara 2FA al confirmar.
+          </div>
+        )}
         <div className="flex gap-2">
           <BtnOutline onClick={() => setConfirm(false)} className="flex-1">Volver</BtnOutline>
           <BtnPrimary type="button" onClick={async () => {
             if (!subcuentaOrigen) { toast.error("Selecciona una subcuenta de origen"); return; }
             if (!selectedDestinatario) { toast.error("Falta destinatario validado"); return; }
             if (!montoNum || montoNum <= 0) { toast.error("Ingresa un monto válido mayor a 0"); return; }
-            onTransferPayload({
+            const payload: TransferPayload = {
               subcuentaOrigen,
               destinatarioCbu: selectedDestinatario.cbu,
+              destinatarioCuit: selectedDestinatario.cuit,
+              destinatarioNombre: selectedDestinatario.nombre,
+              destinatarioAlias: selectedDestinatario.alias,
+              destinatario: selectedDestinatario,
               monto: montoNum,
               concepto,
-            });
-            await onOtpRequired();
+            };
+            onTransferPayload(payload);
+            await onOtpRequired(payload);
           }} className="flex-1">Confirmar transferencia</BtnPrimary>
         </div>
       </div>
     );
   }
 
-  if (!selectedDestinatario) {
-    return (
-      <div className="space-y-4">
-        <div>
-          <Label>Destinatario</Label>
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Input
-                placeholder="Buscar por CUIT, CBU o alias"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSearch();
-                  }
-                }}
-                disabled={searching}
-              />
-            </div>
-            <BtnPrimary type="button" onClick={handleSearch} disabled={searching}>
-              {searching ? "Buscando..." : "Buscar"}
-            </BtnPrimary>
-          </div>
-          {searching && (
-            <div className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
-              <span className="animate-pulse">Validando destinatario (CBU/CVU/Alias)...</span>
-            </div>
-          )}
+  return (
+    <>
+    <form className="space-y-4" onSubmit={async (e) => {
+      e.preventDefault();
+      // If the recipient is not validated (or the text changed), validate here
+      // before moving on to the confirmation screen.
+      if (!selectedDestinatario) {
+        if (!(await handleSearch())) return;
+      }
+      if (!monto || Number(monto) <= 0) { toast.error("Ingresa un monto valido"); return; }
+      setConfirm(true);
+    }}>
+      <div>
+        <Label>Destinatario (CBU/CVU/Alias)</Label>
+        <div className="flex gap-2">
+          <Input
+            className="flex-1"
+            placeholder="22 digitos o alias (6-20)"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              // Si cambia el texto, la validacion anterior deja de valer.
+              setSelectedDestinatario(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); void handleSearch(); }
+            }}
+            disabled={searching}
+          />
+          <BtnOutline type="button" onClick={() => { void handleSearch(); }} disabled={searching}>
+            {searching ? "Validando..." : "Validar"}
+          </BtnOutline>
         </div>
-
-        <BtnOutline type="button" onClick={() => setFrecuentesOpen(true)} className="w-full">
+        {selectedDestinatario ? (
+          <DestinatarioValidadoCard d={selectedDestinatario} />
+        ) : (
+          <div className="text-xs text-muted-foreground mt-1">
+            Se valida contra el banco (/accounts/info) antes de continuar.
+          </div>
+        )}
+        <BtnOutline type="button" onClick={() => setFrecuentesOpen(true)} className="w-full mt-2">
           <Users size={14} /> Destinatarios frecuentes
         </BtnOutline>
-
-        <FormDialog
-          open={frecuentesOpen}
-          onClose={() => setFrecuentesOpen(false)}
-          title="Destinatarios frecuentes"
-          description="Selecciona un destinatario de tu lista."
-          submitLabel="Cerrar"
-          onSubmit={() => setFrecuentesOpen(false)}
-          size="md"
-        >
-          <div className="text-center py-8 text-muted-foreground text-sm">
-            No tenes destinatarios frecuentes guardados.
-          </div>
-        </FormDialog>
-      </div>
-    );
-  }
-
-  return (
-    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); setConfirm(true); }}>
-      <div className="border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 rounded-lg p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <ShieldCheck size={16} className="text-green-600" />
-          <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">
-            Destinatario validado — {detectIdentifierKind(selectedDestinatario.cbu) === "ALIAS" ? "Alias" : (selectedDestinatario.cbu.startsWith("000") ? "CVU" : "CBU")}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Nombre</span>
-            <span className="font-semibold">{selectedDestinatario.nombre}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">CUIT</span>
-            <span className="font-semibold">{selectedDestinatario.cuit}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">CBU</span>
-            <span className="font-semibold">{selectedDestinatario.cbu}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Alias</span>
-            <span className="font-semibold">@{selectedDestinatario.alias}</span>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            onClearPrefill?.();
-            setSelectedDestinatario(null);
-          }}
-          className="text-xs text-primary mt-2 hover:underline"
-        >
-          Cambiar destinatario
-        </button>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-3">
@@ -797,39 +1545,160 @@ function Unica({
         </div>
       </div>
 
-      <div className="flex gap-2 pt-1">
-        <BtnOutline type="button" className="flex-1" onClick={saveAsDraft}>
+      <div className="flex flex-wrap gap-2 pt-1">
+        <BtnOutline type="button" className="flex-1 min-w-[130px]" onClick={resetForm}>
+          <X size={14} /> Cancelar
+        </BtnOutline>
+        <BtnOutline type="button" className="flex-1 min-w-[130px]" onClick={() => { void saveAsDraft(); }}>
           <Save size={14} /> Guardar borrador
         </BtnOutline>
-        <BtnPrimary type="submit" className="flex-1">Continuar</BtnPrimary>
+        <BtnPrimary type="submit" className="flex-1 min-w-[130px]">Continuar</BtnPrimary>
       </div>
     </form>
+
+      <FormDialog
+        open={frecuentesOpen}
+        onClose={() => setFrecuentesOpen(false)}
+        title="Destinatarios frecuentes"
+        description="Selecciona un destinatario de tu lista."
+        submitLabel="Cerrar"
+        onSubmit={() => setFrecuentesOpen(false)}
+        size="md"
+      >
+        {frecuentes.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            No tenes destinatarios frecuentes guardados.
+          </div>
+        ) : (
+          <div className="divide-y border rounded-md max-h-64 overflow-y-auto">
+            {frecuentes.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => {
+                  onClearPrefill?.();
+                  setSearchQuery(f.cbu);
+                  setSelectedDestinatario({ nombre: f.nombre, cuit: f.cuit, cbu: f.cbu, alias: f.alias });
+                  setFrecuentesOpen(false);
+                  // Se revalida contra el banco para completar la ficha (banco, tipo
+                  // de cuenta, moneda, estado) sin tener que apretar "Validar".
+                  void handleSearch(f.cbu);
+                }}
+                className="w-full flex items-center justify-between gap-3 p-3 text-left hover:bg-muted/50"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold truncate">{f.nombre}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {f.alias ? `@${f.alias} · ` : ""}
+                    <span className="font-mono">{f.cbu}</span>
+                  </div>
+                </div>
+                {f.banco && <span className="text-[11px] text-muted-foreground shrink-0">{f.banco}</span>}
+              </button>
+            ))}
+          </div>
+        )}
+      </FormDialog>
+    </>
   );
 }
 
 /* ===== Programar ===== */
-function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSuccess: (s: Scheduled) => void }) {
+function Programar({ subcuentas, frecuentes = [], onSuccess, template, onClearTemplate, programada, onCancelarEdicion }: {
+  subcuentas: Subcuenta[];
+  /** Frequent recipients to pick from the list (same as in the single transfer). */
+  frecuentes?: FrequentRecipient[];
+  onSuccess: (s: Scheduled) => void | Promise<void>;
+  template?: Template | null;
+  onClearTemplate?: () => void;
+  /** When provided, this scheduled transfer is being EDITED instead of created. */
+  programada?: Scheduled | null;
+  /** Leaves edit mode (goes back to the scheduled list). */
+  onCancelarEdicion?: () => void;
+}) {
+  const editando = Boolean(programada);
   const [confirm, setConfirm] = useState(false);
-  const [destQuery, setDestQuery] = useState("proveedor.sa");
+  const [frecuentesOpen, setFrecuentesOpen] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [destQuery, setDestQuery] = useState("");
   const [destValid, setDestValid] = useState<import("@/lib/recipient-validation").RecipientValidationResult | null>(null);
   const [validating, setValidating] = useState(false);
   const [subcuentaOrigen, setSubcuentaOrigen] = useState(subcuentas[0]?.id ?? "");
-  const [monto, setMonto] = useState("220000");
+  const [monto, setMonto] = useState("");
   const [fecha, setFecha] = useState("");
   const [hora, setHora] = useState("14:30");
   const [concepto, setConcepto] = useState("Pago a proveedor");
 
-  // Sincronizar subcuenta por defecto cuando cargan async
+  // Sync the default subaccount once they load asynchronously.
   useEffect(() => {
     if (subcuentas.length > 0 && !subcuentaOrigen) setSubcuentaOrigen(subcuentas[0].id);
   }, [subcuentas, subcuentaOrigen]);
 
-  const handleValidate = async (): Promise<import("@/lib/recipient-validation").RecipientValidationResult | null> => {
-    const q = destQuery.trim();
+  // Template picked: prefills recipient (left to validate), amount,
+  // concept and subaccount. After the effect above so this one wins.
+  useEffect(() => {
+    if (!template) return;
+    setDestQuery(template.destinatario?.cbu ?? "");
+    setDestValid(null);
+    if (template.monto != null) setMonto(String(template.monto));
+    if (template.concepto) setConcepto(template.concepto);
+    if (template.subcuentaOrigen) setSubcuentaOrigen(template.subcuentaOrigen);
+    onClearTemplate?.();
+  }, [template, onClearTemplate]);
+
+  // Editing a scheduled transfer: it loads into this same form (like drafts and
+  // frequent recipients). The recipient was already validated, so it is prefilled
+  // as valid and the API is not queried again.
+  //
+  // The ref avoids re-applying the prefill on every render (it would overwrite
+  // what the user is typing). It resets when edit mode ends.
+  const programadaAplicada = useRef<string | null>(null);
+  useEffect(() => {
+    if (!programada) {
+      programadaAplicada.current = null;
+      return;
+    }
+    if (programadaAplicada.current === programada.id) return;
+    programadaAplicada.current = programada.id;
+
+    const p = programada;
+    const cbu = p.cbu ?? "";
+    setDestQuery(cbu);
+    setDestValid(
+      cbu
+        ? {
+            status: "valid",
+            ok: true,
+            kind: detectIdentifierKind(cbu),
+            identifier: cbu,
+            provider: "bdc",
+            titular: {
+              nombre: p.destinatario,
+              cuit: p.cuit ?? "",
+              cbu,
+              alias: p.alias ?? "",
+              banco: p.banco,
+            },
+            validatedAt: new Date().toISOString(),
+          }
+        : null,
+    );
+    setMonto(p.montoNum ? String(p.montoNum) : "");
+    setFecha(p.fechaISO ?? "");
+    if (p.hora) setHora(p.hora);
+    if (p.concepto) setConcepto(p.concepto);
+    if (p.subcuentaOrigen) setSubcuentaOrigen(p.subcuentaOrigen);
+    setConfirm(false);
+  }, [programada]);
+
+  const handleValidate = async (
+    identifier?: string,
+  ): Promise<import("@/lib/recipient-validation").RecipientValidationResult | null> => {
+    const q = (identifier ?? destQuery).trim();
     if (!q) { toast.error("Ingresa un CBU/CVU o Alias"); return null; }
     setValidating(true);
     try {
-      const res = await recipientValidator.validate({ identifier: q, kind: detectIdentifierKind(q) });
+      const res = await validateRecipient(q, detectIdentifierKind(q));
       if (res.ok) { setDestValid(res); return res; }
       else { setDestValid(null); toast.error(res.errorMessage ?? "Destinatario no válido"); return null; }
     } catch {
@@ -841,7 +1710,7 @@ function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSucce
   if (confirm && destValid) {
     return (
       <div className="space-y-4">
-        <div className="text-sm text-muted-foreground">Revisa los datos antes de programar. Se validará de nuevo al ejecutar.</div>
+        <div className="text-sm text-muted-foreground">Revisa los datos antes de {editando ? "guardar los cambios" : "programar"}. Se validará de nuevo al ejecutar.</div>
         <div className="border rounded-md divide-y">
           {[
             ["Origen", subcuentas.find((s) => s.id === subcuentaOrigen)?.nombre ?? "—"],
@@ -859,45 +1728,50 @@ function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSucce
         </div>
         <div className="flex gap-2">
           <BtnOutline onClick={() => setConfirm(false)} className="flex-1">Volver</BtnOutline>
-          <BtnPrimary onClick={async () => {
-            // Programada no genera movimiento ahora; se persiste y al ejecutar pasa por validación → movimiento
-            try {
-              const sb = requireSupabase();
-              const { data: { user } } = await sb.auth.getUser();
-              const { data: cli } = await sb.from("clientes").select("legajo").eq("correo", user?.email ?? "").maybeSingle();
-              if (cli?.legajo) {
-                await sb.from("transferencias_programadas").insert({
-                  cliente_legajo: cli.legajo,
-                  subcuenta_origen: subcuentaOrigen || null,
-                  destinatario_identifier: destValid.identifier,
-                  destinatario_kind: destValid.kind,
+          <BtnPrimary
+            disabled={guardando}
+            onClick={async () => {
+              if (guardando) return;
+              setGuardando(true);
+              try {
+                // Se persiste ANTES de mostrarla en la lista: si falla, no se
+                // "guarda" nada y el usuario lo ve en el toast.
+                const datos = {
+                  destinatario: {
+                    nombre: destValid.titular?.nombre ?? destValid.identifier,
+                    alias: destValid.titular?.alias,
+                    cbu: destValid.titular?.cbu ?? destValid.identifier,
+                    cuit: destValid.titular?.cuit,
+                    banco: destValid.titular?.banco,
+                  },
+                  subcuentaOrigen,
                   monto: Number(monto) || 0,
                   concepto,
-                  fecha_envio: fecha || new Date().toISOString().slice(0, 10),
-                  hora_envio: hora,
-                });
+                  fechaEnvio: fecha || new Date().toISOString().slice(0, 10),
+                  horaEnvio: hora,
+                };
+                // Editing: overwrites the existing scheduled transfer. Otherwise creates a new one.
+                const fila = programada
+                  ? await updateScheduledTransfer(programada.id, datos)
+                  : await createScheduledTransfer(datos);
+                await onSuccess(fila);
+              } catch (e) {
+                toast.error(toDataError(e).message);
+              } finally {
+                setGuardando(false);
               }
-            } catch { /* fallback local */ }
-            onSuccess({
-              id: `s${Date.now()}`,
-              destinatario: destValid.titular?.nombre ?? destValid.identifier,
-              alias: destValid.titular?.alias ?? destValid.identifier,
-              cbu: destValid.titular?.cbu ?? destValid.identifier,
-              subcuentaOrigen,
-              montoNum: Number(monto) || 0,
-              monto: fmt(Number(monto) || 0),
-              fecha: fecha || new Date().toLocaleDateString("es-AR"),
-              hora,
-              estado: "Programada",
-              concepto,
-            });
-          }} className="flex-1">Programar transferencia</BtnPrimary>
+            }}
+            className="flex-1"
+          >
+            {guardando ? "Guardando..." : editando ? "Guardar cambios" : "Programar transferencia"}
+          </BtnPrimary>
         </div>
       </div>
     );
   }
 
   return (
+    <>
     <form className="space-y-4" onSubmit={async (e) => {
       e.preventDefault();
       let valid = destValid;
@@ -929,13 +1803,16 @@ function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSucce
           <Label>Destinatario (CBU/CVU/Alias)</Label>
           <div className="flex gap-2">
             <Input className="flex-1" placeholder="22 dígitos o alias (6-20)" value={destQuery} onChange={(e) => { setDestQuery(e.target.value); setDestValid(null); }} />
-            <BtnOutline type="button" onClick={handleValidate} disabled={validating}>{validating ? "Validando..." : "Validar"}</BtnOutline>
+            <BtnOutline type="button" onClick={() => void handleValidate()} disabled={validating}>{validating ? "Validando..." : "Validar"}</BtnOutline>
           </div>
           {destValid ? (
             <div className="text-xs text-emerald-700 mt-1 flex items-center gap-1"><ShieldCheck size={11} /> Validado: {destValid.titular?.nombre} — {destValid.titular?.banco ?? destValid.kind}</div>
           ) : (
-            <div className="text-xs text-muted-foreground mt-1">Se validará vía servicio desacoplado (mock hoy, COELSA mañana)</div>
+            <div className="text-xs text-muted-foreground mt-1">Se validara contra el banco antes de programar.</div>
           )}
+          <BtnOutline type="button" onClick={() => setFrecuentesOpen(true)} className="w-full mt-2">
+            <Users size={14} /> Destinatarios frecuentes
+          </BtnOutline>
         </div>
         <div>
           <Label>Monto</Label>
@@ -949,11 +1826,11 @@ function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSucce
         </div>
         <div className="grid grid-cols-2 gap-3 sm:col-span-2">
           <div>
-            <Label>Fecha de envio</Label>
+            <Label>Fecha de envio (hora Argentina)</Label>
             <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </div>
           <div>
-            <Label>Hora de envio</Label>
+            <Label>Hora de envio (hora Argentina)</Label>
             <Input type="time" value={hora} onChange={(e) => setHora(e.target.value)} />
           </div>
         </div>
@@ -968,10 +1845,71 @@ function Programar({ subcuentas, onSuccess }: { subcuentas: Subcuenta[]; onSucce
           </select>
         </div>
       </div>
+      <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+        <Clock size={11} /> Se ejecuta sola a esa fecha y hora (hora Argentina). No hace falta que hagas nada.
+      </p>
       <div className="flex gap-2 pt-1">
-        <BtnPrimary type="submit" className="flex-1" disabled={validating}>{validating ? "Validando..." : destValid ? "Programar" : "Validar y programar"}</BtnPrimary>
+        {editando && (
+          <BtnOutline type="button" className="flex-1" onClick={() => { onCancelarEdicion?.(); setConfirm(false); }}>
+            Cancelar
+          </BtnOutline>
+        )}
+        <BtnPrimary type="submit" className="flex-1" disabled={validating}>{validating ? "Validando..." : destValid ? (editando ? "Revisar y guardar" : "Programar") : "Validar y programar"}</BtnPrimary>
       </div>
     </form>
+
+      <FormDialog
+        open={frecuentesOpen}
+        onClose={() => setFrecuentesOpen(false)}
+        title="Destinatarios frecuentes"
+        description="Selecciona un destinatario de tu lista."
+        submitLabel="Cerrar"
+        onSubmit={() => setFrecuentesOpen(false)}
+        size="md"
+      >
+        {frecuentes.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            No tenes destinatarios frecuentes guardados.
+          </div>
+        ) : (
+          <div className="divide-y border rounded-md max-h-64 overflow-y-auto">
+            {frecuentes.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => {
+                  const cbu = f.cbu;
+                  setDestQuery(cbu);
+                  // Se muestra ya lo guardado y se revalida contra el banco para
+                  // traer el detalle completo (banco, tipo de cuenta, estado).
+                  setDestValid({
+                    status: "valid",
+                    ok: true,
+                    kind: detectIdentifierKind(cbu),
+                    identifier: cbu,
+                    provider: "bdc",
+                    titular: { nombre: f.nombre, cuit: f.cuit, cbu, alias: f.alias, banco: f.banco },
+                    validatedAt: new Date().toISOString(),
+                  });
+                  setFrecuentesOpen(false);
+                  void handleValidate(cbu);
+                }}
+                className="w-full flex items-center justify-between gap-3 p-3 text-left hover:bg-muted/50"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold truncate">{f.nombre}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {f.alias ? `@${f.alias} · ` : ""}
+                    <span className="font-mono">{f.cbu}</span>
+                  </div>
+                </div>
+                {f.banco && <span className="text-[11px] text-muted-foreground shrink-0">{f.banco}</span>}
+              </button>
+            ))}
+          </div>
+        )}
+      </FormDialog>
+    </>
   );
 }
 
@@ -1047,16 +1985,20 @@ function Programadas({ items, onCancel, onEdit, onExecute }: {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Badge tone={s.estado === "Recurrente" ? "neutral" : "warn"}>{s.estado}</Badge>
-            <button onClick={() => onEdit(s.id)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-accent text-muted-foreground" title="Editar">
-              <Edit3 size={13} />
-            </button>
-            <button onClick={() => onExecute(s.id)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-accent text-muted-foreground" title="Ejecutar ahora">
-              <Play size={13} />
-            </button>
-            <button onClick={() => onCancel(s.id)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 text-muted-foreground hover:text-red-600" title="Cancelar">
-              <X size={13} />
-            </button>
+            <Badge tone={STATUS_TONE[s.estado] ?? "neutral"}>{s.estado}</Badge>
+            {s.estado === "Programada" && (
+              <>
+                <button onClick={() => onEdit(s.id)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-accent text-muted-foreground" title="Editar">
+                  <Edit3 size={13} />
+                </button>
+                <button onClick={() => onExecute(s.id)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-accent text-muted-foreground" title="Ejecutar ahora">
+                  <Play size={13} />
+                </button>
+                <button onClick={() => onCancel(s.id)} className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 text-muted-foreground hover:text-red-600" title="Cancelar">
+                  <X size={13} />
+                </button>
+              </>
+            )}
           </div>
         </div>
       ))}
@@ -1065,14 +2007,52 @@ function Programadas({ items, onCancel, onEdit, onExecute }: {
 }
 
 /* ===== Destinatarios frecuentes ===== */
-function DestinatariosList({ onSelect }: { onSelect: (d: Destinatario) => void }) {
-  return (
-    <div className="space-y-3">
+function DestinatariosList({ items, onSelect, onDelete }: {
+  items: FrequentRecipient[];
+  onSelect: (d: Destinatario) => void;
+  onDelete: (id: string) => void | Promise<void>;
+}) {
+  if (items.length === 0) {
+    return (
       <div className="text-center py-12 text-muted-foreground">
         <Users size={32} className="mx-auto mb-3 opacity-50" />
         <p className="font-semibold">No tenes destinatarios frecuentes</p>
         <p className="text-sm mt-1">Los destinatarios se guardan al confirmar una transferencia.</p>
       </div>
+    );
+  }
+
+  return (
+    <div className="divide-y">
+      {items.map((f) => (
+        <div key={f.id} className="flex items-center justify-between py-3">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">{f.nombre}</div>
+            <div className="text-xs text-muted-foreground truncate">
+              {f.alias ? `@${f.alias} · ` : ""}
+              <span className="font-mono">{f.cbu}</span>
+              {f.cuit ? ` · CUIT ${f.cuit}` : ""}
+            </div>
+            {f.banco && <div className="text-[11px] text-muted-foreground/60">{f.banco}</div>}
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => onSelect({ nombre: f.nombre, cuit: f.cuit, cbu: f.cbu, alias: f.alias, banco: f.banco })}
+              className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-accent text-muted-foreground"
+              title="Usar este destinatario"
+            >
+              <ArrowUpRight size={13} />
+            </button>
+            <button
+              onClick={() => void onDelete(f.id)}
+              className="h-8 w-8 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 text-muted-foreground hover:text-red-600"
+              title="Eliminar"
+            >
+              <Trash2 size={13} />
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -1,15 +1,21 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Send, Search, Upload, Star, MoreVertical, Tag } from "lucide-react";
+import { Plus, Send, Search, Upload, Star, Trash2, Tag } from "lucide-react";
 import { PageHeader, Card, BtnPrimary, BtnOutline, Input, Badge, Stat, Label } from "@/components/portal-shell";
 import { toast } from "sonner";
 import { FormDialog } from "@/components/form-dialog";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 import { requireSupabase, toDataError, isPermissionError } from "@/lib/supabase";
 import { executeTransfer } from "@/lib/transfer-orchestrator";
+import { type FrequentRecipient, listFrequentRecipients, createFrequentRecipient, deleteFrequentRecipient } from "@/lib/transfer-store";
+import { detectIdentifierKind } from "@/lib/recipient-validation";
+import { validateRecipient } from "@/lib/recipient-bdc";
 
 export const Route = createFileRoute("/app/destinatarios")({ component: Page });
 
 type Destinatario = {
+  /** id en `destinatarios_frecuentes` (vacío solo para filas efímeras). */
+  id: string;
   n: string;
   a: string;
   cbu: string;
@@ -24,14 +30,23 @@ type Subcuenta = { id: string; nombre: string; cbu: string | null; saldo_disponi
 
 const fmt = (n: number) => `$ ${n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const initialData: Destinatario[] = [
-  { n: "Proveedor SA", a: "proveedor.sa", cbu: "0000003100099887766112", b: "Banco Galicia", cat: "Proveedor", fav: true, ult: "Hoy", ops: 42 },
-  { n: "Estudio Contable Rios", a: "rios.contable", cbu: "0000003200099887766223", b: "Banco Nacion", cat: "Servicios", fav: true, ult: "Ayer", ops: 12 },
-  { n: "Servicios Generales SRL", a: "serv.generales", cbu: "0000003300099887766334", b: "Santander", cat: "Proveedor", fav: false, ult: "30/05", ops: 28 },
-  { n: "Juan Perez", a: "juanperez.mp", cbu: "0000003400099887766445", b: "Mercado Pago", cat: "Empleado", fav: false, ult: "29/05", ops: 6 },
-  { n: "Distribuidora Norte", a: "dist.norte", cbu: "0000003600099887766667", b: "BBVA", cat: "Proveedor", fav: false, ult: "25/05", ops: 18 },
-  { n: "Laura Mendez", a: "laura.mendez", cbu: "0000003500099887766556", b: "Brubank", cat: "Empleado", fav: false, ult: "20/05", ops: 4 },
-];
+/**
+ * Agenda real: `destinatarios_frecuentes` (migración 1012), misma tabla que
+ * usa la pantalla de transferencias. Antes acá había data de ejemplo hardcodeada.
+ */
+function aDestinatario(f: FrequentRecipient): Destinatario {
+  return {
+    id: f.id,
+    n: f.nombre,
+    a: f.alias || "",
+    cbu: f.cbu,
+    b: f.banco || "—",
+    cat: "Destinatario frecuente",
+    fav: false,
+    ult: "",
+    ops: 0,
+  };
+}
 
 const categorias = [
   { n: "Todos", c: 24, active: true },
@@ -48,11 +63,26 @@ function Page() {
   const [nuevoCbu, setNuevoCbu] = useState("");
   const [nuevoCuit, setNuevoCuit] = useState("");
   const [transferir, setTransferir] = useState<Destinatario | null>(null);
+  const [eliminar, setEliminar] = useState<Destinatario | null>(null);
   const [monto, setMonto] = useState("");
   const [concepto, setConcepto] = useState("");
   const [subcuentaOrigen, setSubcuentaOrigen] = useState("");
   const [sending, setSending] = useState(false);
   const [subcuentas, setSubcuentas] = useState<Subcuenta[]>([]);
+  const [items, setItems] = useState<Destinatario[]>([]);
+  const [cargando, setCargando] = useState(true);
+
+  const cargarDestinatarios = useCallback(async () => {
+    setCargando(true);
+    try {
+      const lista = await listFrequentRecipients();
+      setItems(lista.map(aDestinatario));
+    } catch {
+      setItems([]);
+    } finally {
+      setCargando(false);
+    }
+  }, []);
 
   const cargarSubcuentas = useCallback(async () => {
     try {
@@ -76,7 +106,7 @@ function Page() {
     }
   }, []);
 
-  useEffect(() => { cargarSubcuentas(); }, [cargarSubcuentas]);
+  useEffect(() => { cargarSubcuentas(); void cargarDestinatarios(); }, [cargarSubcuentas, cargarDestinatarios]);
 
   const handleTransferir = async () => {
     if (!transferir || !subcuentaOrigen || !monto) return;
@@ -129,8 +159,8 @@ function Page() {
       />
 
       <div className="grid md:grid-cols-4 gap-4 mb-6">
-        <Stat label="Total destinatarios" value={String(initialData.length)} />
-        <Stat label="Favoritos" value={String(initialData.filter((d) => d.fav).length)} />
+        <Stat label="Total destinatarios" value={String(items.length)} />
+        <Stat label="Favoritos" value={String(items.filter((d) => d.fav).length)} />
         <Stat label="Subcuentas" value={String(subcuentas.length)} />
         <Stat label="Disponible" value={fmt(subcuentas.reduce((s, x) => s + (Number(x.saldo_disponible) || 0), 0))} />
       </div>
@@ -169,22 +199,36 @@ function Page() {
           <div className="hidden md:grid grid-cols-[auto_1.2fr_1fr_1.4fr_0.8fr_0.8fr_auto] gap-4 px-5 py-3 border-b text-xs uppercase tracking-wide text-muted-foreground">
             <div></div><div>Nombre</div><div>Alias</div><div>CBU</div><div>Categoria</div><div>Ops</div><div></div>
           </div>
-          {initialData.map((d) => (
-            <div key={d.n} className="md:grid md:grid-cols-[auto_1.2fr_1fr_1.4fr_0.8fr_0.8fr_auto] gap-4 px-5 py-4 border-b last:border-0 items-center">
+          {items.length === 0 && !cargando && (
+            <div className="px-5 py-10 text-center text-sm text-muted-foreground">
+              Todavía no guardaste destinatarios. Cargá uno con "Nuevo destinatario".
+            </div>
+          )}
+          {cargando && (
+            <div className="px-5 py-10 text-center text-sm text-muted-foreground">Cargando agenda…</div>
+          )}
+          {items.map((d) => (
+            <div key={d.id || d.n} className="md:grid md:grid-cols-[auto_1.2fr_1fr_1.4fr_0.8fr_0.8fr_auto] gap-4 px-5 py-4 border-b last:border-0 items-center">
               <Star size={14} className={d.fav ? "fill-amber-400 text-amber-400" : "text-muted-foreground"} />
               <div>
                 <div className="font-semibold">{d.n}</div>
                 <div className="text-xs text-muted-foreground md:hidden">@{d.a} · {d.b}</div>
               </div>
-              <div className="text-sm text-muted-foreground hidden md:block">@{d.a}</div>
+              <div className="text-sm text-muted-foreground hidden md:block">{d.a ? `@${d.a}` : "—"}</div>
               <div className="text-sm font-mono text-muted-foreground hidden md:block">{d.cbu}</div>
               <div className="hidden md:block"><Badge tone="neutral">{d.cat}</Badge></div>
-              <div className="text-sm text-muted-foreground hidden md:block">{d.ops} · {d.ult}</div>
+              <div className="text-sm text-muted-foreground hidden md:block">{d.ops ? `${d.ops} · ${d.ult}` : d.ult || "—"}</div>
               <div className="flex gap-1 mt-2 md:mt-0 justify-end">
                 <BtnOutline className="h-9 px-3" onClick={() => { setTransferir(d); setMonto(""); setConcepto(""); }}>
                   <Send size={14} /> Transferir
                 </BtnOutline>
-                <button className="h-9 w-9 inline-flex items-center justify-center rounded-md border bg-card hover:bg-accent"><MoreVertical size={14} /></button>
+                <button
+                  className="h-9 w-9 inline-flex items-center justify-center rounded-md border bg-card hover:bg-red-50 text-muted-foreground hover:text-red-600"
+                  title="Eliminar de la agenda"
+                  onClick={() => setEliminar(d)}
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
             </div>
           ))}
@@ -200,29 +244,24 @@ function Page() {
         onSubmit={async () => {
           const identifier = (nuevoCbu || nuevoAlias).trim();
           if (!identifier) { toast.error("Ingresa CBU/CVU (22 dígitos) o Alias"); return; }
-          const { recipientValidator, detectIdentifierKind } = await import("@/lib/recipient-validation");
-          const res = await recipientValidator.validate({ identifier, kind: detectIdentifierKind(identifier) });
+          const res = await validateRecipient(identifier, detectIdentifierKind(identifier));
           if (!res.ok) { toast.error(res.errorMessage ?? "Destinatario no válido"); return; }
           try {
-            const sb = requireSupabase();
-            const { data: { user } } = await sb.auth.getUser();
-            const { data: cli } = await sb.from("clientes").select("legajo").eq("correo", user?.email ?? "").maybeSingle();
-            if (cli?.legajo) {
-              await sb.from("destinatarios_frecuentes").insert({
-                cliente_legajo: cli.legajo,
-                identifier: res.identifier,
-                identifier_kind: res.kind,
-                alias: res.titular?.alias ?? nuevoAlias,
-                cbu: res.titular?.cbu ?? nuevoCbu,
-                nombre: nuevoNombre || res.titular?.nombre || "Destinatario",
-                cuit: nuevoCuit || res.titular?.cuit,
-                banco: res.titular?.banco ?? null,
-              });
-            }
-          } catch { /* fallback local */ }
-          setNuevoOpen(false);
-          setNuevoNombre(""); setNuevoAlias(""); setNuevoCbu(""); setNuevoCuit("");
-          toast.success("Destinatario agregado a tu agenda");
+            await createFrequentRecipient({
+              identifier: res.identifier,
+              nombre: nuevoNombre || res.titular?.nombre || "Destinatario",
+              alias: res.titular?.alias ?? nuevoAlias,
+              cbu: res.titular?.cbu ?? nuevoCbu,
+              cuit: nuevoCuit || res.titular?.cuit,
+              banco: res.titular?.banco ?? undefined,
+            });
+            await cargarDestinatarios();
+            setNuevoOpen(false);
+            setNuevoNombre(""); setNuevoAlias(""); setNuevoCbu(""); setNuevoCuit("");
+            toast.success("Destinatario agregado a tu agenda");
+          } catch (e) {
+            toast.error(toDataError(e).message);
+          }
         }}
       >
         <div>
@@ -308,6 +347,25 @@ function Page() {
           />
         </div>
       </FormDialog>
+
+      <ConfirmDialog
+        open={!!eliminar}
+        title="Eliminar destinatario"
+        description={eliminar ? `Se quitará "${eliminar.n}" de tu agenda. No afecta transferencias ya hechas.` : ""}
+        onClose={() => setEliminar(null)}
+        onConfirm={async () => {
+          const d = eliminar;
+          setEliminar(null);
+          if (!d) return;
+          try {
+            await deleteFrequentRecipient(d.id);
+            setItems((prev) => prev.filter((x) => x.id !== d.id));
+            toast.success("Destinatario eliminado de la agenda");
+          } catch (e) {
+            toast.error(toDataError(e).message);
+          }
+        }}
+      />
     </>
   );
 }

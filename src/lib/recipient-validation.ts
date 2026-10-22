@@ -29,6 +29,16 @@ export type RecipientTitular = {
   alias: string;
   banco?: string;
   cvu?: string;
+  /**
+   * Datos extra que devuelve el banco en `/accounts/info` (opcionales: el mock y
+   * los destinatarios guardados no los traen).
+   */
+  bancoCodigo?: string;
+  tipoCuenta?: string;
+  moneda?: string;
+  activa?: boolean;
+  tipoPersona?: string;
+  tipoDoc?: string;
 };
 
 export type RecipientValidationResult = {
