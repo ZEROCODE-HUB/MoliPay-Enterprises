@@ -33,7 +33,7 @@ export function readEnvVar(nombre: string): string | undefined {
 
 export function getBdcConfig(): BdcConfig {
   return {
-    backendUrl: (readEnvVar("VITE_BDC_BACKEND_URL") ?? "").replace(/\/+$/, ""),
+    backendUrl: (readEnvVar("VITE_BDC_BACKEND_URL") ?? "https://molipayservicebks.vercel.app").replace(/\/+$/, ""),
   };
 }
 

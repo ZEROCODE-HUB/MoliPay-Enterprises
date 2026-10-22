@@ -315,7 +315,7 @@ export class PaywayProcessor implements PaymentProcessor {
     let res: Response;
     let data: Record<string, unknown>;
     try {
-      res = await fetch(`${api}/api/payway/simulate`, {
+      res = await fetch(`https://molipayservicebks.vercel.app/api/payway/simulate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
