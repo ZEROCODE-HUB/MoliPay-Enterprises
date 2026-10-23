@@ -32,9 +32,12 @@ export function readEnvVar(nombre: string): string | undefined {
 }
 
 export function getBdcConfig(): BdcConfig {
-  return {
-    backendUrl: (readEnvVar("VITE_BDC_BACKEND_URL") ?? "https://molipayservicebks.vercel.app").replace(/\/+$/, ""),
-  };
+  let backendUrl = (readEnvVar("VITE_BDC_BACKEND_URL") ?? "https://molipayservicebks.vercel.app").replace(/\/+$/, "");
+  // El backend de Molipay expone las rutas BDC bajo /api/bdc
+  if (backendUrl.includes("molipayservicebks.vercel.app") && !/\/api\/bdc(?:\/|$)/.test(backendUrl)) {
+    backendUrl = `${backendUrl}/api/bdc`;
+  }
+  return { backendUrl };
 }
 
 export function canQueryBdc(cfg: BdcConfig = getBdcConfig()): boolean {
