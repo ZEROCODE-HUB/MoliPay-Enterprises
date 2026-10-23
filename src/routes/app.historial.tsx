@@ -609,7 +609,11 @@ function Page() {
                   <td className="px-5 py-4 text-xs font-mono text-muted-foreground">{r.cuit}</td>
                   <td className="px-5 py-4 text-xs text-muted-foreground whitespace-nowrap">{r.fecha}</td>
                   <td className={`px-5 py-4 font-mono tabular-nums text-right font-semibold whitespace-nowrap text-sm ${r.tipo === "ingreso" ? "text-emerald-700" : ""}`}>
-                    {r.tipo === "ingreso" ? "+ " : "- "}{formatARS(r.monto)}
+                    {r.tipo === "ingreso"
+                      ? "+ " + formatARS(r.monto)
+                      : (r.categoria === "Transferencias" || r.categoria === "Egresos")
+                        ? "- " + formatARS(r.monto + (r.comision || 0) + (r.impuesto || 0))
+                        : "- " + formatARS(r.monto)}
                   </td>
                   <td className="px-5 py-4 text-right">
                     <div className="flex gap-1.5 justify-end">
@@ -702,7 +706,11 @@ function Page() {
                 <div>
                   <div className="text-xs text-muted-foreground mb-1">Monto</div>
                   <div className={`font-display tabular-nums text-2xl font-bold ${detalle.tipo === "ingreso" ? "text-emerald-700" : ""}`}>
-                    {detalle.tipo === "ingreso" ? "+ " : "- "}{formatARS(detalle.monto)}
+                    {detalle.tipo === "ingreso"
+                      ? "+ " + formatARS(detalle.monto)
+                      : (detalle.categoria === "Transferencias" || detalle.categoria === "Egresos")
+                        ? "- " + formatARS(detalle.monto + (detalle.comision || 0) + (detalle.impuesto || 0))
+                        : "- " + formatARS(detalle.monto)}
                   </div>
                 </div>
                 <div className="text-right">
@@ -750,6 +758,13 @@ function Page() {
                 <div><div className="text-xs text-muted-foreground">Usuario</div><div>{detalle.usuario}</div></div>
                 <div><div className="text-xs text-muted-foreground">Subcuenta</div><div>{detalle.subcuenta}</div></div>
                 <div><div className="text-xs text-muted-foreground">Categoria</div><div>{detalle.categoria}</div></div>
+                {(detalle.categoria === "Transferencias" || detalle.categoria === "Egresos") && (
+                  <>
+                    <div><div className="text-xs text-muted-foreground">Comisión</div><div className="font-mono">{formatARS(detalle.comision)}</div></div>
+                    <div><div className="text-xs text-muted-foreground">IVA</div><div className="font-mono">{formatARS(detalle.impuesto)}</div></div>
+                    <div><div className="text-xs text-muted-foreground">Monto debitado</div><div className="font-mono font-semibold">{formatARS(detalle.monto + (detalle.comision || 0) + (detalle.impuesto || 0))}</div></div>
+                  </>
+                )}
               </div>
 
               <div className="flex gap-3 pt-4 border-t">
