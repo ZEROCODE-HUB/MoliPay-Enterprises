@@ -3,15 +3,11 @@ import { getPaywayConfig, tokenizeCard } from "@/lib/payway";
 /**
  * URL del backend de pagos.
  *
- * Se toma de una variable de build (VITE_*) porque es la unica forma de que el
- * checkout separado del backend sepa a donde llamar. El backend sigue siendo la
- * autoridad: esta URL solo evita mostrar el monto o el estado en el cliente.
+ * Usa VITE_PAYMENTS_API_URL si existe, sino cae al backend de producción
+ * para que funcione igual en prod sin depender de variables de entorno.
  */
 function backendUrl(): string {
-  const url = import.meta.env.VITE_PAYMENTS_API_URL;
-  if (!url) {
-    throw new Error("El medio de pago no esta configurado");
-  }
+  const url = import.meta.env.VITE_PAYMENTS_API_URL || "https://molipayservicebks.vercel.app";
   return url.replace(/\/+$/, "");
 }
 
@@ -315,7 +311,7 @@ export class PaywayProcessor implements PaymentProcessor {
     let res: Response;
     let data: Record<string, unknown>;
     try {
-      res = await fetch(`https://molipayservicebks.vercel.app/api/payway/simulate`, {
+      res = await fetch(`${api}/api/payway/simulate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
