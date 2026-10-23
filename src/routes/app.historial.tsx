@@ -567,21 +567,23 @@ function Page() {
                 <th className="text-left px-5 py-3 font-semibold">Titular</th>
                 <th className="text-left px-5 py-3 font-semibold">CUIT</th>
                 <th className="text-left px-5 py-3 font-semibold">Fecha</th>
-                <th className="text-right px-5 py-3 font-semibold">Monto</th>
+                <th className="text-right px-5 py-3 font-semibold">Comisión</th>
+                <th className="text-right px-5 py-3 font-semibold">IVA</th>
+                <th className="text-right px-5 py-3 font-semibold">Monto debitado</th>
                 <th className="px-5 py-3 font-semibold"></th>
               </tr>
             </thead>
             <tbody>
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-sm text-muted-foreground">
+                  <td colSpan={10} className="text-center py-12 text-sm text-muted-foreground">
                     Sin datos registrados.
                   </td>
                 </tr>
               )}
               {loading && (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-sm text-muted-foreground">Cargando movimientos...</td>
+                  <td colSpan={10} className="text-center py-12 text-sm text-muted-foreground">Cargando movimientos...</td>
                 </tr>
               )}
               {paginated.map((r, i) => (
@@ -608,12 +610,18 @@ function Page() {
                   <td className="px-5 py-4 text-sm font-medium truncate max-w-[160px]">{r.titular}</td>
                   <td className="px-5 py-4 text-xs font-mono text-muted-foreground">{r.cuit}</td>
                   <td className="px-5 py-4 text-xs text-muted-foreground whitespace-nowrap">{r.fecha}</td>
+                  <td className="px-5 py-4 text-xs font-mono text-muted-foreground">
+                    {(r.categoria === "Transferencias" || r.categoria === "Egresos") ? formatARS(r.comision || 0) : "—"}
+                  </td>
+                  <td className="px-5 py-4 text-xs font-mono text-muted-foreground">
+                    {(r.categoria === "Transferencias" || r.categoria === "Egresos") ? formatARS(r.impuesto || 0) : "—"}
+                  </td>
                   <td className={`px-5 py-4 font-mono tabular-nums text-right font-semibold whitespace-nowrap text-sm ${r.tipo === "ingreso" ? "text-emerald-700" : ""}`}>
                     {r.tipo === "ingreso"
                       ? "+ " + formatARS(r.monto)
                       : (r.categoria === "Transferencias" || r.categoria === "Egresos")
-                        ? "- " + formatARS(r.monto + (r.comision || 0) + (r.impuesto || 0))
-                        : "- " + formatARS(r.monto)}
+                        ? "- " + formatARS((r.monto || 0) + (r.comision || 0) + (r.impuesto || 0))
+                        : "- " + formatARS(r.monto || 0)}
                   </td>
                   <td className="px-5 py-4 text-right">
                     <div className="flex gap-1.5 justify-end">
