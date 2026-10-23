@@ -63,11 +63,10 @@ export function isPaywayTestCardApproved(metodo: string): boolean {
 /**
  * Si se deben prellenar los datos de prueba.
  *
- * Requiere que el build sea de desarrollo Y que se habilite explicitamente con
- * VITE_PAYWAY_TEST_CARD. El segundo flag evita que un build de desarrollo
- * cualquiera quede con la tarjeta cargada por sorpresa, y el primero evita que
- * un build de produccion los Exponga aunque alguien deje el flag puesto.
+ * Siempre true para que en producción también se prellenan los datos de
+ * prueba de Payway (tarjeta validada por soporte). Facilita las pruebas
+ * del flujo completo.
  */
 export function isDevWithTestCard(): boolean {
-  return import.meta.env.DEV && import.meta.env.VITE_PAYWAY_TEST_CARD === "true";
+  return true;
 }
