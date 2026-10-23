@@ -2,32 +2,27 @@
  * Helpers centralizados para construir URLs de pago (checkout público /p/CODE
  * y rutas relacionadas /qr/pdv/ID).
  *
- * Single source of truth: VITE_APP_URL > VITE_PAY_URL > window.location.origin
- *
- * - VITE_APP_URL: dominio público canónico del deploy (ej. https://moli-pay-enterprises.vercel.app).
- *   Usar en emails, exports CSV, webhooks y cualquier contexto donde window no exista.
- * - VITE_PAY_URL: legado, mantenido por compatibilidad. Si está setado, se prefiere.
- * - Fallback client-side: window.location.origin (útil en dev / Vercel preview).
+ * Single source of truth: el dominio de producción hardcodeado en
+ * `PAY_APP_ORIGIN`. No depende de `window.location` ni de variables de build, así
+ * un link copiado desde localhost o desde un preview siempre apunta al deploy.
  *
  * Importante: la columna `cliente_links_pago.url` puede guardar branding
- * (https://pay.molly.com.ar/l/CODE) que no resuelve. Para mostrar/copiar la URL
- * resoluble real, usar `buildResolvableLinkPagoUrl(urlGuardada)`.
+ * (https://pay.molly.com.ar/l/CODE) o un origen viejo (localhost). Para
+ * mostrar/copiar la URL resoluble real, usar `toResolvableLinkPagoUrl(urlGuardada)`.
  */
 
 const trimSlash = (s: string) => s.replace(/\/+$/, "");
 
-const envAppUrl = (import.meta.env.VITE_APP_URL as string | undefined)?.trim();
-const envPayUrl = (import.meta.env.VITE_PAY_URL as string | undefined)?.trim();
-
 /**
- * Origen donde corre la app. En server/no-browser devuelve "" (los llamadores
- * deben tener un fallback explícito si lo necesitan en ese contexto).
+ * Origen público donde está desplegada MoliPay Enterprises.
+ *
+ * Está hardcodeado a propósito: los links de pago se generan y se copian desde
+ * este dominio, aunque el portal se esté viendo en localhost o en un preview.
  */
-export const APP_ORIGIN: string =
-  (envAppUrl && envAppUrl) ||
-  (envPayUrl && envPayUrl) ||
-  (typeof window !== "undefined" && window.location?.origin) ||
-  "";
+export const PAY_APP_ORIGIN = "https://molly-pay-enterprises.vercel.app";
+
+/** Origen con el que se construyen las URLs de pago. */
+export const APP_ORIGIN: string = PAY_APP_ORIGIN;
 
 /**
  * URL canónica de branding de MoliPay (subdominio pay). Solo marketing, no resuelve.

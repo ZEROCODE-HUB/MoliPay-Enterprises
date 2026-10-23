@@ -15,7 +15,7 @@ import { FormDialog } from "@/components/form-dialog";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { paymentMethods, formatARS, type Product, type PaymentLink } from "@/data/links-pago";
 import { requireSupabase } from "@/lib/supabase";
-import { buildResolvableUrl } from "@/lib/pay-url";
+import { buildResolvableUrl, toResolvableLinkPagoUrl } from "@/lib/pay-url";
 
 export const Route = createFileRoute("/app/link-pago/productos")({ component: Page });
 
@@ -51,6 +51,43 @@ type DbLinkDetalle = {
   cantidad: number;
   precio_unitario: number;
 };
+
+type ComercioBandera = {
+  id: string;
+  bandera: string;
+  estado: string;
+  metodo_key: string | null;
+  methodId: string;
+};
+
+/**
+ * Normaliza el texto de una bandera al id de método que usa el checkout.
+ * Solo se usa como fallback cuando `comercio_banderas.metodo_key` viene null.
+ */
+const BANDERA_FALLBACK_METHOD: Record<string, string> = {
+  visa: "visa-cred",
+  "visa crédito": "visa-cred",
+  "visa débito": "visa-deb",
+  "visa prepaga": "visa-deb",
+  mastercard: "mc-cred",
+  "mastercard crédito": "mc-cred",
+  "mastercard débito": "mc-deb",
+  "mastercard prepaga": "mc-deb",
+  amex: "amex",
+  "american express": "amex",
+  cabal: "cabal-cred",
+  "cabal crédito": "cabal-cred",
+  "cabal débito": "cabal-deb",
+  naranja: "naranja",
+  "naranja x": "naranja",
+  diners: "diners",
+  maestro: "maestro",
+};
+
+function methodIdFromBandera(bandera: string): string {
+  const key = bandera.trim().toLowerCase();
+  return BANDERA_FALLBACK_METHOD[key] ?? key.replace(/\s+/g, "_");
+}
 
 function linkDisplayStatus(l: PaymentLink): string {
   if (l.status === "Activo" && l.expiresAt) {
@@ -90,7 +127,7 @@ function Page() {
   const [linkNotes, setLinkNotes] = useState("");
   const [userComercios, setUserComercios] = useState<{id: string; nombre_comercio: string}[]>([]);
   const [selectedComercioId, setSelectedComercioId] = useState<string>("");
-  const [comercioBanderas, setComercioBanderas] = useState<{id: string; bandera: string; estado: string}[]>([]);
+  const [comercioBanderas, setComercioBanderas] = useState<ComercioBandera[]>([]);
 
   const loadProductos = async (lg: string) => {
     const s = requireSupabase();
@@ -139,7 +176,10 @@ function Page() {
       }));
       return {
         id: x.id,
-        url: x.url,
+        // La URL guardada puede ser branding (pay.molly.com.ar) o un origen
+        // viejo (localhost). Se reconstruye con el dominio de producción para
+        // que "Copiar" y el detalle apunten siempre al deploy.
+        url: toResolvableLinkPagoUrl(x.url),
         products: prods,
         status: (x.estado ?? "Activo") as PaymentLink["status"],
         partialPayments: !!x.pagos_parciales,
@@ -180,7 +220,7 @@ function Page() {
         const { data: com } = await s
           .from("comercios")
           .select("id, nombre_comercio")
-          .eq("legajo", cli.legajo);
+          .or(`legajo.eq.${cli.legajo},usuario.eq.${mail}`);
         if (!cancelled) setUserComercios(com ?? []);
       } catch {
         // silencioso
@@ -199,15 +239,30 @@ function Page() {
     const s = requireSupabase();
     s
       .from("comercio_banderas")
-      .select("id, bandera, estado")
+      .select("id, bandera, estado, metodo_key")
       .eq("comercio_id", selectedComercioId)
       .eq("estado", "Activo")
       .then(({ data }) => {
-        setComercioBanderas(data ?? []);
-        const enabledBanderas = (data ?? [])
-          .filter((b: { estado: string }) => b.estado === "Activo")
-          .map((b: { bandera: string }) => b.bandera.toLowerCase().replace(/\s+/g, "_"));
-        setLinkMethods(enabledBanderas.length > 0 ? enabledBanderas : []);
+        const rows = ((data ?? []) as {
+          id: string;
+          bandera: string;
+          estado: string;
+          metodo_key: string | null;
+        }[]).map((b) => ({
+          ...b,
+          methodId: b.metodo_key || methodIdFromBandera(b.bandera),
+        }));
+
+        // Un comercio puede tener varias filas que apuntan al mismo metodo
+        // (ej. "Visa" y "Visa Crédito" -> visa-cred). Se muestra una sola vez.
+        const byMethod = new Map<string, ComercioBandera>();
+        rows.forEach((b) => {
+          if (!byMethod.has(b.methodId)) byMethod.set(b.methodId, b);
+        });
+        const unique = Array.from(byMethod.values());
+
+        setComercioBanderas(unique);
+        setLinkMethods(unique.map((b) => b.methodId));
       });
   }, [selectedComercioId]);
 
@@ -615,8 +670,7 @@ function Page() {
                 <Label>Metodos de pago permitidos</Label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                   {comercioBanderas.map((b) => {
-                    const methodId = b.bandera.toLowerCase().replace(/\s+/g, "_");
-                    const isSelected = linkMethods.includes(methodId);
+                    const isSelected = linkMethods.includes(b.methodId);
                     return (
                       <label
                         key={b.id}
@@ -630,7 +684,7 @@ function Page() {
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          onChange={() => toggleMethod(methodId)}
+                          onChange={() => toggleMethod(b.methodId)}
                           className="accent-[color:var(--brand-dark)]"
                         />
                         {b.bandera}
