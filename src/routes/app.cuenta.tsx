@@ -223,7 +223,7 @@ function Page() {
           start.setDate(1);
           start.setHours(0, 0, 0, 0);
           const { count } = await s
-            .from("movimientos")
+            .from("transactions")
             .select("*", { count: "exact", head: true })
             .eq("legajo", cli.legajo)
             .gte("fecha", start.toISOString());
