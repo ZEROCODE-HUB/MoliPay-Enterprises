@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Download, Filter, FileText, ArrowDownLeft, ArrowUpRight,
-  ChevronRight, ChevronDown, Wallet, X, Eye, FileSpreadsheet, Share2,
+  Wallet, X, Eye, FileSpreadsheet, Share2,
 } from "lucide-react";
 import { PageHeader, Card, Input, BtnOutline, BtnPrimary, Badge } from "@/components/portal-shell";
 import { toast } from "sonner";
@@ -270,8 +270,6 @@ function Page() {
   const [hasta, setHasta] = useState("");
   const [categoria, setCategoria] = useState("Todas");
   const [tipoLinea, setTipoLinea] = useState<TipoLinea | "Todos">("Todos");
-  const [agrupar, setAgrupar] = useState(true);
-  const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
   const { subcuenta: subcuentaInicial } = Route.useSearch();
   const [subFiltro, setSubFiltro] = useState(subcuentaInicial ?? "Todas");
   const [buscarCbu, setBuscarCbu] = useState("");
@@ -398,30 +396,6 @@ function Page() {
 
   useEffect(() => { setPage(1); }, [desde, hasta, categoria, tipoLinea, subFiltro, buscarCbu, buscarCuit, buscarTxid, buscarTitular]);
 
-  // Agrupacion por TXID dentro de la pagina: la primera linea de cada operacion
-  // encabeza el grupo y el resto (comision, impuesto, ...) se despliega.
-  const filas = (() => {
-    const cantidad = new Map<string, number>();
-    for (const l of lineas) cantidad.set(l.idTxn, (cantidad.get(l.idTxn) ?? 0) + 1);
-    const vistos = new Set<string>();
-    const out: Array<Linea & { esCabeza: boolean; hijas: number }> = [];
-    for (const l of lineas) {
-      const esCabeza = !vistos.has(l.idTxn);
-      vistos.add(l.idTxn);
-      if (!agrupar) out.push({ ...l, esCabeza: false, hijas: 0 });
-      else if (esCabeza) out.push({ ...l, esCabeza: true, hijas: (cantidad.get(l.idTxn) ?? 1) - 1 });
-      else if (abiertos.has(l.idTxn)) out.push({ ...l, esCabeza: false, hijas: 0 });
-    }
-    return out;
-  })();
-
-  const toggleGrupo = (idTxn: string) =>
-    setAbiertos((prev) => {
-      const next = new Set(prev);
-      if (next.has(idTxn)) next.delete(idTxn);
-      else next.add(idTxn);
-      return next;
-    });
 
   // Totales de la pagina: el signo ya viene de la base.
   const totalIngresos = lineas.filter((l) => l.monto > 0).reduce((s, l) => s + l.monto, 0);
@@ -685,10 +659,6 @@ function Page() {
         <div className="flex justify-between items-center border-t pt-4">
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span>{loading ? "Cargando..." : `${totalCount} líneas`}</span>
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={agrupar} onChange={(e) => setAgrupar(e.target.checked)} />
-              Agrupar desglose por TXID
-            </label>
           </div>
           <div className="flex gap-2">
             <BtnOutline className="h-8 px-4 text-xs" onClick={limpiarFiltros}>
@@ -725,7 +695,7 @@ function Page() {
               </tr>
             </thead>
             <tbody>
-              {!loading && filas.length === 0 && (
+              {!loading && lineas.length === 0 && (
                 <tr>
                   <td colSpan={12} className="text-center py-12 text-sm text-muted-foreground">
                     Sin datos registrados.
@@ -737,10 +707,9 @@ function Page() {
                   <td colSpan={12} className="text-center py-12 text-sm text-muted-foreground">Cargando movimientos...</td>
                 </tr>
               )}
-              {!loading && filas.map((l) => {
-                const hija = agrupar && !l.esCabeza;
+              {!loading && lineas.map((l) => {
                 return (
-                  <tr key={`${l.lineId}:${l.lineNo}`} className={`border-b last:border-0 hover:bg-muted/30 transition-colors ${hija ? "bg-muted/20" : ""}`}>
+                  <tr key={`${l.lineId}:${l.lineNo}`} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3 text-xs font-mono tabular-nums whitespace-nowrap">{l.legajo}</td>
                     <td className="px-4 py-3">
                       <button
@@ -754,23 +723,11 @@ function Page() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
-                        {l.esCabeza && l.hijas > 0 ? (
-                          <button
-                            type="button"
-                            onClick={() => toggleGrupo(l.idTxn)}
-                            className="h-5 w-5 inline-flex items-center justify-center rounded hover:bg-muted text-muted-foreground"
-                            title={abiertos.has(l.idTxn) ? "Ocultar desglose" : `Ver desglose (${l.hijas})`}
-                          >
-                            {abiertos.has(l.idTxn) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                          </button>
-                        ) : (
-                          <span className={hija ? "w-5 h-5 ml-2 border-l-2 border-muted" : "w-5"} />
-                        )}
                         <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${TIPO_LINEA_STYLE[l.tipoLinea]}`}>
                           {TIPO_LINEA_LABEL.get(l.tipoLinea) ?? l.tipoLinea}
                         </span>
                       </div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5 ml-6">{prettyTipo(l.tipoOperacion)}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">{prettyTipo(l.tipoOperacion)}</div>
                     </td>
                     <td className="px-4 py-3 text-xs font-mono text-muted-foreground whitespace-nowrap">{l.cvu || "-"}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-[200px]">{l.email || "-"}</td>
