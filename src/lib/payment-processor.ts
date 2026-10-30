@@ -88,6 +88,17 @@ export interface PaymentProcessor {
   simulate(req: PaymentRequest): Promise<PaymentResult>;
 }
 
+/**
+ * La tarjeta no es de la marca del medio de pago elegido (Payway rechaza el
+ * BIN). El pago no se creo: el checkout lo muestra nombrando el medio elegido.
+ */
+export class CardMethodMismatchError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CardMethodMismatchError";
+  }
+}
+
 /** Estado especial: el cobro ocurrio pero el registro aun no esta confirmado. */
 export class PaymentPendingError extends Error {
   constructor(message: string) {
@@ -215,7 +226,9 @@ export class PaywayProcessor implements PaymentProcessor {
           linkCode: req.linkCode,
           paymentToken: token,
           bin,
-          method: req.metodo,
+          // Igual que en `simulate`: el backend valida contra los UUID de
+          // comercio_banderas; `method` queda solo como camino legacy.
+          ...(req.banderaId ? { banderaId: req.banderaId } : { method: req.metodo }),
           installments: req.cuotas ?? 1,
           // Se manda como sugerencia. El backend lo valida contra la base.
           amount: req.monto,
@@ -290,6 +303,9 @@ export class PaywayProcessor implements PaymentProcessor {
       // formado) es definitivo: o el pago fue rechazado o los datos no
       // sirvieron. Reintentar es un intento nuevo, con id nuevo.
       this.close(fingerprint, session);
+      if (data.status === "card_method_mismatch") {
+        throw new CardMethodMismatchError(String(data.message ?? ""));
+      }
       throw new Error(String(data.message ?? "No se pudo procesar el pago"));
     }
 

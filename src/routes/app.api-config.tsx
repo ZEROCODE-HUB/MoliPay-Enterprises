@@ -1,7 +1,10 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { toast } from "sonner";
 import { ExternalLink, BookOpen, X } from "lucide-react";
-import { Card, BtnPrimary, BtnOutline } from "@/components/portal-shell";
+import { Card, BtnPrimary, BtnOutline, Badge } from "@/components/portal-shell";
+import { cargarEstadoApi, type EstadoIntegracion } from "@/lib/api-desarrolladores";
 
 export const Route = createFileRoute("/app/api-config")({
   head: () => ({
@@ -13,8 +16,29 @@ export const Route = createFileRoute("/app/api-config")({
   component: Page,
 });
 
+const ESTADO_TEXTO: Record<EstadoIntegracion, string> = {
+  Pendiente_Validacion: "Tu solicitud está pendiente de validación.",
+  Homologacion: "Tu Sandbox está activo: podés probar la API sin mover dinero real.",
+  Pendiente_Pase_Produccion: "Pediste el pase a producción y MoliPay lo está revisando.",
+  Produccion: "La API está habilitada en Producción para tu cuenta.",
+  Suspendido: "La API está suspendida para tu cuenta. Consultá a soporte.",
+  Revocado: "Tu integración fue revocada. Podés empezar de nuevo con un Sandbox.",
+};
+
 function Page() {
+  const navigate = useNavigate();
   const [modalOpen, setModalOpen] = useState(false);
+  const q = useQuery({ queryKey: ["api-desarrolladores"], queryFn: cargarEstadoApi });
+  const estado = q.data?.integracion?.estado;
+  const habilitado = !!estado && estado !== "Revocado" && estado !== "Pendiente_Validacion";
+
+  // Habilitar = generar las llaves de Sandbox en API e integraciones, donde
+  // la Secret Key se muestra una sola vez. El pase a Producción se pide ahí.
+  const habilitar = () => {
+    setModalOpen(false);
+    toast.info("Tocá «Generar llaves de Sandbox» para obtener tu API Key y tu Secret Key.");
+    void navigate({ to: "/app/api" });
+  };
 
   return (
     <>
@@ -29,8 +53,7 @@ function Page() {
       <div className="mb-6">
         <h1 className="text-xl font-semibold">Configuracion de APIs Externas</h1>
         <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
-          Gestione el acceso a las APIs externas de la plataforma. Para consultar la documentacion
-          tecnica, visite nuestro sitio de documentacion.
+          Gestione el acceso a las APIs externas de la plataforma: credenciales de Sandbox y Producción, webhooks y permisos.
         </p>
       </div>
 
@@ -38,24 +61,35 @@ function Page() {
       <Card className="max-w-xl">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
           <div className="flex-1">
-            <h2 className="text-sm font-semibold">Modulo de APIs Externas</h2>
+            <h2 className="text-sm font-semibold flex items-center gap-2">
+              Modulo de APIs Externas
+              {estado && <Badge tone={estado === "Produccion" ? "success" : estado === "Suspendido" || estado === "Revocado" ? "danger" : "warn"}>{estado === "Homologacion" ? "Sandbox" : estado === "Produccion" ? "Producción" : estado.replace(/_/g, " ")}</Badge>}
+            </h2>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Este modulo le permite integrar sus sistemas con las APIs externas de Molipay.
-              Actualmente no esta habilitado para su cuenta.
+              {q.isLoading
+                ? "Cargando…"
+                : estado
+                  ? ESTADO_TEXTO[estado]
+                  : "Este modulo le permite integrar sus sistemas (ERP, e-commerce, software contable) con las APIs de Molipay. Actualmente no esta habilitado para su cuenta."}
             </p>
           </div>
           <div className="flex flex-col gap-2 shrink-0">
-            <a
-              href={`${window.location.origin}/docs`}
-              target="_blank"
-              rel="noreferrer"
+            <Link
+              to="/app/api"
+              hash="como-firmar"
               className="inline-flex h-9 items-center gap-2 px-4 text-sm font-semibold rounded-md border bg-card hover:bg-muted transition whitespace-nowrap"
             >
               <BookOpen size={14} /> Ver documentacion
-            </a>
-            <BtnPrimary onClick={() => setModalOpen(true)}>
-              <ExternalLink size={14} /> Solicitar habilitacion
-            </BtnPrimary>
+            </Link>
+            {habilitado ? (
+              <BtnPrimary onClick={() => void navigate({ to: "/app/api" })}>
+                <ExternalLink size={14} /> Ir a API e integraciones
+              </BtnPrimary>
+            ) : (
+              <BtnPrimary onClick={() => setModalOpen(true)} disabled={estado === "Pendiente_Validacion"}>
+                <ExternalLink size={14} /> Solicitar habilitacion
+              </BtnPrimary>
+            )}
           </div>
         </div>
       </Card>
@@ -82,20 +116,14 @@ function Page() {
             <h3 className="text-base font-semibold mb-2">
               El modulo de APIs externas no esta habilitado para su cuenta.
             </h3>
-            <p className="text-sm text-muted-foreground mb-6">¿Desea solicitar su habilitacion?</p>
+            <p className="text-sm text-muted-foreground mb-6">
+              ¿Desea habilitar el Sandbox? Se activa en el momento y no mueve dinero real. Para operar en Producción, después
+              solicitás el pase y MoliPay lo aprueba.
+            </p>
             <div className="flex gap-3 justify-center">
               <BtnOutline onClick={() => setModalOpen(false)}>Cancelar</BtnOutline>
-              <BtnPrimary
-                onClick={() => {
-                  window.open(
-                    `${window.location.origin}/api-configuration`,
-                    "_blank",
-                    "noopener,noreferrer",
-                  );
-                  setModalOpen(false);
-                }}
-              >
-                Solicitar habilitacion
+              <BtnPrimary onClick={habilitar}>
+                Habilitar Sandbox
               </BtnPrimary>
             </div>
           </div>

@@ -408,6 +408,7 @@ function Checkout() {
       const res = await paymentProcessor.process({
         linkCode: code,
         metodo: method,
+        banderaId: banderaIdDelMethod(method),
         monto: mp,
         pagadorNombre: titular.trim(),
         pagadorEmail: email.trim(),
@@ -445,6 +446,14 @@ function Checkout() {
       }
       if (e?.name === "PaymentPendingError") {
         toast.info(e.message);
+        return;
+      }
+      if (e?.name === "CardMethodMismatchError") {
+        const label = metodosDisponibles.find((m) => m.id === method)?.label ?? "el medio de pago elegido";
+        toast.error("La tarjeta no coincide con el medio de pago", {
+          description: `Elegiste ${label}, pero el número ingresado es de otra tarjeta. Revisá el número o elegí el medio de pago que corresponde a tu tarjeta. No se realizó ningún cargo.`,
+          duration: 8000,
+        });
         return;
       }
       toast.error(e?.message || "No se pudo procesar el pago");

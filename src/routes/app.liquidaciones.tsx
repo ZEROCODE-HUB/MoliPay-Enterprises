@@ -37,7 +37,10 @@ import "jspdf-autotable";
 
 export const Route = createFileRoute("/app/liquidaciones")({ component: Liquidaciones });
 
-type TicketEstado = "pendiente" | "aprobado" | "cancelado" | "rechazado" | "acreditado";
+// pendiente = Solicitado, aprobado = Oferta recibida (con tasa). La empresa
+// acepta o cancela; MoliPay acredita; el sistema lo marca Compensado cuando
+// ya se descontó de las liquidaciones siguientes.
+type TicketEstado = "pendiente" | "aprobado" | "aceptado" | "cancelado" | "rechazado" | "acreditado" | "compensado";
 type Ticket = {
   id: string;
   fullId?: string;
@@ -49,6 +52,26 @@ type Ticket = {
   motivo?: string;
   tasaInteres?: number | null;
   plazoAdelantado?: number | null;
+  /** Monto aprobado en la oferta. */
+  montoOfertado?: number | null;
+  /** Descuento por tasa (monto × tasa). */
+  descuento?: number | null;
+  /** Lo que se acredita en la cuenta. */
+  netoARecibir?: number | null;
+  /** Ya descontado de liquidaciones posteriores. */
+  compensado?: number;
+  rechazoMotivo?: string | null;
+};
+
+/** Tope y condiciones para pedir un adelanto (RPC adelanto_tope). */
+type TopeAdelanto = {
+  tope: number;
+  vendidoNoAcreditado: number;
+  adelantosVigentes: number;
+  cumpleAntiguedad: boolean;
+  antiguedadDias: number | null;
+  antiguedadMinima: number;
+  deuda: number;
 };
 
 type DiaAcreditacion = {
@@ -107,19 +130,29 @@ type Excepcion = {
 };
 
 const ESTADO_TICKET_LABEL: Record<TicketEstado, string> = {
-  pendiente: "Pendiente",
-  aprobado: "Aprobado",
+  pendiente: "Solicitado",
+  aprobado: "Oferta recibida",
+  aceptado: "Aceptado",
   cancelado: "Cancelado",
   rechazado: "Rechazado",
   acreditado: "Acreditado",
+  compensado: "Compensado",
 };
 const ESTADO_TICKET_TONE: Record<TicketEstado, "neutral" | "success" | "warn" | "danger"> = {
   pendiente: "warn",
-  aprobado: "success",
+  aprobado: "warn",
+  aceptado: "neutral",
   cancelado: "neutral",
   rechazado: "danger",
   acreditado: "success",
+  compensado: "success",
 };
+
+/** Lo que falta descontar de un adelanto acreditado. */
+function pendienteCompensar(t: Ticket) {
+  if (t.estado !== "acreditado" && t.estado !== "compensado") return 0;
+  return Math.max(0, Number(t.montoOfertado ?? t.montoSolicitado) - Number(t.compensado ?? 0));
+}
 
 function fmtDate(iso: string) {
   if (!iso) return "—";
@@ -140,7 +173,7 @@ function addDays(date: Date, days: number) {
   return d;
 }
 
-type TabSeccion = "calendario" | "tickets" | "lotes-venta" | "comisiones" | "acreditaciones";
+type TabSeccion = "calendario" | "tickets" | "lotes-venta" | "comisiones" | "acreditaciones" | "contracargos";
 
 // ============================================================================
 // CalendarioAcreditacionesTab
@@ -155,71 +188,270 @@ type TabSeccion = "calendario" | "tickets" | "lotes-venta" | "comisiones" | "acr
 // ============================================================================
 
 const DIAS_SEMANA_CAL = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+const MESES_CAL = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-const ESTADO_CAL_COLORS: Record<
-  "programado" | "pendiente" | "acreditado" | "contracargo" | "cancelado",
-  { bg: string; text: string; label: string; border: string }
-> = {
-  programado: {
-    bg: "bg-blue-100",
-    text: "text-blue-700",
-    border: "border-blue-300",
-    label: "Programado",
-  },
-  pendiente: {
-    bg: "bg-amber-100",
-    text: "text-amber-700",
-    border: "border-amber-300",
-    label: "Pendiente",
-  },
-  acreditado: {
-    bg: "bg-emerald-100",
-    text: "text-emerald-700",
-    border: "border-emerald-300",
-    label: "Acreditado",
-  },
-  contracargo: {
-    bg: "bg-red-100",
-    text: "text-red-700",
-    border: "border-red-300",
-    label: "Contracargo",
-  },
-  cancelado: {
-    bg: "bg-slate-100",
-    text: "text-slate-600",
-    border: "border-slate-300",
-    label: "Cancelado",
-  },
+function isoLocal(d: Date) {
+  const p = (x: number) => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+type DiaCalV3 = { fecha: string; no_habil: boolean; programado: number; acreditado: number; total: number };
+
+type LoteEmpresa = {
+  id: string;
+  codigo: string;
+  fecha: string;
+  bandera: string;
+  origen: "venta" | "archivo";
+  estado: string;
+  fecha_acreditacion: string | null;
+  cantidad_operaciones: number;
+  bruto: number;
+  descuentos: number;
+  compensaciones: number;
+  neto: number;
+  es_negativo: boolean;
+  con_contracargo: boolean;
 };
 
-function fmtDateCorta(iso: string): string {
-  if (!iso) return "—";
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("es-AR", { weekday: "short", day: "2-digit", month: "2-digit" });
+type AperturaLote = {
+  id: string;
+  codigo: string;
+  fecha: string;
+  bandera: string;
+  estado: string;
+  origen: "venta" | "archivo";
+  establecimiento: string | null;
+  fecha_acreditacion: string | null;
+  bruto: number;
+  costo_servicio_payway: number | null;
+  impuestos_payway: number | null;
+  neto_payway: number | null;
+  tasa_pct: number;
+  tasa_monto: number;
+  iva_tasa_monto: number | null;
+  cierre_pct: number | null;
+  cierre_monto: number | null;
+  impuestos: { asignacion_id: string; codigo: string; nombre: string; alicuota: number | null; monto: number }[] | null;
+  retencion_contracargos: number | null;
+  compensacion_adelantos: number;
+  recuperacion_deuda: number;
+  neto: number;
+  es_negativo: boolean;
+  ventas: { id_txn: string; fecha: string; bandera: string | null; cuotas: number; monto: number; tipo: string }[];
+};
+
+/** Para la empresa un lote es Programado (Payway todavia no pago o falta acreditar) o Acreditado. */
+function estadoEmpresa(estado: string): "Programada" | "Acreditada" {
+  return estado === "Acreditado" ? "Acreditada" : "Programada";
 }
 
-function parseDateLocalC(dateStr: string): Date {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  return new Date(y, m - 1, d);
+async function cargarApertura(loteId: string): Promise<AperturaLote> {
+  const sb = requireSupabase();
+  const { data, error } = await sb.rpc("comercio_lote_apertura", { p_lote_id: loteId });
+  if (error) throw new Error(error.message);
+  return data as AperturaLote;
 }
 
-import {
-  listCalendarioAcreditaciones,
-  getAdelantosPorDia,
-  getExportDia,
-  getMinMontoAdelanto,
-  type CalendarioAcreditacion as CACal,
-  type AdelantoParaCalendario,
-  type EstadoCalendario,
-} from "@/lib/api/calendario-acreditaciones";
+/** Comprobante de la liquidacion de un lote (CSV o PDF). */
+function descargarComprobante(a: AperturaLote, formato: "csv" | "pdf") {
+  const filas: [string, number][] = [
+    ["Importe bruto", Number(a.bruto)],
+    ["Impuestos (referencia, Payway)", -Number(a.impuestos_payway ?? 0)],
+    ["Menos impuestos", Number(a.bruto) - Number(a.impuestos_payway ?? 0)],
+    ["Tasa de interés PayWay", -Number(a.costo_servicio_payway ?? 0)],
+    [`Tasa de interés MoliPay (${a.tasa_pct}%)`, -Number(a.tasa_monto ?? 0)],
+    ...(Number(a.iva_tasa_monto ?? 0) > 0 ? [["IVA sobre la tasa MoliPay", -Number(a.iva_tasa_monto)] as [string, number]] : []),
+    [`Comisión cierre de lote (${a.cierre_pct ?? 0}%)`, -Number(a.cierre_monto ?? 0)],
+    ...(a.impuestos ?? []).filter((i) => Number(i.monto) > 0).map((i): [string, number] => [`${i.nombre} (${i.codigo})`, -Number(i.monto)]),
+    ["Contracargo retenido", -Number(a.retencion_contracargos ?? 0)],
+    ["Compensación de adelantos", -Number(a.compensacion_adelantos ?? 0)],
+    ["Recuperación de deuda", -Number(a.recuperacion_deuda ?? 0)],
+    ["Importe final acreditado", Number(a.neto)],
+  ];
+  const nombre = `liquidacion_${a.codigo}`;
+  if (formato === "csv") {
+    const lineas = [
+      `Lote;${a.codigo}`,
+      `Bandera;${a.bandera}`,
+      `Fecha de liquidación;${fmtDateFull(a.fecha)}`,
+      `Fecha de acreditación;${a.fecha_acreditacion ? fmtDateFull(a.fecha_acreditacion) : "—"}`,
+      "",
+      "Concepto;Importe",
+      ...filas.map(([c, v]) => `${c};${v.toFixed(2).replace(".", ",")}`),
+      "",
+      "Ventas incluidas",
+      "Fecha;Operación;Cuotas;Monto",
+      ...a.ventas.map((v) => `${new Date(v.fecha).toLocaleString("es-AR")};${v.id_txn};${v.cuotas};${Number(v.monto).toFixed(2).replace(".", ",")}`),
+    ];
+    const blob = new Blob(["\uFEFF" + lineas.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const el = document.createElement("a");
+    el.href = url;
+    el.download = `${nombre}.csv`;
+    el.click();
+    URL.revokeObjectURL(url);
+    return;
+  }
+  const doc = new jsPDF();
+  doc.setFontSize(14);
+  doc.text(`Comprobante de liquidación · ${a.codigo}`, 14, 16);
+  doc.setFontSize(9);
+  doc.text(
+    `${a.bandera} · Liquidación ${fmtDateFull(a.fecha)} · Acreditación ${a.fecha_acreditacion ? fmtDateFull(a.fecha_acreditacion) : "—"}`,
+    14,
+    23,
+  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (doc as any).autoTable({
+    startY: 28,
+    head: [["Concepto", "Importe"]],
+    body: filas.map(([c, v]) => [c, formatARS(v)]),
+    styles: { fontSize: 8 },
+  });
+  if (a.ventas.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (doc as any).autoTable({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      startY: (doc as any).lastAutoTable.finalY + 6,
+      head: [["Fecha", "Operación", "Cuotas", "Monto"]],
+      body: a.ventas.map((v) => [new Date(v.fecha).toLocaleString("es-AR"), v.id_txn, String(v.cuotas), formatARS(v.monto)]),
+      styles: { fontSize: 7 },
+    });
+  }
+  doc.save(`${nombre}.pdf`);
+}
 
+/**
+ * Apertura de un lote para la empresa: como se formo el neto y que ventas
+ * incluye. Se usa desde el calendario y desde Lotes de acreditacion.
+ */
+function AperturaLoteModal({ loteId, onClose }: { loteId: string | null; onClose: () => void }) {
+  const q = useQuery({ queryKey: ["empresa-lote-apertura", loteId], queryFn: () => cargarApertura(loteId!), enabled: !!loteId });
+  if (!loteId) return null;
+  const a = q.data;
+  const fila = (label: string, v: number, fuerte = false) => (
+    <div className={`flex justify-between ${fuerte ? "font-semibold border-t pt-1.5 mt-1" : ""}`}>
+      <span className={fuerte ? "" : "text-muted-foreground"}>{label}</span>
+      <span className={`font-mono tabular-nums ${v < 0 ? "text-red-600" : ""}`}>{v < 0 ? `- ${formatARS(-v)}` : formatARS(v)}</span>
+    </div>
+  );
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="relative bg-card rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+        <div className="sticky top-0 bg-card px-6 py-4 border-b flex items-center justify-between">
+          <div>
+            <div className="font-semibold">Liquidación del lote</div>
+            {a && (
+              <div className="text-xs text-muted-foreground">
+                {a.codigo} · {a.bandera} · {fmtDateFull(a.fecha)}
+              </div>
+            )}
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-muted rounded">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="p-6 space-y-4 text-sm">
+          {q.isLoading ? (
+            <p className="text-muted-foreground">Cargando…</p>
+          ) : q.isError || !a ? (
+            <p className="text-red-700">{(q.error as Error)?.message ?? "No se pudo cargar el lote"}</p>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <Badge tone={a.estado === "Acreditado" ? "success" : "warn"}>{estadoEmpresa(a.estado)}</Badge>
+                {a.es_negativo && <Badge tone="danger">Negativo</Badge>}
+                {a.fecha_acreditacion && <span className="text-xs text-muted-foreground">Acreditado el {fmtDateFull(a.fecha_acreditacion)}</span>}
+              </div>
+              {a.origen === "archivo" ? (
+                <div className="rounded-md border p-3 space-y-1">
+                  {fila("Importe bruto", Number(a.bruto))}
+                  {fila("Impuestos (referencia, informados por Payway)", -Number(a.impuestos_payway ?? 0))}
+                  {fila("Menos impuestos", Number(a.bruto) - Number(a.impuestos_payway ?? 0))}
+                  {fila(
+                    `Tasa de interés PayWay (${Number(a.bruto) > 0 ? Math.round((Number(a.costo_servicio_payway ?? 0) / Number(a.bruto)) * 10000) / 100 : 0}%)`,
+                    -Number(a.costo_servicio_payway ?? 0),
+                  )}
+                  {fila(`Tasa de interés MoliPay (${a.tasa_pct}%)`, -Number(a.tasa_monto ?? 0))}
+                  {Number(a.iva_tasa_monto ?? 0) > 0 && fila("IVA sobre la tasa MoliPay", -Number(a.iva_tasa_monto ?? 0))}
+                  {fila(`Comisión cierre de lote (${a.cierre_pct ?? 0}%)`, -Number(a.cierre_monto ?? 0))}
+                  {(a.impuestos ?? []).filter((i) => Number(i.monto) > 0).map((i) => (
+                    <div key={i.asignacion_id}>{fila(`${i.nombre} (${i.codigo}${i.alicuota != null ? ` · ${i.alicuota}%` : ""})`, -Number(i.monto))}</div>
+                  ))}
+                  {Number(a.retencion_contracargos ?? 0) > 0 && fila("Contracargo retenido (se libera si ganás la disputa)", -Number(a.retencion_contracargos))}
+                  {Number(a.compensacion_adelantos) > 0 && fila("Compensación de adelantos", -Number(a.compensacion_adelantos))}
+                  {Number(a.recuperacion_deuda) > 0 && fila("Recuperación de deuda (contracargos)", -Number(a.recuperacion_deuda))}
+                  {fila(a.estado === "Acreditado" ? "Importe acreditado" : "Importe final a acreditar", Number(a.neto), true)}
+                </div>
+              ) : (
+                <div className="rounded-md border p-3 space-y-1">
+                  {fila("Bruto vendido", Number(a.bruto))}
+                  {fila("Neto estimado", Number(a.neto), true)}
+                  <p className="text-[11px] text-muted-foreground pt-1">
+                    Payway todavía no liquidó estas ventas: el neto definitivo se conoce cuando llega la liquidación.
+                  </p>
+                </div>
+              )}
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+                  Ventas incluidas ({a.ventas.length})
+                </div>
+                {a.ventas.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Sin ventas vinculadas.</p>
+                ) : (
+                  <div className="max-h-56 overflow-y-auto rounded-md border">
+                    <table className="w-full text-xs">
+                      <thead className="sticky top-0 bg-muted/60 text-muted-foreground">
+                        <tr className="text-left">
+                          <th className="px-2 py-1.5">Fecha</th>
+                          <th className="px-2 py-1.5">Operación</th>
+                          <th className="px-2 py-1.5">Cuotas</th>
+                          <th className="px-2 py-1.5 text-right">Monto</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {a.ventas.map((v) => (
+                          <tr key={v.id_txn}>
+                            <td className="px-2 py-1">{new Date(v.fecha).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+                            <td className="px-2 py-1 font-mono">{v.id_txn}</td>
+                            <td className="px-2 py-1">{v.cuotas}</td>
+                            <td className="px-2 py-1 text-right font-mono">{formatARS(v.monto)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+              {a.origen === "archivo" && (
+                <div className="flex gap-2 pt-2">
+                  <BtnOutline className="flex-1" onClick={() => descargarComprobante(a, "csv")}>
+                    <FileSpreadsheet size={14} /> Comprobante CSV
+                  </BtnOutline>
+                  <BtnPrimary className="flex-1" onClick={() => descargarComprobante(a, "pdf")}>
+                    <Download size={14} /> Comprobante PDF
+                  </BtnPrimary>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Calendario de acreditaciones de la empresa (9.2): por dia habil, cuanto
+ * esta Programado y cuanto se Acredito. Pendiente y Vencida son estados
+ * internos del backoffice: la empresa los ve como Programada.
+ */
 function CalendarioAcreditacionesTab({
-  comercioId,
   loading: parentLoading,
-  tickets,
   onSelectDate,
   onOpenGeneral,
-  onOpenDetalle,
 }: {
   comercioId: string | null;
   loading: boolean;
@@ -233,537 +465,710 @@ function CalendarioAcreditacionesTab({
   onOpenGeneral: () => void;
   onOpenDetalle: (t: Ticket) => void;
 }) {
-  const [mes, setMes] = useState(new Date().getMonth() + 1);
-  const [anio, setAnio] = useState(new Date().getFullYear());
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [minMonto, setMinMonto] = useState<number>(100);
-  const [exporting, setExporting] = useState<"xlsx" | "pdf" | null>(null);
+  const hoy = new Date();
+  const [mes, setMes] = useState(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+  const [dia, setDia] = useState<string | null>(null);
+  const [bandera, setBandera] = useState("");
+  const [abierto, setAbierto] = useState<string | null>(null);
+  const [apertura, setApertura] = useState<string | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-    getMinMontoAdelanto()
-      .then((v) => alive && setMinMonto(v))
-      .catch(() => {});
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  const { data: items = [], isLoading: loadingCal } = useQuery<CACal[]>({
-    queryKey: ["calendario", comercioId, mes, anio],
-    queryFn: () => {
-      if (!comercioId) return Promise.resolve([]);
-      return listCalendarioAcreditaciones({ mes, anio, comercioId });
+  const desde = isoLocal(mes);
+  const hasta = isoLocal(new Date(mes.getFullYear(), mes.getMonth() + 1, 0));
+  const q = useQuery({
+    queryKey: ["empresa-calendario", desde, hasta],
+    queryFn: async () => {
+      const sb = requireSupabase();
+      const { data, error } = await sb.rpc("calendario_acreditaciones_v3", { p_desde: desde, p_hasta: hasta, p_comercio_id: null });
+      if (error) throw new Error(error.message);
+      return ((data as { dias?: DiaCalV3[] } | null)?.dias ?? []) as DiaCalV3[];
     },
-    enabled: !!comercioId,
-    staleTime: 60_000,
   });
+  const porFecha = useMemo(() => new Map((q.data ?? []).map((d) => [d.fecha, d])), [q.data]);
+  const totMes = (q.data ?? []).reduce((a, d) => ({ prog: a.prog + Number(d.programado), acr: a.acr + Number(d.acreditado) }), { prog: 0, acr: 0 });
 
-  // Map fechaAcreditacion → items del día
-  const itemsPorFecha = useMemo(() => {
-    const m = new Map<string, CACal[]>();
-    for (const it of items) {
-      const arr = m.get(it.fechaAcreditacion) ?? [];
-      arr.push(it);
-      m.set(it.fechaAcreditacion, arr);
-    }
-    return m;
-  }, [items]);
+  const lotesDia = useQuery({
+    queryKey: ["empresa-calendario-dia", dia],
+    enabled: !!dia,
+    queryFn: async () => {
+      const sb = requireSupabase();
+      const { data, error } = await sb.rpc("comercio_lotes_acreditacion", { p_desde: dia, p_hasta: dia });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as LoteEmpresa[];
+    },
+  });
+  const ventasLote = useQuery({ queryKey: ["empresa-lote-apertura", abierto], queryFn: () => cargarApertura(abierto!), enabled: !!abierto });
 
-  // Días del mes en grilla 7×N
-  const diasDelMes = useMemo(() => {
-    const today = new Date();
-    const primerDia = new Date(anio, mes - 1, 1);
-    const ultimoDia = new Date(anio, mes, 0);
-    const out: { fecha: Date; esActual: boolean; esPasado: boolean; esOtroMes: boolean }[] = [];
-    let diaSemana = primerDia.getDay();
-    diaSemana = diaSemana === 0 ? 6 : diaSemana - 1;
-    for (let i = diaSemana - 1; i >= 0; i--) {
-      out.push({ fecha: new Date(anio, mes - 1, -i), esActual: false, esPasado: false, esOtroMes: true });
-    }
-    for (let d = 1; d <= ultimoDia.getDate(); d++) {
-      const f = new Date(anio, mes - 1, d);
-      const esHoy = d === today.getDate() && mes === today.getMonth() + 1 && anio === today.getFullYear();
-      out.push({ fecha: f, esActual: esHoy, esPasado: f < today && !esHoy, esOtroMes: false });
-    }
-    const restante = 7 - (out.length % 7);
-    if (restante < 7) {
-      for (let i = 1; i <= restante; i++) {
-        out.push({ fecha: new Date(anio, mes, i), esActual: false, esPasado: false, esOtroMes: true });
-      }
-    }
+  const celdas = useMemo(() => {
+    const offset = (new Date(mes.getFullYear(), mes.getMonth(), 1).getDay() + 6) % 7;
+    const dias = new Date(mes.getFullYear(), mes.getMonth() + 1, 0).getDate();
+    const out: (string | null)[] = Array(offset).fill(null);
+    for (let i = 1; i <= dias; i++) out.push(isoLocal(new Date(mes.getFullYear(), mes.getMonth(), i)));
+    while (out.length % 7) out.push(null);
     return out;
-  }, [mes, anio]);
+  }, [mes]);
 
-  // Para el modal: si hay día seleccionado, levantamos los adelantos del comercio
-  // que se imputan a ese día. Lo cacheamos por fecha.
-  const { data: adelantosDelDia = [] } = useQuery<AdelantoParaCalendario[]>({
-    queryKey: ["calendario-adelantos-dia", comercioId, selectedDate],
-    queryFn: () => {
-      if (!comercioId || !selectedDate) return Promise.resolve([]);
-      return getAdelantosPorDia(comercioId, selectedDate);
-    },
-    enabled: !!comercioId && !!selectedDate,
-  });
-
-  // Ticket activo del día (entre los tickets que ya tenemos en memoria)
-  const ticketDelDia = useMemo<Ticket | null>(() => {
-    if (!selectedDate) return null;
-    return tickets.find((t) => {
-      const fechaAcred = t.fechaAcreditacion || t.fecha || "";
-      return fechaAcred.slice(0, 10) === selectedDate;
-    }) ?? null;
-  }, [selectedDate, tickets]);
-
-  const itemsDelDia = selectedDate ? (itemsPorFecha.get(selectedDate) ?? []) : [];
-  const totalBrutoDia = itemsDelDia.reduce((s, i) => s + i.importeBruto, 0);
-  const totalNetoDia = itemsDelDia.reduce((s, i) => s + i.importeNeto, 0);
-  const totalAdelantosDia = itemsDelDia.reduce(
-    (s, i) => s + (i.adelantosAplicadosDia ?? 0),
-    0,
-  );
-  const netoDespuesAdelantos = Math.max(totalNetoDia - totalAdelantosDia, 0);
-
-  const onExport = async (formato: "xlsx" | "pdf") => {
-    if (!selectedDate || !comercioId) return;
-    setExporting(formato);
-    try {
-      const rows = await getExportDia(selectedDate, comercioId);
-      if (rows.length === 0) {
-        toast.error("No hay filas para exportar");
-        return;
-      }
-      const titulo = parseDateLocalC(selectedDate).toLocaleDateString("es-AR", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
-      if (formato === "xlsx") exportExcelDia(titulo, rows);
-      else exportPdfDia(titulo, rows);
-      toast.success(`Exportación ${formato.toUpperCase()} lista`);
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setExporting(null);
-    }
-  };
-
-  const mesAnterior = () => {
-    if (mes === 1) {
-      setMes(12);
-      setAnio(anio - 1);
-    } else setMes(mes - 1);
-  };
-  const mesSiguiente = () => {
-    if (mes === 12) {
-      setMes(1);
-      setAnio(anio + 1);
-    } else setMes(mes + 1);
-  };
-  const nombreMes = new Date(anio, mes - 1).toLocaleDateString("es-AR", {
-    month: "long",
-    year: "numeric",
-  });
+  const lotes = (lotesDia.data ?? []).filter((l) => !bandera || l.bandera === bandera);
+  const banderasDia = Array.from(new Set((lotesDia.data ?? []).map((l) => l.bandera))).sort();
+  const progDia = lotes.filter((l) => l.estado !== "Acreditado");
+  const acrDia = lotes.filter((l) => l.estado === "Acreditado");
+  const sum = (ls: LoteEmpresa[]) => ls.reduce((a, l) => a + Number(l.neto), 0);
+  const hoyIso = isoLocal(hoy);
 
   return (
-    <div className="p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <p className="text-xs text-muted-foreground">
-          Cuánto te acredita MoliPay cada día. Tocá un día para ver el detalle o solicitar un
-          adelanto.
-        </p>
+    <div className="p-5 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <button
-            onClick={mesAnterior}
-            className="h-7 w-7 rounded-md border bg-card hover:bg-muted flex items-center justify-center"
             type="button"
+            className="h-9 w-9 inline-flex items-center justify-center rounded-md border border-black-100 bg-white text-black-600 shadow-sm hover:bg-plata-200"
+            onClick={() => setMes(new Date(mes.getFullYear(), mes.getMonth() - 1, 1))}
             aria-label="Mes anterior"
           >
-            <ChevronLeft size={14} />
+            <ChevronLeft size={18} strokeWidth={2.5} />
           </button>
-          <span className="font-semibold min-w-[140px] text-center capitalize text-sm">
-            {nombreMes}
-          </span>
+          <div className="min-w-[160px] text-center font-semibold">
+            {MESES_CAL[mes.getMonth()]} {mes.getFullYear()}
+          </div>
           <button
-            onClick={mesSiguiente}
-            className="h-7 w-7 rounded-md border bg-card hover:bg-muted flex items-center justify-center"
             type="button"
+            className="h-9 w-9 inline-flex items-center justify-center rounded-md border border-black-100 bg-white text-black-600 shadow-sm hover:bg-plata-200"
+            onClick={() => setMes(new Date(mes.getFullYear(), mes.getMonth() + 1, 1))}
             aria-label="Mes siguiente"
           >
-            <ChevronRight size={14} />
+            <ChevronRight size={18} strokeWidth={2.5} />
           </button>
-          <BtnOutline
-            className="h-7 px-2 text-xs"
-            onClick={() => {
-              const t = new Date();
-              setMes(t.getMonth() + 1);
-              setAnio(t.getFullYear());
-            }}
-          >
-            Hoy
-          </BtnOutline>
+        </div>
+        <div className="flex flex-wrap items-center gap-4 text-xs">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> Programado del mes:{" "}
+            <b className="font-mono">{formatARS(totMes.prog)}</b>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Acreditado del mes:{" "}
+            <b className="font-mono">{formatARS(totMes.acr)}</b>
+          </span>
+          <BtnPrimary className="h-9 px-3 text-xs" onClick={onOpenGeneral}>
+            <Plus size={14} /> Solicitar adelanto
+          </BtnPrimary>
         </div>
       </div>
 
-      {parentLoading || loadingCal ? (
-        <div className="py-10 text-center text-sm text-muted-foreground">Cargando calendario…</div>
-      ) : !comercioId ? (
+      {q.isLoading || parentLoading ? (
         <div className="py-10 text-center text-sm text-muted-foreground">
-          No se pudo identificar tu comercio. Iniciá sesión nuevamente.
+          <Loader2 size={16} className="inline animate-spin mr-2" /> Cargando calendario…
         </div>
+      ) : q.isError ? (
+        <div className="py-10 text-center text-sm text-red-700">{(q.error as Error).message}</div>
       ) : (
-        <div className="rounded-lg border overflow-hidden">
-          <div className="grid grid-cols-7 border-b bg-muted/30">
+        <div>
+          <div className="grid grid-cols-7 gap-1 text-[11px] text-muted-foreground mb-1">
             {DIAS_SEMANA_CAL.map((d) => (
-              <div
-                key={d}
-                className="p-2 text-center text-xs font-semibold text-muted-foreground"
-              >
+              <div key={d} className="px-1 font-semibold">
                 {d}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7">
-            {diasDelMes.map((dia, idx) => {
-              const fechaKey = dia.fecha.toISOString().slice(0, 10);
-              const dayItems = itemsPorFecha.get(fechaKey) ?? [];
-              const tieneItems = dayItems.length > 0;
-              const totalBruto = dayItems.reduce((s, i) => s + i.importeBruto, 0);
-              const totalAdelantos = dayItems.reduce(
-                (s, i) => s + (i.adelantosAplicadosDia ?? 0),
-                0,
-              );
-              const netoDelDia = Math.max(
-                dayItems.reduce((s, i) => s + i.importeNeto, 0) - totalAdelantos,
-                0,
-              );
-              const tieneAdelanto = totalAdelantos > 0;
-              const cupoAgotado = tieneAdelanto && netoDelDia < minMonto;
-              const isSelected = selectedDate === fechaKey;
-
+          <div className="grid grid-cols-7 gap-1">
+            {celdas.map((f, i) => {
+              if (!f) return <div key={`v${i}`} />;
+              const d = porFecha.get(f);
+              const noHabil = d?.no_habil ?? [0, 6].includes(new Date(`${f}T12:00:00`).getDay());
+              const prog = Number(d?.programado ?? 0);
+              const acr = Number(d?.acreditado ?? 0);
               return (
                 <button
-                  key={idx}
+                  key={f}
                   type="button"
-                  onClick={() => tieneItems && setSelectedDate(fechaKey)}
-                  disabled={!tieneItems}
-                  className={`text-left min-h-[110px] border-b border-r p-2 transition-colors ${
-                    !dia.esOtroMes
-                      ? dia.esPasado
-                        ? "bg-emerald-50/20 hover:bg-emerald-50/40"
-                        : "hover:bg-muted/30"
-                      : "bg-muted/20 text-muted-foreground"
-                  } ${dia.esActual ? "ring-2 ring-primary/30 bg-primary/5" : ""} ${
-                    isSelected ? "ring-2 ring-navy-200" : ""
-                  } ${tieneItems ? "cursor-pointer" : "cursor-default"}`}
+                  onClick={() => {
+                    setDia(f);
+                    setBandera("");
+                    setAbierto(null);
+                  }}
+                  className={`min-h-[78px] rounded-md border p-1.5 text-left text-[11px] transition ${noHabil ? "bg-muted/50" : "bg-card hover:bg-muted/30"}`}
                 >
-                  <div className="flex justify-between items-start mb-1">
-                    <span
-                      className={`text-sm font-semibold ${
-                        dia.esActual ? "text-primary" : ""
-                      }`}
-                    >
-                      {fmtDateCorta(fechaKey)}
-                    </span>
-                    {tieneItems && (
-                      <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">
-                        {dayItems.reduce((s, i) => s + i.cantidadOperaciones, 0)} ops
-                      </span>
-                    )}
-                  </div>
-                  {tieneItems && (
-                    <div className="space-y-1">
-                      <div className="font-mono text-sm font-semibold">{formatARS(totalBruto)}</div>
-                      {dayItems.slice(0, 2).map((it) => {
-                        const color = ESTADO_CAL_COLORS[it.estadoCalculado];
-                        return (
-                          <div
-                            key={it.id}
-                            className={`text-[10px] p-1 rounded truncate ${color.bg} ${color.text}`}
-                            title={`${it.bandera} · ${formatARS(it.importeBruto)}`}
-                          >
-                            {it.bandera}
-                          </div>
-                        );
-                      })}
-                      {dayItems.length > 2 && (
-                        <div className="text-[10px] text-muted-foreground text-center">
-                          +{dayItems.length - 2} más
-                        </div>
-                      )}
-                      {tieneAdelanto && (
-                        <div className="mt-1 rounded bg-amber-100 border border-amber-300 px-1.5 py-1 text-[10px] text-amber-800">
-                          <div className="font-semibold flex items-center gap-1">
-                            <Percent size={10} /> Adelanto
-                          </div>
-                          <div className="font-mono">-{formatARS(totalAdelantos)}</div>
-                          <div className="font-mono">Libre: {formatARS(netoDelDia)}</div>
-                          {cupoAgotado && (
-                            <div className="text-red-700 font-semibold mt-0.5">Cupo agotado</div>
-                          )}
-                        </div>
-                      )}
+                  <div className={`font-semibold ${f === hoyIso ? "text-primary" : "text-muted-foreground"}`}>{Number(f.slice(8))}</div>
+                  {prog !== 0 && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                      <span className="font-mono">{formatARS(prog)}</span>
+                    </div>
+                  )}
+                  {acr !== 0 && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      <span className="font-mono">{formatARS(acr)}</span>
                     </div>
                   )}
                 </button>
               );
             })}
           </div>
+          <p className="text-[11px] text-muted-foreground mt-2">
+            Los sábados, domingos y feriados aparecen sombreados: los plazos de Payway son en días hábiles.
+          </p>
         </div>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-        {Object.entries(ESTADO_CAL_COLORS).map(([key, val]) => (
-          <div key={key} className="flex items-center gap-1">
-            <div className={`w-2.5 h-2.5 rounded ${val.bg}`} />
-            <span>{val.label}</span>
-          </div>
-        ))}
-        <div className="flex items-center gap-1">
-          <div className="w-2.5 h-2.5 rounded bg-amber-100 border border-amber-300" />
-          <span>Adelanto reservado</span>
-        </div>
-      </div>
-
-      {/* Modal de detalle del día */}
-      {selectedDate && itemsDelDia.length > 0 && (
+      {dia && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setSelectedDate(null)} />
-          <div className="relative bg-card rounded-xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-xl">
-            <div className="sticky top-0 bg-card border-b px-6 py-4 z-10">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="font-display text-lg font-semibold flex items-center gap-2">
-                    <CalendarDays size={18} />
-                    {parseDateLocalC(selectedDate).toLocaleDateString("es-AR", {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {itemsDelDia.length} lote{itemsDelDia.length !== 1 ? "s" : ""} ·{" "}
-                    {itemsDelDia.reduce((s, i) => s + i.cantidadOperaciones, 0)} operaciones
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => onExport("xlsx")}
-                    disabled={exporting !== null}
-                    className="h-8 px-3 rounded-md border bg-card text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-muted disabled:opacity-50"
-                    type="button"
-                  >
-                    {exporting === "xlsx" ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <FileSpreadsheet size={12} />
-                    )}
-                    Excel
-                  </button>
-                  <button
-                    onClick={() => onExport("pdf")}
-                    disabled={exporting !== null}
-                    className="h-8 px-3 rounded-md border bg-card text-xs font-semibold inline-flex items-center gap-1.5 hover:bg-muted disabled:opacity-50"
-                    type="button"
-                  >
-                    {exporting === "pdf" ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <Download size={12} />
-                    )}
-                    PDF
-                  </button>
-                  <button
-                    onClick={() => setSelectedDate(null)}
-                    className="p-1.5 hover:bg-muted rounded-md"
-                    type="button"
-                    aria-label="Cerrar"
-                  >
-                    <X size={18} />
-                  </button>
+          <div className="absolute inset-0 bg-black/50" onClick={() => setDia(null)} />
+          <div className="relative bg-card rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="sticky top-0 bg-card px-6 py-4 border-b flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Acreditaciones del día</div>
+                <div className="font-semibold capitalize">
+                  {new Date(`${dia}T12:00:00`).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
                 </div>
               </div>
-
-              <div className="grid grid-cols-3 gap-2 text-xs">
-                <div className="rounded-md border bg-muted/30 px-3 py-2">
-                  <div className="text-muted-foreground">Total bruto</div>
-                  <div className="font-mono font-semibold text-base">
-                    {formatARS(totalBrutoDia)}
-                  </div>
-                </div>
-                <div className="rounded-md border bg-muted/30 px-3 py-2">
-                  <div className="text-muted-foreground">Total neto</div>
-                  <div className="font-mono font-semibold text-base text-emerald-700">
-                    {formatARS(totalNetoDia)}
-                  </div>
-                </div>
-                <div className="rounded-md border bg-amber-50 border-amber-200 px-3 py-2">
-                  <div className="text-amber-700">Adelantos reservados</div>
-                  <div className="font-mono font-semibold text-base text-amber-700">
-                    {formatARS(totalAdelantosDia)}
-                  </div>
-                </div>
+              <div className="flex items-center gap-2">
+                {banderasDia.length > 1 && (
+                  <select value={bandera} onChange={(e) => setBandera(e.target.value)} className="h-9 rounded-md border bg-card px-2 text-sm">
+                    <option value="">Todas las banderas</option>
+                    {banderasDia.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button onClick={() => setDia(null)} className="p-1 hover:bg-muted rounded">
+                  <X size={16} />
+                </button>
               </div>
             </div>
-
             <div className="p-6 space-y-4">
-              {/* Banner amarillo de adelantos en curso */}
-              {adelantosDelDia.some(
-                (a) =>
-                  a.estado !== "Acreditado" && a.estado !== "Rechazado" && a.estado !== "Cancelado",
-              ) && (
-                <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs">
-                  <div className="flex items-center gap-1.5 font-semibold text-amber-700">
-                    <Percent size={12} /> Adelanto en curso
-                  </div>
-                  <div className="text-amber-700 mt-1 space-y-0.5">
-                    {adelantosDelDia
-                      .filter(
-                        (a) =>
-                          a.estado !== "Acreditado" &&
-                          a.estado !== "Rechazado" &&
-                          a.estado !== "Cancelado",
-                      )
-                      .map((a) => {
-                        const t = tickets.find((x) => x.fullId === a.id);
-                        return (
-                          <button
-                            key={a.id}
-                            type="button"
-                            onClick={() => {
-                              if (t) onOpenDetalle(t);
-                            }}
-                            className="block w-full text-left hover:underline"
-                          >
-                            {a.estado} · {formatARS(a.montoPorAcreditar ?? a.montoSolicitado)} ·
-                            Tkt #{a.id.slice(0, 8).toUpperCase()}
-                          </button>
-                        );
-                      })}
-                  </div>
-                </div>
-              )}
-
-              {itemsDelDia.map((it) => {
-                const color = ESTADO_CAL_COLORS[it.estadoCalculado];
-                const comisionCierrePct =
-                  it.importeBruto > 0
-                    ? (it.comisionCierreLoteMonto / it.importeBruto) * 100
-                    : 0;
-                const netoFinal = Math.max(
-                  it.importeNeto - (it.adelantosAplicadosDia ?? 0),
-                  0,
-                );
-                return (
-                  <Card key={it.id} className="p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <div className="font-semibold text-sm">
-                          {it.bandera} · {it.codigo}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {it.cantidadOperaciones} operaciones
-                        </div>
+              {lotesDia.isLoading ? (
+                <p className="text-sm text-muted-foreground">Cargando…</p>
+              ) : lotes.length === 0 ? (
+                <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">Sin acreditaciones este día.</div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border-2 border-amber-200 bg-amber-50/50 p-4">
+                      <div className="flex items-center gap-1.5 text-sm font-semibold">
+                        <span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> Programado
                       </div>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${color.bg} ${color.text}`}>
-                        {color.label}
-                      </span>
+                      <div className="font-mono text-xl font-bold mt-1 text-amber-700">{formatARS(sum(progDia))}</div>
+                      <div className="text-xs text-muted-foreground">{progDia.length} lote(s) · todavía no es saldo</div>
                     </div>
-
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="text-muted-foreground">
-                            <th className="text-left py-1 font-medium">Concepto</th>
-                            <th className="text-right py-1 font-medium">Importe</th>
-                          </tr>
-                        </thead>
-                        <tbody className="font-mono">
-                          <tr>
-                            <td className="py-1">Importe bruto del lote</td>
-                            <td className="text-right">{formatARS(it.importeBruto)}</td>
-                          </tr>
-                          <tr className="text-red-600">
-                            <td className="py-1">
-                              (-) Comisión MoliPay ({it.tasaMolipayPct.toFixed(2)}%)
-                            </td>
-                            <td className="text-right">-{formatARS(it.tasaMolipayMonto)}</td>
-                          </tr>
-                          <tr className="text-red-600">
-                            <td className="py-1">
-                              (-) Comisión PayWay ({it.tasaPaywayPct.toFixed(2)}%)
-                            </td>
-                            <td className="text-right">-{formatARS(it.tasaPaywayMonto)}</td>
-                          </tr>
-                          <tr className="text-red-600">
-                            <td className="py-1">
-                              (-) Comisión cierre de lote ({comisionCierrePct.toFixed(2)}%)
-                            </td>
-                            <td className="text-right">-{formatARS(it.comisionCierreLoteMonto)}</td>
-                          </tr>
-                          <tr className="text-red-600">
-                            <td className="py-1">(-) Impuestos</td>
-                            <td className="text-right">-{formatARS(it.impuestos)}</td>
-                          </tr>
-                          {it.contracargoMonto > 0 && (
-                            <tr className="text-red-600">
-                              <td className="py-1">(-) Contracargo</td>
-                              <td className="text-right">-{formatARS(it.contracargoMonto)}</td>
-                            </tr>
-                          )}
-                          {it.adelantosAplicadosDia > 0 && (
-                            <tr className="text-amber-700">
-                              <td className="py-1">(-) Adelanto aplicado a este día</td>
-                              <td className="text-right">
-                                -{formatARS(it.adelantosAplicadosDia)}
-                              </td>
-                            </tr>
-                          )}
-                          <tr className="border-t-2 font-semibold">
-                            <td className="py-1.5">= Neto a recibir en tu Operativa</td>
-                            <td className="text-right text-emerald-700">{formatARS(netoFinal)}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                    <div className="rounded-lg border-2 border-emerald-200 bg-emerald-50/50 p-4">
+                      <div className="flex items-center gap-1.5 text-sm font-semibold">
+                        <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Acreditado
+                      </div>
+                      <div className="font-mono text-xl font-bold mt-1 text-emerald-700">{formatARS(sum(acrDia))}</div>
+                      <div className="text-xs text-muted-foreground">{acrDia.length} lote(s) · ya está en tu cuenta</div>
                     </div>
-                  </Card>
-                );
-              })}
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="text-xs text-muted-foreground">
+                      <tr className="text-left border-b">
+                        <th className="py-1.5 pr-3">Bandera</th>
+                        <th className="py-1.5 pr-3 text-right">Ops</th>
+                        <th className="py-1.5 pr-3 text-right">Bruto</th>
+                        <th className="py-1.5 pr-3 text-right">Neto</th>
+                        <th className="py-1.5 pr-3">Estado</th>
+                        <th className="py-1.5" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lotes.map((l) => (
+                        <FilaLoteEmpresa
+                          key={l.id}
+                          l={l}
+                          abierto={abierto === l.id}
+                          ventas={abierto === l.id ? (ventasLote.data?.ventas ?? null) : null}
+                          cargandoVentas={abierto === l.id && ventasLote.isLoading}
+                          onToggle={() => setAbierto(abierto === l.id ? null : l.id)}
+                          onApertura={() => setApertura(l.id)}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                  {progDia.length > 0 && dia >= hoyIso && (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-4 py-3">
+                      <span className="text-sm text-muted-foreground">¿Necesitás cobrar antes? Pedí un adelanto sobre lo programado.</span>
+                      <BtnPrimary
+                        className="h-9 px-3 text-xs"
+                        onClick={() => {
+                          setDia(null);
+                          onSelectDate(dia);
+                        }}
+                      >
+                        <Plus size={14} /> Solicitar adelanto
+                      </BtnPrimary>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      <AperturaLoteModal loteId={apertura} onClose={() => setApertura(null)} />
+    </div>
+  );
+}
 
-              {/* Acciones del pie del modal */}
-              <div className="mt-3 pt-3 border-t flex items-center justify-end gap-2">
-                {ticketDelDia ? (
-                  <button
-                    type="button"
-                    onClick={() => onOpenDetalle(ticketDelDia)}
-                    className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold inline-flex items-center gap-1.5"
-                  >
-                    <Eye size={14} /> Ver mi ticket
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (netoDespuesAdelantos < minMonto) {
-                        toast.error(
-                          `El remanente libre (${formatARS(netoDespuesAdelantos)}) es menor al mínimo (${formatARS(minMonto)}).`,
-                        );
-                        return;
-                      }
-                      onSelectDate(selectedDate);
-                    }}
-                    disabled={netoDespuesAdelantos < minMonto}
-                    className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-semibold inline-flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    <Plus size={14} /> Solicitar adelanto
-                  </button>
-                )}
-                <BtnOutline onClick={onOpenGeneral}>
-                  <ArrowUpRight size={14} /> Solicitar general
-                </BtnOutline>
+function FilaLoteEmpresa({
+  l,
+  abierto,
+  ventas,
+  cargandoVentas,
+  onToggle,
+  onApertura,
+}: {
+  l: LoteEmpresa;
+  abierto: boolean;
+  ventas: AperturaLote["ventas"] | null;
+  cargandoVentas: boolean;
+  onToggle: () => void;
+  onApertura: () => void;
+}) {
+  return (
+    <>
+      <tr className="border-b">
+        <td className="py-2 pr-3">{l.bandera}</td>
+        <td className="py-2 pr-3 text-right font-mono">{l.cantidad_operaciones}</td>
+        <td className="py-2 pr-3 text-right font-mono">{formatARS(l.bruto)}</td>
+        <td className={`py-2 pr-3 text-right font-mono font-semibold ${Number(l.neto) < 0 ? "text-red-600" : ""}`}>{formatARS(l.neto)}</td>
+        <td className="py-2 pr-3">
+          <Badge tone={l.estado === "Acreditado" ? "success" : "warn"}>{estadoEmpresa(l.estado)}</Badge>
+          {(l.es_negativo || l.con_contracargo) && (
+            <span className="ml-1">
+              <Badge tone="danger">Contracargo</Badge>
+            </span>
+          )}
+        </td>
+        <td className="py-2 text-right whitespace-nowrap">
+          <button type="button" className="text-xs text-primary hover:underline mr-3" onClick={onToggle}>
+            {abierto ? "Ocultar ventas" : "Ver ventas"}
+          </button>
+          <button type="button" className="text-xs text-primary hover:underline" onClick={onApertura}>
+            Ver liquidación
+          </button>
+        </td>
+      </tr>
+      {abierto && (
+        <tr className="bg-muted/20">
+          <td colSpan={6} className="px-3 py-2">
+            {cargandoVentas ? (
+              <p className="text-xs text-muted-foreground">Cargando ventas…</p>
+            ) : !ventas || ventas.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Sin ventas vinculadas a este lote.</p>
+            ) : (
+              <table className="w-full text-xs">
+                <tbody className="divide-y">
+                  {ventas.map((v) => (
+                    <tr key={v.id_txn}>
+                      <td className="py-1 pr-3">{new Date(v.fecha).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</td>
+                      <td className="py-1 pr-3 font-mono">{v.id_txn}</td>
+                      <td className="py-1 pr-3">{v.cuotas} cuota(s)</td>
+                      <td className="py-1 text-right font-mono">{formatARS(v.monto)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+
+// ============================================================================
+// Pestañas del portal que leen con RPCs del comercio (migracion 20261030140000)
+// ============================================================================
+
+function Paginador({
+  page,
+  pageSize,
+  total,
+  onPage,
+  onPageSize,
+}: {
+  page: number;
+  pageSize: number;
+  total: number;
+  onPage: (p: number) => void;
+  onPageSize: (n: number) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  if (total === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-3 border-t">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span>Filas por página:</span>
+        <select className="h-8 px-2 rounded border bg-card text-xs" value={pageSize} onChange={(e) => onPageSize(Number(e.target.value))}>
+          {[10, 20, 50].map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+        <span>{`${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, total)} de ${total}`}</span>
+      </div>
+      <div className="flex gap-1">
+        <BtnOutline className="h-8 px-3 text-xs" disabled={page <= 1} onClick={() => onPage(1)}>
+          Primero
+        </BtnOutline>
+        <BtnOutline className="h-8 px-3 text-xs" disabled={page <= 1} onClick={() => onPage(page - 1)}>
+          Anterior
+        </BtnOutline>
+        <span className="flex items-center px-3 text-xs text-muted-foreground">
+          {page} / {totalPages}
+        </span>
+        <BtnOutline className="h-8 px-3 text-xs" disabled={page >= totalPages} onClick={() => onPage(page + 1)}>
+          Siguiente
+        </BtnOutline>
+        <BtnOutline className="h-8 px-3 text-xs" disabled={page >= totalPages} onClick={() => onPage(totalPages)}>
+          Último
+        </BtnOutline>
+      </div>
+    </div>
+  );
+}
+
+function rangoDefault() {
+  const h = new Date();
+  const d = new Date(h);
+  d.setDate(d.getDate() - 60);
+  const f = new Date(h);
+  f.setDate(f.getDate() + 60);
+  return { desde: isoLocal(d), hasta: isoLocal(f) };
+}
+
+/** 9.4 Lotes de acreditacion: una fila por bandera y fecha, con su liquidacion. */
+function LotesAcreditacionEmpresaTab() {
+  const [desde, setDesde] = useState(rangoDefault().desde);
+  const [hasta, setHasta] = useState(rangoDefault().hasta);
+  const [bandera, setBandera] = useState("");
+  const [soloContracargo, setSoloContracargo] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [apertura, setApertura] = useState<string | null>(null);
+  const q = useQuery({
+    queryKey: ["empresa-lotes-acreditacion", desde, hasta],
+    queryFn: async () => {
+      const { data, error } = await requireSupabase().rpc("comercio_lotes_acreditacion", { p_desde: desde, p_hasta: hasta });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as LoteEmpresa[];
+    },
+  });
+  const todos = q.data ?? [];
+  const banderas = Array.from(new Set(todos.map((l) => l.bandera))).sort();
+  const filas = todos.filter((l) => (!bandera || l.bandera === bandera) && (!soloContracargo || l.con_contracargo || l.es_negativo));
+  const pagina = filas.slice((page - 1) * pageSize, page * pageSize);
+  const acreditado = filas.filter((l) => l.estado === "Acreditado").reduce((a, l) => a + Number(l.neto), 0);
+  const descuentos = filas.reduce((a, l) => a + Number(l.descuentos), 0);
+
+  return (
+    <div>
+      <div className="px-5 py-3 border-b flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <Label>Desde</Label>
+            <Input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPage(1); }} />
+          </div>
+          <div>
+            <Label>Hasta</Label>
+            <Input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPage(1); }} />
+          </div>
+          <div>
+            <Label>Bandera</Label>
+            <select value={bandera} onChange={(e) => { setBandera(e.target.value); setPage(1); }} className="h-10 px-3 rounded-md border bg-card text-sm">
+              <option value="">Todas</option>
+              {banderas.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </div>
+          <label className="flex items-center gap-1.5 text-xs h-10">
+            <input type="checkbox" checked={soloContracargo} onChange={(e) => { setSoloContracargo(e.target.checked); setPage(1); }} /> Con contracargo
+          </label>
+        </div>
+        <div className="text-xs text-muted-foreground text-right">
+          Acreditado en el período: <span className="font-mono font-semibold text-emerald-700">{formatARS(acreditado)}</span>
+          <br />
+          Descuentos totales: <span className="font-mono font-semibold text-red-600">- {formatARS(descuentos)}</span>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
+              <th className="text-left px-5 py-3">Fecha de acreditación</th>
+              <th className="text-left px-5 py-3">Bandera</th>
+              <th className="text-right px-5 py-3">Bruto</th>
+              <th className="text-right px-5 py-3">Descuentos</th>
+              <th className="text-right px-5 py-3">Compensaciones</th>
+              <th className="text-right px-5 py-3">Neto acreditado</th>
+              <th className="text-center px-5 py-3">Estado</th>
+              <th className="text-center px-5 py-3">Acción</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {q.isLoading ? (
+              <tr>
+                <td colSpan={8} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                  Cargando…
+                </td>
+              </tr>
+            ) : q.isError ? (
+              <tr>
+                <td colSpan={8} className="px-5 py-10 text-center text-sm text-red-700">
+                  {(q.error as Error).message}
+                </td>
+              </tr>
+            ) : pagina.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                  No hay lotes de acreditación en el período.
+                </td>
+              </tr>
+            ) : (
+              pagina.map((l) => (
+                <tr key={l.id} className="hover:bg-muted/30">
+                  <td className="px-5 py-3 text-xs">
+                    <div className="font-mono">{fmtDateFull(l.fecha_acreditacion ?? l.fecha)}</div>
+                    {!l.fecha_acreditacion && <div className="text-[10px] text-muted-foreground">estimada</div>}
+                  </td>
+                  <td className="px-5 py-3">
+                    <Badge tone="neutral">{l.bandera}</Badge>
+                  </td>
+                  <td className="px-5 py-3 text-right font-mono tabular-nums">{formatARS(l.bruto)}</td>
+                  <td className="px-5 py-3 text-right font-mono tabular-nums text-red-600">- {formatARS(l.descuentos)}</td>
+                  <td className="px-5 py-3 text-right font-mono tabular-nums text-muted-foreground">
+                    {Number(l.compensaciones) > 0 ? `- ${formatARS(l.compensaciones)}` : "—"}
+                  </td>
+                  <td className={`px-5 py-3 text-right font-mono tabular-nums font-semibold ${Number(l.neto) < 0 ? "text-red-600" : "text-emerald-700"}`}>
+                    {formatARS(l.neto)}
+                  </td>
+                  <td className="px-5 py-3 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <Badge tone={l.estado === "Acreditado" ? "success" : "warn"}>{estadoEmpresa(l.estado)}</Badge>
+                      {(l.es_negativo || l.con_contracargo) && <Badge tone="danger">Contracargo</Badge>}
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 text-center">
+                    <BtnOutline className="h-8 px-2.5 text-xs" onClick={() => setApertura(l.id)}>
+                      <Eye size={13} /> Ver apertura
+                    </BtnOutline>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      <Paginador page={page} pageSize={pageSize} total={filas.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }} />
+      <AperturaLoteModal loteId={apertura} onClose={() => setApertura(null)} />
+    </div>
+  );
+}
+
+type VentaDiaEmpresa = {
+  fecha: string;
+  ventas: number;
+  rechazos: number;
+  bruto: number;
+  por_bandera: Record<string, number>;
+  proxima_acreditacion: string | null;
+  liquidado: number;
+  pendiente_liquidar: number;
+  estado: "Abierto" | "Cerrado";
+};
+
+type VentaDetalleEmpresa = {
+  id: string;
+  id_txn: string;
+  fecha: string;
+  bandera: string | null;
+  cuotas: number;
+  monto: number;
+  estado: string;
+  lote: { codigo: string; estado: string; fecha: string; origen: string } | null;
+};
+
+/** 9.3 Lotes de venta por dia: cuanto vendio, sin importar cuando cobra. */
+function LotesVentaEmpresaTab() {
+  const h = new Date();
+  const ini = new Date(h);
+  ini.setDate(ini.getDate() - 30);
+  const [desde, setDesde] = useState(isoLocal(ini));
+  const [hasta, setHasta] = useState(isoLocal(h));
+  const [bandera, setBandera] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [detalle, setDetalle] = useState<VentaDiaEmpresa | null>(null);
+  const q = useQuery({
+    queryKey: ["empresa-ventas-dia", desde, hasta],
+    queryFn: async () => {
+      const { data, error } = await requireSupabase().rpc("comercio_ventas_dia", { p_desde: desde, p_hasta: hasta });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as VentaDiaEmpresa[];
+    },
+  });
+  const det = useQuery({
+    queryKey: ["empresa-ventas-detalle", detalle?.fecha],
+    enabled: !!detalle,
+    queryFn: async () => {
+      const { data, error } = await requireSupabase().rpc("comercio_ventas_detalle", { p_fecha: detalle!.fecha });
+      if (error) throw new Error(error.message);
+      return (data ?? []) as VentaDetalleEmpresa[];
+    },
+  });
+  const todos = q.data ?? [];
+  const banderas = Array.from(new Set(todos.flatMap((r) => Object.keys(r.por_bandera ?? {})))).sort();
+  const filas = todos.filter((r) => !bandera || (r.por_bandera ?? {})[bandera] != null);
+  const pagina = filas.slice((page - 1) * pageSize, page * pageSize);
+  const totalBruto = filas.reduce((a, r) => a + Number(r.bruto), 0);
+
+  return (
+    <div>
+      <div className="px-5 py-3 border-b flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <Label>Desde</Label>
+            <Input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPage(1); }} />
+          </div>
+          <div>
+            <Label>Hasta</Label>
+            <Input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPage(1); }} />
+          </div>
+          <div>
+            <Label>Bandera</Label>
+            <select value={bandera} onChange={(e) => { setBandera(e.target.value); setPage(1); }} className="h-10 px-3 rounded-md border bg-card text-sm">
+              <option value="">Todas</option>
+              {banderas.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Vendido en el período: <span className="font-mono font-semibold">{formatARS(totalBruto)}</span>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
+              <th className="text-left px-5 py-3">Fecha</th>
+              <th className="text-right px-5 py-3">Ventas</th>
+              <th className="text-right px-5 py-3">Rechazos</th>
+              <th className="text-right px-5 py-3">Bruto vendido</th>
+              <th className="text-left px-5 py-3">Por bandera</th>
+              <th className="text-left px-5 py-3">Cobro estimado</th>
+              <th className="text-center px-5 py-3">Estado</th>
+              <th className="text-center px-5 py-3">Acción</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {q.isLoading ? (
+              <tr>
+                <td colSpan={8} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                  Cargando…
+                </td>
+              </tr>
+            ) : q.isError ? (
+              <tr>
+                <td colSpan={8} className="px-5 py-10 text-center text-sm text-red-700">
+                  {(q.error as Error).message}
+                </td>
+              </tr>
+            ) : pagina.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                  No se encontraron ventas en el período.
+                </td>
+              </tr>
+            ) : (
+              pagina.map((r) => (
+                <tr key={r.fecha} className="hover:bg-muted/30">
+                  <td className="px-5 py-3 text-xs">{fmtDateFull(r.fecha)}</td>
+                  <td className="px-5 py-3 text-right font-mono tabular-nums">{r.ventas}</td>
+                  <td className="px-5 py-3 text-right font-mono tabular-nums text-muted-foreground">{r.rechazos}</td>
+                  <td className="px-5 py-3 text-right font-mono tabular-nums font-semibold">{formatARS(r.bruto)}</td>
+                  <td className="px-5 py-3 text-xs">
+                    {Object.entries(r.por_bandera ?? {}).map(([b, v]) => (
+                      <div key={b}>
+                        <span className="text-muted-foreground">{b}:</span> <span className="font-mono">{formatARS(Number(v))}</span>
+                      </div>
+                    ))}
+                  </td>
+                  <td className="px-5 py-3 text-xs">{r.proxima_acreditacion ? fmtDateFull(r.proxima_acreditacion) : "—"}</td>
+                  <td className="px-5 py-3 text-center">
+                    <Badge tone={r.estado === "Abierto" ? "warn" : "neutral"}>{r.estado}</Badge>
+                  </td>
+                  <td className="px-5 py-3 text-center">
+                    <BtnOutline className="h-8 px-2.5 text-xs" onClick={() => setDetalle(r)}>
+                      <Eye size={13} /> Ver detalle
+                    </BtnOutline>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      <Paginador page={page} pageSize={pageSize} total={filas.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }} />
+
+      {detalle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setDetalle(null)} />
+          <div className="relative bg-card rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="sticky top-0 bg-card px-6 py-4 border-b flex items-center justify-between">
+              <div>
+                <div className="font-semibold">Ventas del {fmtDateFull(detalle.fecha)}</div>
+                <div className="text-xs text-muted-foreground">
+                  {detalle.ventas} ventas · {formatARS(detalle.bruto)} · {detalle.estado}
+                </div>
               </div>
+              <button onClick={() => setDetalle(null)} className="p-1 hover:bg-muted rounded">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-6">
+              {det.isLoading ? (
+                <p className="text-sm text-muted-foreground">Cargando…</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-xs uppercase tracking-wider text-muted-foreground">
+                      <th className="text-left py-2 pr-3">Hora</th>
+                      <th className="text-left py-2 pr-3">Operación</th>
+                      <th className="text-left py-2 pr-3">Bandera</th>
+                      <th className="text-right py-2 pr-3">Cuotas</th>
+                      <th className="text-right py-2 pr-3">Monto</th>
+                      <th className="text-left py-2 pr-3">Estado</th>
+                      <th className="text-left py-2">Se cobra en</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {(det.data ?? []).map((v) => (
+                      <tr key={v.id}>
+                        <td className="py-2 pr-3 text-xs">{new Date(v.fecha).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}</td>
+                        <td className="py-2 pr-3 font-mono text-xs">{v.id_txn}</td>
+                        <td className="py-2 pr-3">{v.bandera ?? "—"}</td>
+                        <td className="py-2 pr-3 text-right">{v.cuotas}</td>
+                        <td className="py-2 pr-3 text-right font-mono">{formatARS(v.monto)}</td>
+                        <td className="py-2 pr-3">
+                          <Badge tone="success">{v.estado}</Badge>
+                        </td>
+                        <td className="py-2 text-xs">
+                          {v.lote ? `${fmtDateFull(v.lote.fecha)} · ${estadoEmpresa(v.lote.estado)}` : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
@@ -772,82 +1177,138 @@ function CalendarioAcreditacionesTab({
   );
 }
 
-// ============================================================================
-// Export helpers (por día)
-// ============================================================================
+type ContracargoEmpresa = {
+  id: string;
+  fecha: string;
+  bandera: string | null;
+  venta_fecha: string | null;
+  venta_txn: string | null;
+  venta_monto: number | null;
+  importe: number;
+  motivo: string | null;
+  lote_codigo: string | null;
+  lote_fecha: string | null;
+  estado: string;
+  mediacion: string | null;
+  pendiente_recuperar: number;
+};
 
-function exportExcelDia(titulo: string, rows: { id: string; codigo: string; nombreComercio: string | null; legajo: string; bandera: string; estado: string; cantidadOperaciones: number; importeBruto: number; tasaMolipayPct: number; tasaMolipayMonto: number; tasaPaywayPct: number; tasaPaywayMonto: number; comisionCierreLoteMonto: number; impuestos: number; contracargoMonto: number; importeNeto: number; }[]) {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const XLSX = require("xlsx") as typeof import("xlsx");
-  const wb = XLSX.utils.book_new();
-  const data = rows.map((r) => ({
-    Lote: r.codigo,
-    Comercio: r.nombreComercio ?? "—",
-    Legajo: r.legajo,
-    Bandera: r.bandera,
-    Estado: r.estado,
-    Operaciones: r.cantidadOperaciones,
-    "Importe bruto": r.importeBruto,
-    "Comisión MoliPay": r.tasaMolipayMonto,
-    "Comisión PayWay": r.tasaPaywayMonto,
-    "Comisión cierre lote": r.comisionCierreLoteMonto,
-    Impuestos: r.impuestos,
-    Contracargo: r.contracargoMonto,
-    "Importe neto": r.importeNeto,
-  }));
-  const ws = XLSX.utils.json_to_sheet(data);
-  XLSX.utils.book_append_sheet(wb, ws, titulo.slice(0, 30));
-  const safe = titulo.replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 40);
-  XLSX.writeFile(wb, `calendario_${safe}.xlsx`);
-}
-
-function exportPdfDia(titulo: string, rows: { codigo: string; nombreComercio: string | null; bandera: string; estado: string; cantidadOperaciones: number; importeBruto: number; tasaMolipayMonto: number; tasaPaywayMonto: number; comisionCierreLoteMonto: number; impuestos: number; contracargoMonto: number; importeNeto: number; }[]) {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { jsPDF } = require("jspdf") as typeof import("jspdf");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const autoTableMod = require("jspdf-autotable") as { default: (doc: import("jspdf").jsPDF, opts: unknown) => void };
-  const doc = new jsPDF({ orientation: "landscape" });
-  doc.setFontSize(14);
-  doc.text(`Calendario de Acreditaciones — ${titulo}`, 14, 16);
-  doc.setFontSize(9);
-  doc.text(`Generado: ${new Date().toLocaleString("es-AR")}`, 14, 22);
-  autoTableMod.default(doc, {
-    startY: 28,
-    head: [
-      [
-        "Lote",
-        "Comercio",
-        "Bandera",
-        "Estado",
-        "Ops",
-        "Bruto",
-        "MoliPay",
-        "PayWay",
-        "Cierre",
-        "Impuestos",
-        "Contracargo",
-        "Neto",
-      ],
-    ],
-    body: rows.map((r) => [
-      r.codigo,
-      r.nombreComercio ?? "—",
-      r.bandera,
-      r.estado,
-      String(r.cantidadOperaciones),
-      formatARS(r.importeBruto),
-      formatARS(r.tasaMolipayMonto),
-      formatARS(r.tasaPaywayMonto),
-      formatARS(r.comisionCierreLoteMonto),
-      formatARS(r.impuestos),
-      formatARS(r.contracargoMonto),
-      formatARS(r.importeNeto),
-    ]),
-    styles: { fontSize: 7, cellPadding: 1.5 },
-    headStyles: { fillColor: [33, 37, 41] },
+/** 9.6 Contracargos: que venta le desconocieron y donde se le desconto. */
+function ContracargosEmpresaTab() {
+  const [bandera, setBandera] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const q = useQuery({
+    queryKey: ["empresa-contracargos"],
+    queryFn: async () => {
+      const { data, error } = await requireSupabase().rpc("comercio_contracargos");
+      if (error) throw new Error(error.message);
+      return data as { deuda_pendiente: number; contracargos: ContracargoEmpresa[] };
+    },
   });
-  const safe = titulo.replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 40);
-  doc.save(`calendario_${safe}.pdf`);
+  const todos = q.data?.contracargos ?? [];
+  const banderas = Array.from(new Set(todos.map((c) => c.bandera ?? "—"))).sort();
+  const filas = todos.filter((c) => !bandera || (c.bandera ?? "—") === bandera);
+  const pagina = filas.slice((page - 1) * pageSize, page * pageSize);
+  const deuda = Number(q.data?.deuda_pendiente ?? 0);
+  const tono = (e: string): "neutral" | "success" | "warn" | "danger" =>
+    e === "Recuperado" || e === "Descontado" || e === "Devuelto" ? "success" : e === "Pendiente de recuperar" ? "danger" : "warn";
+
+  return (
+    <div>
+      <div className="px-5 py-3 border-b flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <Label>Bandera</Label>
+          <select value={bandera} onChange={(e) => { setBandera(e.target.value); setPage(1); }} className="h-10 px-3 rounded-md border bg-card text-sm">
+            <option value="">Todas</option>
+            {banderas.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="text-xs text-right">
+          <div className="text-muted-foreground">
+            Contracargos: <b>{filas.length}</b> · Total <span className="font-mono font-semibold">{formatARS(filas.reduce((a, c) => a + Number(c.importe), 0))}</span>
+          </div>
+          {deuda > 0 && (
+            <div className="text-red-700 font-semibold mt-0.5">
+              Deuda pendiente: <span className="font-mono">{formatARS(deuda)}</span> · se descuenta de tus próximas acreditaciones
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
+              <th className="text-left px-5 py-3">Fecha</th>
+              <th className="text-left px-5 py-3">Bandera</th>
+              <th className="text-left px-5 py-3">Venta original</th>
+              <th className="text-right px-5 py-3">Importe</th>
+              <th className="text-left px-5 py-3">Lote</th>
+              <th className="text-center px-5 py-3">Estado</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {q.isLoading ? (
+              <tr>
+                <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                  Cargando…
+                </td>
+              </tr>
+            ) : q.isError ? (
+              <tr>
+                <td colSpan={6} className="px-5 py-10 text-center text-sm text-red-700">
+                  {(q.error as Error).message}
+                </td>
+              </tr>
+            ) : pagina.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">
+                  No tenés contracargos.
+                </td>
+              </tr>
+            ) : (
+              pagina.map((c) => (
+                <tr key={c.id} className="hover:bg-muted/30">
+                  <td className="px-5 py-3 text-xs">{new Date(c.fecha).toLocaleDateString("es-AR")}</td>
+                  <td className="px-5 py-3">
+                    <Badge tone="neutral">{c.bandera ?? "—"}</Badge>
+                  </td>
+                  <td className="px-5 py-3 text-xs">
+                    {c.venta_txn ? (
+                      <>
+                        <div className="font-mono">{c.venta_txn}</div>
+                        <div className="text-muted-foreground">
+                          {c.venta_fecha ? new Date(c.venta_fecha).toLocaleDateString("es-AR") : ""} · {formatARS(c.venta_monto ?? 0)}
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">{c.motivo ?? "—"}</span>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 text-right font-mono tabular-nums font-semibold text-red-600">- {formatARS(c.importe)}</td>
+                  <td className="px-5 py-3 text-xs">{c.lote_codigo ? `${c.lote_codigo} · ${c.lote_fecha ? fmtDateFull(c.lote_fecha) : ""}` : "—"}</td>
+                  <td className="px-5 py-3 text-center">
+                    <div className="flex flex-col items-center gap-0.5">
+                      <Badge tone={tono(c.estado)}>{c.estado}</Badge>
+                      {c.mediacion && <span className="text-[10px] text-muted-foreground">{c.mediacion}</span>}
+                      {Number(c.pendiente_recuperar) > 0 && (
+                        <span className="text-[10px] text-red-700 font-mono">debe {formatARS(c.pendiente_recuperar)}</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      <Paginador page={page} pageSize={pageSize} total={filas.length} onPage={setPage} onPageSize={(n) => { setPageSize(n); setPage(1); }} />
+    </div>
+  );
 }
 
 function Liquidaciones() {
@@ -886,6 +1347,34 @@ function Liquidaciones() {
   const [motivo, setMotivo] = useState("");
   const [saving, setSaving] = useState(false);
   const [detalle, setDetalle] = useState<Ticket | null>(null);
+  const [tope, setTope] = useState<TopeAdelanto | null>(null);
+  const [aceptoOferta, setAceptoOferta] = useState(false);
+  // Cambia para volver a leer todo después de pedir / aceptar / cancelar.
+  const [recarga, setRecarga] = useState(0);
+
+  // Resumen del comercio (RPC comercio_liquidaciones_resumen): saldo,
+  // pendiente de acreditacion, proxima acreditacion, vendido del mes,
+  // adelanto a compensar y deuda por contracargos.
+  const resumenQ = useQuery({
+    queryKey: ["empresa-liquidaciones-resumen", recarga],
+    queryFn: async () => {
+      const { data, error } = await requireSupabase().rpc("comercio_liquidaciones_resumen", {});
+      if (error) throw new Error(error.message);
+      return data as {
+        saldo_disponible: number;
+        pendiente_acreditacion: number;
+        proxima_acreditacion: { fecha: string; monto: number } | null;
+        vendido_periodo: number;
+        ventas_periodo: number;
+        adelanto_pendiente_compensar: number;
+        deuda_contracargos: number;
+        saldo_negativo: boolean;
+        ultimas_acreditaciones: { lote_id: string; codigo: string; bandera: string; fecha_acreditacion: string; neto: number }[];
+        proximas_acreditaciones: { lote_id: string; codigo: string; bandera: string; fecha: string; neto: number }[];
+      };
+    },
+  });
+  const res = resumenQ.data;
 
   const ROWS_OPTIONS = [10, 20, 50];
 
@@ -916,36 +1405,6 @@ function Liquidaciones() {
     acredPage * acredPageSize,
   );
 
-  /**
-   * Mapa fecha (YYYY-MM-DD) → ticket activo. La UI del calendario lo
-   * usa para pintar el badge "Adelanto en curso" y cambiar el botón
-   * "Adelantar" por "Ver ticket" cuando ya hay un ticket cubriendo
-   * ese lote. Se recomputa solo cuando `tickets` cambia.
-   *
-   * Estados que cuentan como "compromiso en curso" para el lote:
-   *   - Pendiente: el comercio pidió, aún no fue revisado
-   *   - Aprobado:  el admin cargó TEM, falta Acreditar
-   *   - Acreditado: el admin ya pagó, se repone al liquidar el lote
-   *
-   * Si hay más de un ticket para la misma fecha, conservamos el más
-   * "comprometido" (Acreditado > Aprobado > Pendiente) para no perder
-   * estado al re-renderizar.
-   */
-  const ticketPorFecha = useMemo<Record<string, Ticket>>(() => {
-    const mapa: Record<string, Ticket> = {};
-    const orden = { pendiente: 0, aprobado: 1, acreditado: 2 } as Record<string, number>;
-    for (const t of tickets) {
-      const fechaKey = (t.fechaAcreditacion || t.fecha || "").slice(0, 10);
-      if (!fechaKey) continue;
-      const estadoNorm = t.estado.toLowerCase();
-      if (!(estadoNorm in orden)) continue;
-      const previo = mapa[fechaKey];
-      if (!previo || orden[estadoNorm] > (orden[previo.estado.toLowerCase()] ?? -1)) {
-        mapa[fechaKey] = t;
-      }
-    }
-    return mapa;
-  }, [tickets]);
 
   const totalSeleccionado = useMemo(() => {
     if (!selectedDate) return porAcreditar;
@@ -1027,7 +1486,8 @@ function Liquidaciones() {
             .select(
               "id, fecha, cantidad_operaciones, importe_neto, estado, comision_cierre_lote_pct, comision_cierre_lote_monto, bandera, fecha_resolucion, fecha_cobro_real",
             )
-            .eq("comercio_id", comercioId);
+            .eq("comercio_id", comercioId)
+            .neq("estado", "Liquidado");
 
           const rows = (loteRows ?? []) as any[];
           const pendientes = rows.filter(
@@ -1082,33 +1542,35 @@ function Liquidaciones() {
           const { data: adelRows } = await sb
             .from("adelantos")
             .select(
-              "id, monto_solicitado, monto_por_acreditar, fecha_acreditacion, estado, motivo, fecha_solicitud, created_at, tasa_interes_pct, plazo_adelantado_dias, fecha_resolucion",
+              "id, monto_solicitado, monto_por_acreditar, fecha_acreditacion, estado, motivo, fecha_solicitud, created_at, tasa_interes_pct, plazo_adelantado_dias, fecha_resolucion, monto_ofertado, descuento, neto_a_recibir, compensado, rechazo_motivo",
             )
-            .eq("comercio_id", comercioId);
+            .eq("comercio_id", comercioId)
+            .order("fecha_solicitud", { ascending: false });
 
-          // El "Disponible para adelanto" sale de la RPC `fn_calcular_tope_disponible`
-          // (fuente única de verdad). Si la RPC no existe todavía (migración
-          // no aplicada), caemos al cálculo JS para no romper la pantalla.
+          // El "Disponible para adelanto" sale de la RPC `adelanto_tope`: lo
+          // vendido con tarjeta y no acreditado menos los adelantos vigentes,
+          // y si el comercio cumple la antigüedad mínima.
           try {
-            const { data: topeRpc, error: rpcError } = await sb.rpc(
-              "fn_calcular_tope_disponible",
-              { p_comercio_id: comercioId },
-            );
-            if (!rpcError) {
-              disp = Math.max(0, Number(topeRpc ?? 0));
-            } else {
-              throw new Error(rpcError.message);
-            }
-          } catch {
-            const reservado = (adelRows ?? []).reduce(
-              (s: number, a: any) =>
-                s +
-                (a.estado === "Pendiente" || a.estado === "Aprobado"
-                  ? Number(a.monto_solicitado ?? 0)
-                  : 0),
-              0,
-            );
-            disp = Math.max(0, acreditar - reservado);
+            const { data: topeRpc, error: rpcError } = await sb.rpc("adelanto_tope", {
+              p_comercio_id: comercioId,
+            });
+            if (rpcError) throw new Error(rpcError.message);
+            const t = (topeRpc ?? {}) as Record<string, unknown>;
+            disp = Math.max(0, Number(t.tope ?? 0));
+            adelantosEnCursoCalc = Number(t.adelantos_vigentes ?? 0);
+            if (!cancelled)
+              setTope({
+                tope: disp,
+                vendidoNoAcreditado: Number(t.vendido_no_acreditado ?? 0),
+                adelantosVigentes: Number(t.adelantos_vigentes ?? 0),
+                cumpleAntiguedad: Boolean(t.cumple_antiguedad),
+                antiguedadDias: t.antiguedad_dias != null ? Number(t.antiguedad_dias) : null,
+                antiguedadMinima: Number(t.antiguedad_minima_dias ?? 90),
+                deuda: Number(t.deuda_pendiente ?? 0),
+              });
+          } catch (e) {
+            console.warn("adelanto_tope no disponible:", e);
+            disp = 0;
           }
 
           ticketsReal.push(
@@ -1124,15 +1586,13 @@ function Liquidaciones() {
               tasaInteres: r.tasa_interes_pct != null ? Number(r.tasa_interes_pct) : null,
               plazoAdelantado:
                 r.plazo_adelantado_dias != null ? Number(r.plazo_adelantado_dias) : null,
+              montoOfertado: r.monto_ofertado != null ? Number(r.monto_ofertado) : null,
+              descuento: r.descuento != null ? Number(r.descuento) : null,
+              netoARecibir: r.neto_a_recibir != null ? Number(r.neto_a_recibir) : null,
+              compensado: Number(r.compensado ?? 0),
+              rechazoMotivo: r.rechazo_motivo ?? null,
             })),
           );
-          // Σ adelantos en curso (Pendiente + Aprobado)
-          adelantosEnCursoCalc = (adelRows ?? [])
-            .filter((r: any) => r.estado === "Pendiente" || r.estado === "Aprobado")
-            .reduce(
-              (s: number, r: any) => s + Number(r.monto_por_acreditar ?? r.monto_solicitado ?? 0),
-              0,
-            );
         }
 
         // 4) Lotes de venta — filtrado por comercio_id.
@@ -1258,7 +1718,7 @@ function Liquidaciones() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [recarga]);
 
   const openForDate = (date: string) => {
     setSelectedDate(date);
@@ -1282,8 +1742,8 @@ function Liquidaciones() {
       toast.error("Ingresá un monto válido");
       return;
     }
-    if (!fechaAcred) {
-      toast.error("Seleccioná una fecha de acreditación");
+    if (tope && !tope.cumpleAntiguedad) {
+      toast.error(`El adelanto se habilita a partir de los ${tope.antiguedadMinima} días de operación`);
       return;
     }
     if (montoNum > disponible) {
@@ -1293,36 +1753,50 @@ function Liquidaciones() {
     setSaving(true);
     try {
       const sb = requireSupabase();
-      // Alta con validación server-side (RPC security definer): recalcula el
-      // disponible y rechaza si el monto supera el pendiente por acreditar.
-      const { data, error } = await sb.rpc("ingresar_adelanto", {
-        monto: montoNum,
-        fecha_acreditacion: fechaAcred,
-        motivo: motivo || null,
+      // Plazo deseado: días hasta la fecha de acreditación que se quiere adelantar.
+      const plazo = fechaAcred
+        ? Math.max(1, Math.round((new Date(`${fechaAcred}T12:00:00`).getTime() - Date.now()) / 86_400_000))
+        : 1;
+      // Alta con validación server-side (RPC adelanto_solicitar): antigüedad
+      // mínima y tope (vendido y no acreditado − adelantos vigentes).
+      const { data, error } = await sb.rpc("adelanto_solicitar", {
+        p_monto: montoNum,
+        p_plazo_dias: plazo,
+        p_transaction_ids: null,
+        p_motivo: motivo || null,
       });
       if (error) throw new Error(error.message);
-      const row = data as any;
-      const nuevo: Ticket = {
-        id: String(row?.id ?? Date.now())
-          .slice(0, 8)
-          .toUpperCase(),
-        fullId: row?.id ?? undefined,
-        fecha: (row?.fecha_solicitud ?? new Date().toISOString()).slice(0, 10),
-        montoSolicitado: Number(row?.monto_solicitado ?? montoNum),
-        montoPorAcreditar: Number(row?.monto_por_acreditar ?? porAcreditar),
-        fechaAcreditacion: (row?.fecha_acreditacion ?? fechaAcred).slice(0, 10),
-        estado: "pendiente",
-        motivo: motivo || undefined,
-        tasaInteres: row?.tasa_interes_pct != null ? Number(row.tasa_interes_pct) : null,
-        plazoAdelantado:
-          row?.plazo_adelantado_dias != null ? Number(row.plazo_adelantado_dias) : null,
-      };
-      setTickets((prev) => [nuevo, ...prev]);
-      setDisponible((prev) => Math.max(0, prev - montoNum));
+      const row = data as { adelanto_id?: string } | null;
       setOpen(false);
-      toast.success(`Ticket ${nuevo.id} creado — pendiente de aprobación`);
+      setRecarga((n) => n + 1);
+      toast.success(
+        `Adelanto ${String(row?.adelanto_id ?? "").slice(0, 8).toUpperCase()} solicitado. MoliPay te va a enviar una oferta con la tasa y el neto a recibir.`,
+      );
     } catch (e: any) {
-      toast.error(e?.message ?? "No se pudo crear el ticket");
+      toast.error(e?.message ?? "No se pudo solicitar el adelanto");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Aceptar la oferta (RPC adelanto_aceptar): exige confirmar la tasa y el neto.
+  const handleAceptar = async (t: Ticket) => {
+    if (!t.fullId) return;
+    if (!aceptoOferta) {
+      toast.error("Marcá que aceptás la tasa y el monto a recibir");
+      return;
+    }
+    setSaving(true);
+    try {
+      const sb = requireSupabase();
+      const { error } = await sb.rpc("adelanto_aceptar", { p_adelanto_id: t.fullId, p_acepto: true });
+      if (error) throw new Error(error.message);
+      toast.success("Oferta aceptada. MoliPay va a acreditar el neto en tu cuenta.");
+      setDetalle(null);
+      setAceptoOferta(false);
+      setRecarga((n) => n + 1);
+    } catch (e: any) {
+      toast.error(e?.message ?? "No se pudo aceptar la oferta");
     } finally {
       setSaving(false);
     }
@@ -1354,6 +1828,7 @@ function Liquidaciones() {
           : null,
       );
       toast.success("Adelanto cancelado correctamente");
+      setRecarga((n) => n + 1);
     } catch (e: any) {
       toast.error(e?.message ?? "No se pudo cancelar el adelantar");
     } finally {
@@ -1483,43 +1958,104 @@ function Liquidaciones() {
         }
       />
 
-      {/* KPIs: 4 cards (Falta cobrar / Por acreditar / Adelantos en curso / Disponible real) */}
+      {res?.saldo_negativo && (
+        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          Tenés una deuda de <b className="font-mono">{formatARS(res.deuda_contracargos)}</b> por contracargos o
+          liquidaciones negativas. Se descuenta automáticamente de tus próximas acreditaciones y, mientras exista,
+          los retiros pueden estar bloqueados.{" "}
+          <button className="underline font-semibold" onClick={() => setActiveTab("contracargos")}>
+            Ver contracargos
+          </button>
+        </div>
+      )}
+
+      {/* KPIs: saldo, pendiente de acreditación, próxima acreditación, adelanto a compensar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <Card className="border-l-4 border-l-amber-500">
+        <Card className="border-l-4 border-l-emerald-500">
           <div className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <Clock size={12} /> Falta cobrar
+            <Wallet size={12} /> Saldo disponible
           </div>
-          <div className="font-display tabular-nums text-xl md:text-2xl font-bold mt-1">
-            {loading ? "—" : formatARS(faltaCobrar)}
+          <div className="font-display tabular-nums text-xl md:text-2xl font-bold mt-1 text-emerald-700">
+            {resumenQ.isLoading ? "—" : formatARS(res?.saldo_disponible ?? 0)}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">Ventas sin lote aún</div>
+          <div className="text-xs text-muted-foreground mt-1">El mismo que el Saldo Total de tu cuenta</div>
         </Card>
         <Card className="border-l-4 border-l-blue-500">
           <div className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <Wallet size={12} /> Por acreditar
+            <Clock size={12} /> Pendiente de acreditación
           </div>
           <div className="font-display tabular-nums text-xl md:text-2xl font-bold mt-1 text-blue-700">
-            {loading ? "—" : formatARS(porAcreditar)}
+            {resumenQ.isLoading ? "—" : formatARS(res?.pendiente_acreditacion ?? 0)}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">Lotes no Acreditados</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Vendido del mes: {formatARS(res?.vendido_periodo ?? 0)} ({res?.ventas_periodo ?? 0} ventas)
+          </div>
+        </Card>
+        <Card className="border-l-4 border-l-amber-500">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <CalendarDays size={12} /> Próxima acreditación
+          </div>
+          <div className="font-display tabular-nums text-xl md:text-2xl font-bold mt-1">
+            {resumenQ.isLoading ? "—" : res?.proxima_acreditacion ? formatARS(res.proxima_acreditacion.monto) : "—"}
+          </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {res?.proxima_acreditacion ? fmtDateFull(res.proxima_acreditacion.fecha) : "Sin acreditaciones programadas"}
+          </div>
         </Card>
         <Card className="border-l-4 border-l-amber-600">
           <div className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <Percent size={12} /> Adelantos en curso
+            <Percent size={12} /> Adelanto a compensar
           </div>
           <div className="font-display tabular-nums text-xl md:text-2xl font-bold mt-1 text-amber-700">
-            {loading ? "—" : formatARS(adelantosEnCurso)}
+            {resumenQ.isLoading ? "—" : formatARS(res?.adelanto_pendiente_compensar ?? 0)}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">Pendiente + Aprobado</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {(res?.deuda_contracargos ?? 0) > 0
+              ? `Deuda por contracargos: ${formatARS(res!.deuda_contracargos)}`
+              : `Disponible para adelanto: ${formatARS(disponible)}`}
+          </div>
         </Card>
-        <Card className="border-l-4 border-l-emerald-500">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <TrendingUp size={12} /> Disponible real
+      </div>
+
+      {/* Últimas 5 acreditaciones y próximas 5 programadas */}
+      <div className="grid md:grid-cols-2 gap-3 mb-6">
+        <Card>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+            <CheckCircle2 size={12} /> Últimas acreditaciones
           </div>
-          <div className="font-display tabular-nums text-xl md:text-2xl font-bold mt-1 text-emerald-700">
-            {loading ? "—" : formatARS(disponible)}
+          {(res?.ultimas_acreditaciones ?? []).length === 0 ? (
+            <p className="text-xs text-muted-foreground">Todavía no tenés acreditaciones.</p>
+          ) : (
+            <div className="divide-y text-sm">
+              {res!.ultimas_acreditaciones.map((a) => (
+                <div key={a.lote_id} className="flex items-center justify-between py-1.5">
+                  <span className="text-xs">
+                    {fmtDateFull(a.fecha_acreditacion)} · <Badge tone="neutral">{a.bandera}</Badge>
+                  </span>
+                  <span className="font-mono font-semibold text-emerald-700">{formatARS(a.neto)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+        <Card>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+            <CalendarDays size={12} /> Próximas acreditaciones
           </div>
-          <div className="text-xs text-muted-foreground mt-1">Por acreditar − en curso</div>
+          {(res?.proximas_acreditaciones ?? []).length === 0 ? (
+            <p className="text-xs text-muted-foreground">No hay acreditaciones programadas.</p>
+          ) : (
+            <div className="divide-y text-sm">
+              {res!.proximas_acreditaciones.map((a) => (
+                <div key={a.lote_id} className="flex items-center justify-between py-1.5">
+                  <span className="text-xs">
+                    {fmtDateFull(a.fecha)} · <Badge tone="neutral">{a.bandera}</Badge>
+                  </span>
+                  <span className="font-mono font-semibold">{formatARS(a.neto)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
 
@@ -1545,7 +2081,7 @@ function Liquidaciones() {
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
             }`}
           >
-            <FileText size={15} /> Tickets de adelanto
+            <FileText size={15} /> Adelantos
             {tickets.length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 rounded-full bg-muted text-[10px] font-semibold">
                 {tickets.length}
@@ -1560,12 +2096,7 @@ function Liquidaciones() {
                 : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
             }`}
           >
-            <CheckCircle2 size={15} /> Acreditaciones
-            {lotesAcreditados.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-semibold">
-                {lotesAcreditados.length}
-              </span>
-            )}
+            <CheckCircle2 size={15} /> Lotes de acreditación
           </button>
           <button
             onClick={() => setActiveTab("lotes-venta")}
@@ -1576,11 +2107,16 @@ function Liquidaciones() {
             }`}
           >
             <FileSpreadsheet size={15} /> Lotes de venta
-            {lotesVenta.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-muted text-[10px] font-semibold">
-                {lotesVenta.length}
-              </span>
-            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("contracargos")}
+            className={`flex-1 px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+              activeTab === "contracargos"
+                ? "border-b-2 border-primary text-primary bg-muted/30"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
+            }`}
+          >
+            <ArrowUpRight size={15} /> Contracargos
           </button>
           <button
             onClick={() => setActiveTab("comisiones")}
@@ -1604,13 +2140,7 @@ function Liquidaciones() {
             adelantosEnCurso={adelantosEnCurso}
             disponible={disponible}
             tickets={tickets}
-            onSelectDate={(d) => {
-              setSelectedDate(d);
-              setFechaAcred(d);
-              const match = dias.find((x) => x.date === d);
-              if (match) setMonto(String(Math.round(match.monto)));
-              setMotivo("");
-            }}
+            onSelectDate={(d) => openForDate(d)}
             onClearSelection={() => setSelectedDate(null)}
             onOpenGeneral={openGeneral}
             onOpenDetalle={setDetalle}
@@ -1630,11 +2160,13 @@ function Liquidaciones() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-                    <th className="text-left px-5 py-3">Ticket</th>
-                    <th className="text-left px-5 py-3">Fecha solicitud</th>
-                    <th className="text-right px-5 py-3">Monto solicitado</th>
-                    <th className="text-left px-5 py-3">Acredita</th>
+                    <th className="text-left px-5 py-3">Número</th>
+                    <th className="text-left px-5 py-3">Fecha</th>
+                    <th className="text-right px-5 py-3">Monto pedido</th>
+                    <th className="text-right px-5 py-3">Tasa</th>
+                    <th className="text-right px-5 py-3">Neto a recibir</th>
                     <th className="text-left px-5 py-3">Estado</th>
+                    <th className="text-right px-5 py-3">Pendiente de compensar</th>
                     <th className="text-center px-5 py-3">Acción</th>
                   </tr>
                 </thead>
@@ -1642,11 +2174,11 @@ function Liquidaciones() {
                   {tickets.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={8}
                         className="px-5 py-10 text-center text-sm text-muted-foreground"
                       >
-                        Aún no solicitaste adelantos. Elegí un día del calendario y creá tu primer
-                        ticket.
+                        Aún no solicitaste adelantos. Elegí un día del calendario o tocá "Solicitar
+                        adelanto".
                       </td>
                     </tr>
                   ) : (
@@ -1659,15 +2191,29 @@ function Liquidaciones() {
                         <td className="px-5 py-3 font-mono tabular-nums text-right font-semibold">
                           {formatARS(t.montoSolicitado)}
                         </td>
-                        <td className="px-5 py-3 text-xs">{fmtDateFull(t.fechaAcreditacion)}</td>
+                        <td className="px-5 py-3 font-mono tabular-nums text-right text-xs">
+                          {t.tasaInteres != null ? `${t.tasaInteres}%` : "—"}
+                        </td>
+                        <td className="px-5 py-3 font-mono tabular-nums text-right">
+                          {t.netoARecibir != null ? formatARS(t.netoARecibir) : "—"}
+                        </td>
                         <td className="px-5 py-3">
-                          <Badge tone={ESTADO_TICKET_TONE[t.estado]}>
-                            {ESTADO_TICKET_LABEL[t.estado]}
+                          <Badge tone={ESTADO_TICKET_TONE[t.estado] ?? "neutral"}>
+                            {ESTADO_TICKET_LABEL[t.estado] ?? t.estado}
                           </Badge>
                         </td>
+                        <td className="px-5 py-3 font-mono tabular-nums text-right text-xs">
+                          {t.estado === "acreditado" || t.estado === "compensado" ? formatARS(pendienteCompensar(t)) : "—"}
+                        </td>
                         <td className="px-5 py-3 text-center">
-                          <BtnOutline className="h-8 px-2.5 text-xs" onClick={() => setDetalle(t)}>
-                            <Eye size={13} /> Ver
+                          <BtnOutline
+                            className="h-8 px-2.5 text-xs"
+                            onClick={() => {
+                              setAceptoOferta(false);
+                              setDetalle(t);
+                            }}
+                          >
+                            <Eye size={13} /> {t.estado === "aprobado" ? "Ver oferta" : "Ver"}
                           </BtnOutline>
                         </td>
                       </tr>
@@ -1740,258 +2286,13 @@ function Liquidaciones() {
         )}
 
         {/* Tab: Acreditaciones (historial de lotes ya Acreditados) */}
-        {activeTab === "acreditaciones" && (
-          <div>
-            <div className="px-5 py-3 border-b flex items-center justify-between gap-3">
-              <div className="text-xs text-muted-foreground">
-                Lotes que ya fueron acreditados a tu subcuenta Operativa (estado{" "}
-                <Badge tone="success">Acreditado</Badge>). Suma:{" "}
-                <span className="font-mono font-semibold text-emerald-700">
-                  {formatARS(
-                    lotesAcreditados.reduce((s, l) => s + Number(l.importeNeto ?? 0), 0),
-                  )}
-                </span>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-                    <th className="text-left px-5 py-3">Lote</th>
-                    <th className="text-left px-5 py-3">Bandera</th>
-                    <th className="text-right px-5 py-3">Operaciones</th>
-                    <th className="text-right px-5 py-3">Importe neto</th>
-                    <th className="text-left px-5 py-3">Fecha estimada</th>
-                    <th className="text-left px-5 py-3">Cobro real</th>
-                    <th className="text-left px-5 py-3">Acreditado el</th>
-                    <th className="text-center px-5 py-3">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {acredSorted.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        className="px-5 py-10 text-center text-sm text-muted-foreground"
-                      >
-                        Aún no tenés acreditaciones registradas.
-                      </td>
-                    </tr>
-                  ) : (
-                    acredPaginated.map((l) => (
-                      <tr key={l.fullId ?? l.id} className="hover:bg-muted/30">
-                        <td className="px-5 py-3 font-mono font-semibold">{l.id}</td>
-                        <td className="px-5 py-3">
-                          <Badge tone="neutral">{l.bandera}</Badge>
-                        </td>
-                        <td className="px-5 py-3 text-right font-mono tabular-nums">
-                          {l.cantidadOperaciones}
-                        </td>
-                        <td className="px-5 py-3 text-right font-mono tabular-nums font-semibold text-emerald-700">
-                          {formatARS(l.importeNeto)}
-                        </td>
-                        <td className="px-5 py-3 text-xs">{fmtDateFull(l.fecha)}</td>
-                        <td className="px-5 py-3 text-xs">
-                          {l.fechaCobroReal ? (
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-mono">{fmtDateFull(l.fechaCobroReal)}</span>
-                              <Badge tone="success">real</Badge>
-                            </div>
-                          ) : (
-                            <Badge tone="neutral">est.</Badge>
-                          )}
-                        </td>
-                        <td className="px-5 py-3 text-xs font-mono">
-                          {l.fechaAcreditacion ? fmtDateFull(l.fechaAcreditacion) : "—"}
-                        </td>
-                        <td className="px-5 py-3 text-center">
-                          <Badge tone="success">Acreditado</Badge>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {acredSorted.length > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-3 border-t">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>Filas por página:</span>
-                  <select
-                    className="h-8 px-2 rounded border bg-card text-xs"
-                    value={acredPageSize}
-                    onChange={(e) => {
-                      setAcredPageSize(Number(e.target.value));
-                      setAcredPage(1);
-                    }}
-                  >
-                    {ROWS_OPTIONS.map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                  <span>
-                    {`${(acredPage - 1) * acredPageSize + 1}–${Math.min(acredPage * acredPageSize, acredSorted.length)} de ${acredSorted.length}`}
-                  </span>
-                </div>
-                <div className="flex gap-1">
-                  <BtnOutline
-                    className="h-8 px-3 text-xs"
-                    disabled={acredPage <= 1}
-                    onClick={() => setAcredPage(1)}
-                  >
-                    Primero
-                  </BtnOutline>
-                  <BtnOutline
-                    className="h-8 px-3 text-xs"
-                    disabled={acredPage <= 1}
-                    onClick={() => setAcredPage((p) => Math.max(1, p - 1))}
-                  >
-                    Anterior
-                  </BtnOutline>
-                  <span className="flex items-center px-3 text-xs text-muted-foreground">
-                    {acredPage} / {acredTotalPages}
-                  </span>
-                  <BtnOutline
-                    className="h-8 px-3 text-xs"
-                    disabled={acredPage >= acredTotalPages}
-                    onClick={() => setAcredPage((p) => Math.min(acredTotalPages, p + 1))}
-                  >
-                    Siguiente
-                  </BtnOutline>
-                  <BtnOutline
-                    className="h-8 px-3 text-xs"
-                    disabled={acredPage >= acredTotalPages}
-                    onClick={() => setAcredPage(acredTotalPages)}
-                  >
-                    Último
-                  </BtnOutline>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {activeTab === "acreditaciones" && <LotesAcreditacionEmpresaTab />}
 
         {/* Tab: Lotes de venta */}
-        {activeTab === "lotes-venta" && (
-          <div>
-            <div className="px-5 py-3 border-b">
-              <div className="text-xs text-muted-foreground">
-                Ventas del comercio por fecha y bandera. Datos de la vista{" "}
-                <code className="bg-muted px-1 rounded">v_lotes_venta</code>.
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-                    <th className="text-left px-5 py-3">Fecha</th>
-                    <th className="text-left px-5 py-3">Bandera</th>
-                    <th className="text-right px-5 py-3">Ops</th>
-                    <th className="text-right px-5 py-3">Monto operaciones</th>
-                    <th className="text-right px-5 py-3">Comisión</th>
-                    <th className="text-right px-5 py-3">Impuesto</th>
-                    <th className="text-right px-5 py-3">Monto cobrado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {lotesVenta.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="px-5 py-10 text-center text-sm text-muted-foreground"
-                      >
-                        No se encontraron lotes de venta.
-                      </td>
-                    </tr>
-                  ) : (
-                    ventaPaginated.map((v, idx) => (
-                      <tr key={`${v.fecha}-${v.bandera}-${idx}`} className="hover:bg-muted/30">
-                        <td className="px-5 py-3 text-xs">{fmtDateFull(v.fecha)}</td>
-                        <td className="px-5 py-3">
-                          <Badge tone="neutral">{v.bandera}</Badge>
-                        </td>
-                        <td className="px-5 py-3 text-right font-mono tabular-nums">
-                          {v.cantidadOperaciones}
-                        </td>
-                        <td className="px-5 py-3 text-right font-mono tabular-nums font-semibold">
-                          {formatARS(v.montoOperaciones)}
-                        </td>
-                        <td className="px-5 py-3 text-right font-mono tabular-nums text-muted-foreground">
-                          {formatARS(v.comision)}
-                        </td>
-                        <td className="px-5 py-3 text-right font-mono tabular-nums text-muted-foreground">
-                          {formatARS(v.impuesto)}
-                        </td>
-                        <td className="px-5 py-3 text-right font-mono tabular-nums font-semibold text-emerald-700">
-                          {formatARS(v.montoCobrado)}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {lotesVenta.length > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-3 border-t">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>Filas por página:</span>
-                  <select
-                    className="h-8 px-2 rounded border bg-card text-xs"
-                    value={ventaPageSize}
-                    onChange={(e) => {
-                      setVentaPageSize(Number(e.target.value));
-                      setVentaPage(1);
-                    }}
-                  >
-                    {ROWS_OPTIONS.map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                  <span>
-                    {`${(ventaPage - 1) * ventaPageSize + 1}–${Math.min(ventaPage * ventaPageSize, lotesVenta.length)} de ${lotesVenta.length}`}
-                  </span>
-                </div>
-                <div className="flex gap-1">
-                  <BtnOutline
-                    className="h-8 px-3 text-xs"
-                    disabled={ventaPage <= 1}
-                    onClick={() => setVentaPage(1)}
-                  >
-                    Primero
-                  </BtnOutline>
-                  <BtnOutline
-                    className="h-8 px-3 text-xs"
-                    disabled={ventaPage <= 1}
-                    onClick={() => setVentaPage((p) => Math.max(1, p - 1))}
-                  >
-                    Anterior
-                  </BtnOutline>
-                  <span className="flex items-center px-3 text-xs text-muted-foreground">
-                    {ventaPage} / {ventaTotalPages}
-                  </span>
-                  <BtnOutline
-                    className="h-8 px-3 text-xs"
-                    disabled={ventaPage >= ventaTotalPages}
-                    onClick={() => setVentaPage((p) => Math.min(ventaTotalPages, p + 1))}
-                  >
-                    Siguiente
-                  </BtnOutline>
-                  <BtnOutline
-                    className="h-8 px-3 text-xs"
-                    disabled={ventaPage >= ventaTotalPages}
-                    onClick={() => setVentaPage(ventaTotalPages)}
-                  >
-                    Último
-                  </BtnOutline>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {activeTab === "lotes-venta" && <LotesVentaEmpresaTab />}
+
+        {/* Tab: Contracargos */}
+        {activeTab === "contracargos" && <ContracargosEmpresaTab />}
 
         {/* Tab: Comisiones por bandera y cuota */}
         {activeTab === "comisiones" && (
@@ -2164,13 +2465,11 @@ function Liquidaciones() {
                       <Wallet size={14} /> Tu adelanto disponible
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Por acreditar total</span>
-                      <span className="font-mono">{formatARS(porAcreditar)}</span>
+                      <span className="text-muted-foreground">Vendido y no acreditado</span>
+                      <span className="font-mono">{formatARS(tope?.vendidoNoAcreditado ?? porAcreditar)}</span>
                     </div>
                     {(() => {
-                      const reservados = tickets
-                        .filter((t) => ["pendiente", "aprobado"].includes(t.estado.toLowerCase()))
-                        .reduce((s, t) => s + t.montoSolicitado, 0);
+                      const reservados = tope?.adelantosVigentes ?? 0;
                       if (reservados > 0) {
                         return (
                           <div className="flex justify-between">
@@ -2205,16 +2504,25 @@ function Liquidaciones() {
 
                   <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-xs space-y-1">
                     <div className="flex items-center gap-1.5 text-blue-700 font-medium mb-1">
-                      <Clock size={14} /> Recordatorio
+                      <Clock size={14} /> Cómo sigue
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Comisión por acreditación</span>
-                      <span className="font-mono font-semibold">$45 + IVA</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Plazo de acreditación</span>
-                      <span className="font-mono font-semibold">30 días</span>
-                    </div>
+                    <p className="text-muted-foreground">
+                      MoliPay evalúa tu pedido y te envía una oferta con la tasa y el neto que vas a
+                      recibir. Recién cuando la aceptás se acredita en tu cuenta. El adelanto se
+                      descuenta solo de tus próximas liquidaciones.
+                    </p>
+                    {tope && !tope.cumpleAntiguedad && (
+                      <p className="text-red-700 font-semibold pt-1">
+                        El adelanto se habilita a partir de los {tope.antiguedadMinima} días de
+                        operación (llevás {tope.antiguedadDias ?? 0}).
+                      </p>
+                    )}
+                    {tope && tope.deuda > 0 && (
+                      <p className="text-amber-800 pt-1">
+                        Tenés una deuda pendiente de {formatARS(tope.deuda)} por contracargos: se
+                        descuenta de tus próximas acreditaciones.
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -2258,8 +2566,12 @@ function Liquidaciones() {
                     <BtnOutline className="flex-1" disabled={saving} onClick={() => setOpen(false)}>
                       Cancelar
                     </BtnOutline>
-                    <BtnPrimary className="flex-1" disabled={saving} onClick={handleCreate}>
-                      {saving ? "Creando…" : "Crear ticket"}
+                    <BtnPrimary
+                      className="flex-1"
+                      disabled={saving || (tope != null && !tope.cumpleAntiguedad) || disponible <= 0}
+                      onClick={handleCreate}
+                    >
+                      {saving ? "Enviando…" : "Solicitar adelanto"}
                     </BtnPrimary>
                   </div>
                 </>
@@ -2275,9 +2587,9 @@ function Liquidaciones() {
           <div className="absolute inset-0 bg-black/50" onClick={() => setDetalle(null)} />
           <div className="relative bg-card rounded-lg w-full max-w-md shadow-xl">
             <div className="px-6 py-4 border-b flex items-center justify-between">
-              <div className="font-semibold">Ticket {detalle.id}</div>
-              <Badge tone={ESTADO_TICKET_TONE[detalle.estado]}>
-                {ESTADO_TICKET_LABEL[detalle.estado]}
+              <div className="font-semibold">Adelanto {detalle.id}</div>
+              <Badge tone={ESTADO_TICKET_TONE[detalle.estado] ?? "neutral"}>
+                {ESTADO_TICKET_LABEL[detalle.estado] ?? detalle.estado}
               </Badge>
             </div>
             <div className="p-6 space-y-3 text-sm">
@@ -2291,14 +2603,52 @@ function Liquidaciones() {
                   {formatARS(detalle.montoSolicitado)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Fecha a adelantar</span>
-                <span className="font-semibold">{fmtDateFull(detalle.fechaAcreditacion)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Por acreditar al momento</span>
-                <span className="font-mono">{formatARS(detalle.montoPorAcreditar)}</span>
-              </div>
+              {detalle.plazoAdelantado != null && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Plazo</span>
+                  <span className="font-semibold">{detalle.plazoAdelantado} días</span>
+                </div>
+              )}
+              {detalle.fechaAcreditacion && (detalle.estado === "acreditado" || detalle.estado === "compensado") && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Acreditado</span>
+                  <span className="font-semibold">{fmtDateFull(detalle.fechaAcreditacion)}</span>
+                </div>
+              )}
+              {detalle.estado === "rechazado" && detalle.rechazoMotivo && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3 text-xs text-red-800">
+                  Motivo del rechazo: {detalle.rechazoMotivo}
+                </div>
+              )}
+              {detalle.estado === "pendiente" && (
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-3 text-xs text-amber-900">
+                  MoliPay está evaluando tu pedido. Vas a recibir una oferta con la tasa y el neto a
+                  recibir.
+                </div>
+              )}
+              {detalle.estado === "aceptado" && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-xs text-blue-900">
+                  Aceptaste la oferta. MoliPay va a acreditar{" "}
+                  <span className="font-mono font-semibold">{formatARS(detalle.netoARecibir ?? 0)}</span> en tu
+                  cuenta. Hasta que se acredite todavía podés cancelarla.
+                </div>
+              )}
+              {(detalle.estado === "acreditado" || detalle.estado === "compensado") && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-md p-3 text-xs space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Neto acreditado</span>
+                    <span className="font-mono font-semibold">{formatARS(detalle.netoARecibir ?? 0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Ya descontado de tus liquidaciones</span>
+                    <span className="font-mono">{formatARS(detalle.compensado ?? 0)}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-emerald-200 pt-1">
+                    <span className="text-muted-foreground font-semibold">Pendiente de compensar</span>
+                    <span className="font-mono font-bold">{formatARS(pendienteCompensar(detalle))}</span>
+                  </div>
+                </div>
+              )}
               {detalle.motivo && (
                 <div className="pt-3 border-t">
                   <div className="text-xs text-muted-foreground">Motivo</div>
@@ -2311,86 +2661,100 @@ function Liquidaciones() {
                     <TrendingUp size={14} /> Oferta del administrador
                   </div>
                   <p className="text-[11px] text-emerald-900/80 mb-2">
-                    Si estás conforme con la tasa, no hace falta confirmar: el
-                    administrador procesará el pago en breve y vas a ver el neto
-                    acreditado en tu Saldo Disponible.
+                    MoliPay te ofrece este adelanto. Revisá la tasa y el neto: si te conviene,
+                    aceptala; si no, cancelala. La tasa es un descuento único sobre el monto.
                   </p>
-                  {detalle.tasaInteres != null && (() => {
-                    // Regla de negocio: TEM = Tasa Efectiva Mensual.
-                    // Interés = monto_solicitado * TEM / 100
-                    // Neto a recibir = monto_solicitado - Interés
-                    const tem = detalle.tasaInteres;
-                    const interes = Math.round(detalle.montoSolicitado * tem) / 100;
-                    const neto = Math.max(0, detalle.montoSolicitado - interes);
-                    const tna = tem * 12;
-                    return (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Monto solicitado</span>
-                          <span className="font-mono font-semibold">
-                            {formatARS(detalle.montoSolicitado)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Tasa de interés (TEM)</span>
-                          <span className="font-mono font-bold text-emerald-700">
-                            {tem}%
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Costo financiero (interés)</span>
-                          <span className="font-mono font-semibold text-red-600">
-                            - {formatARS(interes)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between pt-1 border-t border-emerald-200">
-                          <span className="text-muted-foreground">Neto a recibir</span>
-                          <span className="font-mono font-bold text-emerald-700">
-                            {formatARS(neto)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">TNA equivalente</span>
-                          <span className="font-mono text-muted-foreground">
-                            {tna.toFixed(1)}%
-                          </span>
-                        </div>
-                      </>
-                    );
-                  })()}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Monto aprobado</span>
+                    <span className="font-mono font-semibold">
+                      {formatARS(detalle.montoOfertado ?? detalle.montoSolicitado)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tasa</span>
+                    <span className="font-mono font-bold text-emerald-700">{detalle.tasaInteres ?? 0}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Descuento</span>
+                    <span className="font-mono font-semibold text-red-600">
+                      - {formatARS(detalle.descuento ?? 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t border-emerald-200">
+                    <span className="text-muted-foreground">Neto que se acredita en tu cuenta</span>
+                    <span className="font-mono font-bold text-emerald-700">
+                      {formatARS(detalle.netoARecibir ?? 0)}
+                    </span>
+                  </div>
+                  <label className="flex items-start gap-2 pt-2 text-[12px] text-foreground">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={aceptoOferta}
+                      onChange={(e) => setAceptoOferta(e.target.checked)}
+                    />
+                    <span>
+                      Acepto la tasa de {detalle.tasaInteres ?? 0}% y que se acreditarán{" "}
+                      <b>{formatARS(detalle.netoARecibir ?? 0)}</b> en mi cuenta. El monto de{" "}
+                      {formatARS(detalle.montoOfertado ?? detalle.montoSolicitado)} se descuenta de mis
+                      próximas liquidaciones.
+                    </span>
+                  </label>
                 </div>
               )}
               <div className="flex gap-2 pt-4">
                 <BtnOutline className="flex-1" onClick={() => setDetalle(null)}>
                   Cerrar
                 </BtnOutline>
-                {(detalle.estado === "pendiente" || detalle.estado === "aprobado") && (
+                {detalle.estado === "aprobado" && (
+                  <BtnPrimary className="flex-1" disabled={saving || !aceptoOferta} onClick={() => handleAceptar(detalle)}>
+                    <CheckCircle2 size={14} /> {saving ? "Aceptando…" : "Aceptar"}
+                  </BtnPrimary>
+                )}
+                {(detalle.estado === "pendiente" || detalle.estado === "aprobado" || detalle.estado === "aceptado") && (
                   <button
                     className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-sm border border-red-200 bg-white text-red-600 text-sm font-semibold cursor-pointer hover:bg-red-50 active:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 flex-1"
                     disabled={saving}
                     onClick={() => {
                       if (
                         confirm(
-                          detalle.estado === "aprobado"
-                            ? "¿Rechazás la oferta del administrador? El adelanto pasará a Cancelado y se liberará el cupo reservado de tus lotes."
-                            : "¿Seguro que querés cancelar esta solicitud? Esta acción no se puede deshacer.",
+                          detalle.estado === "pendiente"
+                            ? "¿Seguro que querés cancelar esta solicitud? Esta acción no se puede deshacer."
+                            : "¿Cancelás la oferta? El adelanto pasará a Cancelado y se liberará el cupo de tus lotes.",
                         )
                       ) {
                         handleCancel(detalle.fullId);
                       }
                     }}
                   >
-                    {saving ? "Cancelando…" : "Cancelar adelantar"}
+                    {saving ? "Cancelando…" : detalle.estado === "pendiente" ? "Cancelar pedido" : "Cancelar oferta"}
                   </button>
                 )}
-                <BtnPrimary
-                  className="flex-1"
-                  onClick={() => {
-                    toast.success(`Comprobante ${detalle.id} descargado`);
-                  }}
-                >
-                  <Download size={14} /> Comprobante
-                </BtnPrimary>
+                {(detalle.estado === "acreditado" || detalle.estado === "compensado") && (
+                  <BtnPrimary
+                    className="flex-1"
+                    onClick={() => {
+                      const ws = XLSX.utils.json_to_sheet([
+                        {
+                          Adelanto: detalle.id,
+                          "Fecha solicitud": fmtDateFull(detalle.fecha),
+                          "Monto aprobado": detalle.montoOfertado ?? detalle.montoSolicitado,
+                          "Tasa %": detalle.tasaInteres ?? 0,
+                          Descuento: detalle.descuento ?? 0,
+                          "Neto acreditado": detalle.netoARecibir ?? 0,
+                          Acreditado: fmtDateFull(detalle.fechaAcreditacion),
+                          Compensado: detalle.compensado ?? 0,
+                          "Pendiente de compensar": pendienteCompensar(detalle),
+                        },
+                      ]);
+                      const wb = XLSX.utils.book_new();
+                      XLSX.utils.book_append_sheet(wb, ws, "Adelanto");
+                      XLSX.writeFile(wb, `adelanto_${detalle.id}.xlsx`);
+                    }}
+                  >
+                    <Download size={14} /> Comprobante
+                  </BtnPrimary>
+                )}
               </div>
             </div>
           </div>
