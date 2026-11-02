@@ -6,6 +6,7 @@
 // ejecución exitosa, nunca al ingresar CBU.
 // ============================================================================
 import { requireSupabase } from "@/lib/supabase";
+import { parseImpuestos, type ImpuestoAplicado } from "@/lib/transfer-store";
 import {
   recipientValidator,
   type RecipientValidator,
@@ -25,7 +26,17 @@ export type TransferRequest = {
 };
 
 export type TransferResult =
-  | { ok: true; validation: RecipientValidationResult; txn: { id_txn: string; comision: number; impuesto: number; total_debitado: number } }
+  | {
+      ok: true;
+      validation: RecipientValidationResult;
+      txn: {
+        id_txn: string;
+        comision: number;
+        impuesto: number;
+        impuestos: ImpuestoAplicado[];
+        total_debitado: number;
+      };
+    }
   | { ok: false; validation: RecipientValidationResult; error?: string };
 
 export type TransferOrchestratorDeps = {
@@ -67,10 +78,28 @@ export async function executeTransfer(
     p_concepto: req.concepto ?? null,
   });
   if (error) throw error;
-  const txn = data as { ok: boolean; id_txn: string; comision: number; impuesto: number; total_debitado: number; motivo?: string };
+  const txn = data as {
+    ok: boolean;
+    id_txn: string;
+    comision: number;
+    impuesto: number;
+    taxes?: unknown;
+    total_debitado: number;
+    motivo?: string;
+  };
   // Rechazada por bloqueo, saldo o controles: queda registrada sin mover dinero.
   if (txn.ok === false) return { ok: false, validation, error: txn.motivo ?? "La transferencia fue rechazada" };
-  return { ok: true, validation, txn };
+  return {
+    ok: true,
+    validation,
+    txn: {
+      id_txn: txn.id_txn,
+      comision: Number(txn.comision),
+      impuesto: Number(txn.impuesto),
+      impuestos: parseImpuestos(txn.taxes),
+      total_debitado: Number(txn.total_debitado),
+    },
+  };
 }
 
 // Helpers para borrador/programada/frecuente: reutilizan mismo validador

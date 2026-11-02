@@ -553,15 +553,52 @@ export async function updateTemplate(
 // Transferencia unica por BDC (ledger): reservar -> enviar -> confirmar/cancelar
 // ============================================================================
 
+/**
+ * Impuesto asignado al comercio que se cobra en la operación (DyC, IIBB...).
+ * Lo calcula la base según Comercios › Impuestos › Usuarios.
+ */
+export type ImpuestoAplicado = {
+  impuestoId: string;
+  codigo: string;
+  nombre: string;
+  /** Alícuota usada: IN_06 / OUT_06, PADRON o CUSTOM. */
+  alicuotaCodigo: string | null;
+  tipoCalculo: "Porcentaje" | "Monto fijo";
+  alicuota: number;
+  base: number;
+  monto: number;
+};
+
+/** `taxes` de las RPC (cotizar / reservar / registrar) -> ImpuestoAplicado[]. */
+export function parseImpuestos(raw: unknown): ImpuestoAplicado[] {
+  if (!Array.isArray(raw)) return [];
+  return (raw as Record<string, unknown>[])
+    .map((t) => ({
+      impuestoId: String(t.tax_id ?? ""),
+      codigo: String(t.tax_code ?? ""),
+      nombre: String(t.tax_name ?? t.tax_code ?? ""),
+      alicuotaCodigo: t.rate_code == null ? null : String(t.rate_code),
+      tipoCalculo: t.calculation_type === "fixed_amount" ? ("Monto fijo" as const) : ("Porcentaje" as const),
+      alicuota: Number(t.rate ?? 0),
+      base: Number(t.taxable_base ?? 0),
+      monto: Number(t.amount ?? 0),
+    }))
+    .filter((t) => t.monto > 0);
+}
+
 export type BdcReserva = {
   ok: boolean;
   id_txn: string;
   ya_registrada: boolean;
   ledger_status: "reserved" | "posted" | "reversed" | "unposted";
+  /** Lo que recibe el destinatario. */
   monto: number;
   /** Comisión + IVA (los calcula la base según el CVU de origen). */
   comision: number;
   impuesto: number;
+  /** Impuestos asignados (DyC, IIBB...): total y detalle crudo de la base. */
+  tax_amount?: number;
+  taxes?: unknown;
   total: number;
 };
 
@@ -619,7 +656,8 @@ export async function cancelBdcTransfer(originId: string, motivo?: string): Prom
   if (error) fail(error);
 }
 // ============================================================================
-// Cotizacion (solo lectura): comision + IVA + total y si alcanza el disponible.
+// Cotizacion (solo lectura): el destinatario recibe el monto; comision, IVA e
+// impuestos se suman y el total se debita del disponible.
 // La calcula la base con la misma regla que cobra al enviar.
 // ============================================================================
 
@@ -638,6 +676,10 @@ export type Cotizacion = {
   monto: number;
   comision: number;
   impuesto: number;
+  /** Impuestos asignados al comercio (vacío si no tiene ninguno que aplique). */
+  impuestos: ImpuestoAplicado[];
+  impuestosTotal: number;
+  /** Lo que se debita del disponible: monto + comisión + IVA + impuestos. */
   total: number;
   disponible: number;
   alcanza: boolean;
@@ -666,6 +708,8 @@ export async function cotizarTransferencia(input: {
     monto: Number(r.monto),
     comision: Number(r.comision),
     impuesto: Number(r.impuesto),
+    impuestos: parseImpuestos(r.taxes),
+    impuestosTotal: Number(r.tax_amount ?? 0),
     total: Number(r.total),
     disponible: Number(r.disponible),
     alcanza: Boolean(r.alcanza),

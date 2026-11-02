@@ -2,10 +2,14 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, CheckCircle2, Copy, Download, Loader2, Share2, ShieldCheck, Star, X } from "lucide-react";
 import { toast } from "sonner";
 import { BtnOutline, BtnPrimary } from "@/components/portal-shell";
-import { cotizarTransferencia, type ComisionConfig, type Cotizacion } from "@/lib/transfer-store";
+import { cotizarTransferencia, type ComisionConfig, type Cotizacion, type ImpuestoAplicado } from "@/lib/transfer-store";
 
 const fmt = (n: number) => `$ ${n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtPct = (n: number) => `${n.toLocaleString("es-AR", { maximumFractionDigits: 2 })}%`;
+
+/** "0,6%" o "$ 150,00 fijo" (alícuota de un impuesto asignado). */
+export const detalleImpuesto = (t: ImpuestoAplicado) =>
+  t.tipoCalculo === "Monto fijo" ? `${fmt(t.alicuota)} fijo` : fmtPct(t.alicuota);
 
 /** "1,5% del monto" o "fijo $ 5,00 por transferencia". */
 const detalleComision = (c: ComisionConfig) =>
@@ -55,7 +59,29 @@ export function useCotizacion(subcuentaOrigen: string, monto: number, destino: s
   return { cotizacion: vigente, cargando, insuficiente, faltante };
 }
 
-/** Resumen debajo del monto: comision, IVA, total y aviso de saldo insuficiente. */
+/** Cargo que se suma al monto: "+ $ 6,00". */
+export const fmtCargo = (n: number) => `+ ${fmt(n)}`;
+
+/** Fila "Débitos y Créditos · 0,6% del monto" en el resumen de cargos. */
+function ImpuestoFila({ t }: { t: ImpuestoAplicado }) {
+  return (
+    <>
+      <span className="text-muted-foreground">
+        {t.nombre}
+        <span className="ml-1 text-[11px]">
+          · {detalleImpuesto(t)}
+          {t.tipoCalculo === "Porcentaje" ? " del monto" : ""}
+        </span>
+      </span>
+      <span className="text-right font-mono tabular-nums">{fmtCargo(t.monto)}</span>
+    </>
+  );
+}
+
+/**
+ * Resumen debajo del monto. El destinatario recibe el monto completo; comisión,
+ * IVA e impuestos se suman y el total sale del disponible.
+ */
 export function ResumenCotizacion({
   monto,
   disponible,
@@ -79,21 +105,35 @@ export function ResumenCotizacion({
   return (
     <div className={`mt-2 rounded-lg border p-3 text-sm ${insuficiente ? "border-red-300 bg-red-50" : "bg-muted/30"}`}>
       <div className="grid grid-cols-2 gap-y-1">
-        <span className="text-muted-foreground">Disponible</span>
-        <span className="text-right font-mono tabular-nums">{fmt(cotizacion?.disponible ?? disponible)}</span>
+        <span className="text-muted-foreground">Monto a enviar</span>
+        <span className="text-right font-mono tabular-nums">{fmt(monto)}</span>
         <span className="text-muted-foreground">
           Comisión
           {cotizacion && !sinCargo && cfg && <span className="ml-1 text-[11px]">· {detalleComision(cfg)}</span>}
         </span>
-        <span className="text-right font-mono tabular-nums">{cotizacion ? fmt(cotizacion.comision) : cargando ? "…" : "—"}</span>
+        <span className="text-right font-mono tabular-nums">{cotizacion ? fmtCargo(cotizacion.comision) : cargando ? "…" : "—"}</span>
         <span className="text-muted-foreground">
           IVA
           {cotizacion && !sinCargo && cfg && <span className="ml-1 text-[11px]">· {fmtPct(cfg.porcentajeImpuesto)} de la comisión</span>}
         </span>
-        <span className="text-right font-mono tabular-nums">{cotizacion ? fmt(cotizacion.impuesto) : cargando ? "…" : "—"}</span>
-        <span className="font-semibold">Total a debitar</span>
-        <span className="text-right font-mono tabular-nums font-semibold">{cotizacion ? fmt(cotizacion.total) : cargando ? "…" : fmt(monto)}</span>
+        <span className="text-right font-mono tabular-nums">{cotizacion ? fmtCargo(cotizacion.impuesto) : cargando ? "…" : "—"}</span>
+        {cotizacion?.impuestos.map((t) => (
+          <ImpuestoFila key={t.impuestoId} t={t} />
+        ))}
+        <span className="font-semibold border-t pt-1 mt-1">Total a debitar de tu saldo</span>
+        <span className="text-right font-mono tabular-nums font-semibold border-t pt-1 mt-1">
+          {cotizacion ? fmt(cotizacion.total) : cargando ? "…" : "—"}
+        </span>
+        <span className="text-muted-foreground">Disponible</span>
+        <span className="text-right font-mono tabular-nums">{fmt(cotizacion?.disponible ?? disponible)}</span>
+        <span className="text-muted-foreground">Saldo restante estimado</span>
+        <span
+          className={`text-right font-mono tabular-nums ${cotizacion && cotizacion.disponible - cotizacion.total < 0 ? "text-red-700" : ""}`}
+        >
+          {cotizacion ? fmt(cotizacion.disponible - cotizacion.total) : cargando ? "…" : "—"}
+        </span>
       </div>
+      <div className="mt-1 text-[11px] text-muted-foreground">El destinatario recibe {fmt(monto)}.</div>
       {cotizacion && (
         <div className="mt-2 border-t pt-2 text-[11px] text-muted-foreground">
           {cotizacion.interna
@@ -105,7 +145,7 @@ export function ResumenCotizacion({
       )}
       {insuficiente && (
         <div className="mt-2 border-t border-red-200 pt-2 text-xs font-semibold text-red-700" role="alert">
-          Saldo insuficiente: te faltan {fmt(faltante)} para cubrir el monto{cotizacion && cotizacion.comision > 0 ? " más comisión e IVA" : ""}.
+          Saldo insuficiente: te faltan {fmt(faltante)} para cubrir el total a debitar.
         </div>
       )}
     </div>
@@ -183,6 +223,8 @@ export type ReciboTransferencia = {
   concepto?: string;
   comision?: number;
   impuesto?: number;
+  /** Impuestos asignados cobrados (DyC, IIBB...). */
+  impuestos?: ImpuestoAplicado[];
   origen: ReciboCuenta;
   destino: ReciboCuenta;
 };
@@ -237,7 +279,11 @@ export function TransferReceiptModal({
   const fechaTxt = Number.isNaN(fecha.getTime())
     ? recibo.fecha
     : fecha.toLocaleString("es-AR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
-  const total = recibo.monto + (recibo.comision ?? 0) + (recibo.impuesto ?? 0);
+  const total =
+    recibo.monto +
+    (recibo.comision ?? 0) +
+    (recibo.impuesto ?? 0) +
+    (recibo.impuestos ?? []).reduce((acc, t) => acc + t.monto, 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -284,6 +330,9 @@ export function TransferReceiptModal({
             <Fila label="Estado" value={recibo.estado || "Enviada"} />
             <Fila label="Comisión" value={recibo.comision != null ? fmt(recibo.comision) : undefined} mono />
             <Fila label="IVA" value={recibo.impuesto != null ? fmt(recibo.impuesto) : undefined} mono />
+            {(recibo.impuestos ?? []).map((t) => (
+              <Fila key={t.impuestoId} label={`${t.nombre} (${detalleImpuesto(t)})`} value={fmt(t.monto)} mono />
+            ))}
             <div className="flex justify-between gap-4 pt-2 mt-1 border-t text-sm font-semibold">
               <span>Total debitado</span>
               <span className="font-mono tabular-nums">{fmt(total)}</span>

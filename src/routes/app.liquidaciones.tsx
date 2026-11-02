@@ -1648,32 +1648,36 @@ function Liquidaciones() {
         let excepcionesData: Excepcion[] = [];
         try {
           const { data: impRows } = await sb
-            .from("impuestos")
-            .select("id, codigo, descripcion, tipo, alicuota, estado, ambito")
-            .eq("ambito", "Externo")
-            .eq("estado", "Activo");
+            .from("taxes")
+            .select("id, code, description, rate_source, status, tax_rates(value, status)")
+            .eq("scope", "external")
+            .eq("status", "active");
           impuestosData = (impRows ?? []).map((r: any) => ({
             id: r.id,
-            codigo: r.codigo ?? "",
-            descripcion: r.descripcion ?? "",
-            tipo: r.tipo ?? "",
-            alicuota: Number(r.alicuota ?? 0),
-            estado: r.estado ?? "Activo",
+            codigo: r.code ?? "",
+            descripcion: r.description ?? "",
+            tipo: r.rate_source === "taxpayer_registry" ? "Padrón" : r.rate_source === "fixed" ? "Fija" : "Manual",
+            alicuota: Number((r.tax_rates ?? []).find((t: any) => t.status === "active")?.value ?? 0),
+            estado: "Activo",
           }));
 
           if (legajo) {
+            // Exenciones vigentes del comercio (hoy RLS solo deja leer a admins).
             const { data: excRows } = await sb
-              .from("dc_excepciones")
-              .select("tipo, motivo, estado, vigencia_hasta, impuesto_id")
-              .eq("legajo", legajo)
-              .eq("estado", "Activo");
-            const impIdToCodigo = new Map(impuestosData.map((i) => [i.id, i.codigo]));
-            excepcionesData = (excRows ?? []).map((r: any) => ({
-              impuestoCodigo: impIdToCodigo.get(r.impuesto_id) ?? r.tipo ?? "—",
-              motivo: r.motivo ?? r.tipo ?? "Exención",
-              estado: r.estado ?? "Activo",
-              vigenciaHasta: r.vigencia_hasta ?? null,
-            }));
+              .from("tax_exemptions")
+              .select("reason, status, valid_to, direction, taxes(code)")
+              .eq("client_legajo", legajo)
+              .eq("status", "active")
+              .or(`valid_to.is.null,valid_to.gte.${new Date().toISOString()}`);
+            excepcionesData = (excRows ?? []).map((r: any) => {
+              const tax = Array.isArray(r.taxes) ? r.taxes[0] : r.taxes;
+              return {
+                impuestoCodigo: tax?.code ?? "—",
+                motivo: r.reason ?? "Exención",
+                estado: "Activo",
+                vigenciaHasta: r.valid_to ?? null,
+              };
+            });
           }
         } catch {
           // Tablas aún no disponibles

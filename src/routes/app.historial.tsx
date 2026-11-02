@@ -210,10 +210,12 @@ type Linea = {
   nombreDestino: string | null;
   cuit: string | null;
   estado: Mov["estado"];
+  /** "IVA", "Débitos y Créditos 0,6%", "Ingresos Brutos 2,5%"... */
+  detalle: string | null;
 };
 
 const LINEA_COLS =
-  "line_id, transaction_id, id_txn, legajo, tipo_operacion, tipo_linea, monto, fecha, line_no, cvu, email, nombre, nombre_destino, cuit, estado_codigo, estado_nombre";
+  "line_id, transaction_id, id_txn, legajo, tipo_operacion, tipo_linea, monto, fecha, line_no, cvu, email, nombre, nombre_destino, cuit, estado_codigo, estado_nombre, detalle";
 
 const TIPOS_LINEA: Array<{ k: TipoLinea | "Todos"; l: string }> = [
   { k: "Todos", l: "Todos" },
@@ -225,6 +227,9 @@ const TIPOS_LINEA: Array<{ k: TipoLinea | "Todos"; l: string }> = [
   { k: "reverso", l: "Reverso" },
 ];
 const TIPO_LINEA_LABEL = new Map(TIPOS_LINEA.map((t) => [t.k, t.l]));
+/** Las lineas de impuesto muestran cual (IVA, DyC, IIBB) con su alicuota. */
+const etiquetaLinea = (l: Pick<Linea, "tipoLinea" | "detalle">) =>
+  l.tipoLinea === "impuesto" && l.detalle ? l.detalle : TIPO_LINEA_LABEL.get(l.tipoLinea) ?? l.tipoLinea;
 const TIPO_LINEA_STYLE: Record<TipoLinea, string> = {
   ingreso: "bg-emerald-50 text-emerald-700 border-emerald-200",
   egreso: "bg-red-50 text-red-700 border-red-200",
@@ -378,6 +383,7 @@ function Page() {
           nombreDestino: r.nombre_destino,
           cuit: r.cuit,
           estado: estadoVisible(r.estado_nombre ?? r.estado_codigo),
+          detalle: r.detalle ?? null,
         })),
       );
       setTotalCount(count ?? 0);
@@ -464,7 +470,7 @@ function Page() {
     const body = lineas.map((l) => ({
       Legajo: l.legajo,
       TXID: l.idTxn,
-      Tipo: TIPO_LINEA_LABEL.get(l.tipoLinea) ?? l.tipoLinea,
+      Tipo: etiquetaLinea(l),
       Operacion: prettyTipo(l.tipoOperacion),
       CVU: l.cvu ?? "",
       Email: l.email ?? "",
@@ -514,7 +520,7 @@ function Page() {
       startY: 52,
       head: [["TXID", "Fecha", "Tipo", "Operacion", "Nombre destino", "CUIT", "Monto", "Estado"]],
       body: lineas.map((l) => [
-        l.idTxn, formatFechaLinea(l.fecha), TIPO_LINEA_LABEL.get(l.tipoLinea) ?? l.tipoLinea, prettyTipo(l.tipoOperacion),
+        l.idTxn, formatFechaLinea(l.fecha), etiquetaLinea(l), prettyTipo(l.tipoOperacion),
         l.nombreDestino ?? "-", l.cuit ?? "-", l.monto.toFixed(2), l.estado,
       ]),
       styles: { fontSize: 7 },
@@ -724,7 +730,7 @@ function Page() {
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${TIPO_LINEA_STYLE[l.tipoLinea]}`}>
-                          {TIPO_LINEA_LABEL.get(l.tipoLinea) ?? l.tipoLinea}
+                          {etiquetaLinea(l)}
                         </span>
                       </div>
                       <div className="text-[11px] text-muted-foreground mt-0.5">{prettyTipo(l.tipoOperacion)}</div>

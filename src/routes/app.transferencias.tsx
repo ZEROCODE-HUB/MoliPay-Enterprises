@@ -18,6 +18,8 @@ import {
   ResumenCotizacion,
   TransferProcessingOverlay,
   TransferReceiptModal,
+  detalleImpuesto,
+  fmtCargo,
   useCotizacion,
   type PasoTransferencia,
 } from "@/components/transfer-ui";
@@ -44,6 +46,8 @@ import {
   reserveBdcTransfer,
   confirmBdcTransfer,
   cancelBdcTransfer,
+  parseImpuestos,
+  type ImpuestoAplicado,
 } from "@/lib/transfer-store";
 
 export const Route = createFileRoute("/app/transferencias")({ component: Page });
@@ -187,6 +191,7 @@ type TransferSuccess = {
   estado?: string;
   mensaje?: string;
   /** Comprobante de la operación (se completa al enviar). */
+  /** Lo que recibió el destinatario. Total debitado = monto + cargos. */
   monto?: number;
   concepto?: string;
   origenNombre?: string;
@@ -194,6 +199,7 @@ type TransferSuccess = {
   destino?: string;
   comision?: number;
   impuesto?: number;
+  impuestos?: ImpuestoAplicado[];
   fecha?: string;
 };
 
@@ -507,6 +513,7 @@ function Page() {
         });
         const comision = Number(reserva.comision);
         const impuesto = Number(reserva.impuesto);
+        const impuestos = parseImpuestos(reserva.taxes);
 
         // 2) Enviar. Si el pedido falla se pregunta al banco antes de liberar la
         //    reserva: un timeout puede haber ejecutado igual la transferencia.
@@ -564,6 +571,7 @@ function Page() {
           destino: payload.destinatarioCbu,
           comision,
           impuesto,
+          impuestos,
           fecha: new Date().toISOString(),
         });
         setDestAlias(payload.destinatarioAlias || payload.destinatarioNombre || payload.destinatarioCbu.slice(0, 10) + "...");
@@ -618,6 +626,7 @@ function Page() {
         destino: payload.destinatarioCbu,
         comision: result.txn.comision,
         impuesto: result.txn.impuesto,
+        impuestos: result.txn.impuestos,
         fecha: new Date().toISOString(),
       });
       setDestAlias(result.validation.titular?.alias ?? payload.destinatarioCbu.slice(0, 10) + "...");
@@ -959,6 +968,7 @@ function Page() {
               concepto: transferSuccess.concepto,
               comision: transferSuccess.comision,
               impuesto: transferSuccess.impuesto,
+              impuestos: transferSuccess.impuestos,
               origen: {
                 nombre: clienteNombre,
                 cuit: clienteCuit,
@@ -1410,10 +1420,12 @@ function Unica({
                 .join(" ") || "—",
             ],
             ["Tipo de cuenta", selectedDestinatario?.tipoCuenta || "—"],
-            ["Monto", fmt(montoNum)],
-            ["Comisión", cot.cotizacion ? fmt(cot.cotizacion.comision) : "—"],
-            ["IVA", cot.cotizacion ? fmt(cot.cotizacion.impuesto) : "—"],
-            ["Total a debitar", cot.cotizacion ? fmt(cot.cotizacion.total) : fmt(montoNum)],
+            ["Monto a enviar (recibe el destinatario)", fmt(montoNum)],
+            ["Comisión", cot.cotizacion ? fmtCargo(cot.cotizacion.comision) : "—"],
+            ["IVA", cot.cotizacion ? fmtCargo(cot.cotizacion.impuesto) : "—"],
+            ...(cot.cotizacion?.impuestos ?? []).map((t) => [`${t.nombre} (${detalleImpuesto(t)})`, fmtCargo(t.monto)]),
+            ["Total a debitar de tu saldo", cot.cotizacion ? fmt(cot.cotizacion.total) : fmt(montoNum)],
+            ["Saldo restante estimado", cot.cotizacion ? fmt(cot.cotizacion.disponible - cot.cotizacion.total) : "—"],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between py-2.5 px-3 text-sm">
               <span className="text-muted-foreground">{k}</span>

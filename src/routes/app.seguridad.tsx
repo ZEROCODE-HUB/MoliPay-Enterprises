@@ -1,21 +1,14 @@
 ﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Smartphone, Key, Monitor, AlertTriangle, CheckCircle2, Plus, Trash2, Mail, QrCode } from "lucide-react";
+import { Smartphone, Key, Monitor, CheckCircle2, Plus, Trash2, Mail, QrCode } from "lucide-react";
 import { PageHeader, Card, Input, Label, BtnPrimary, BtnOutline, Badge } from "@/components/portal-shell";
 import { FormDialog } from "@/components/form-dialog";
 import { toast } from "sonner";
 import { requireSupabase } from "@/lib/supabase";
+import { SecurityActivityCard } from "@/components/security-activity-card";
 
 export const Route = createFileRoute("/app/seguridad")({ component: Page });
 
-
-const log = [
-  { d: "Inicio de sesion exitoso", ip: "190.12.44.21", f: "Hoy 09:12", ok: true },
-  { d: "Cambio de contrasena", ip: "190.12.44.21", f: "12/05/2026", ok: true },
-  { d: "Intento fallido de login", ip: "45.220.88.10", f: "08/05/2026", ok: false },
-  { d: "Nuevo dispositivo autorizado", ip: "190.12.44.21", f: "01/05/2026", ok: true },
-  { d: "API Key rotada", ip: "190.12.44.21", f: "28/04/2026", ok: true },
-];
 
 const initialTeam = [
   { n: "Carla Rivas", e: "carla@empresademo.com", r: "Owner", a: "Activa" },
@@ -390,21 +383,7 @@ function Page() {
         </Card>
       </div>
 
-      <Card>
-        <h3 className="font-semibold mb-3 flex items-center gap-2"><AlertTriangle size={16} /> Registro de actividad</h3>
-        <div className="divide-y">
-          {log.map((l, i) => (
-            <div key={i} className="flex items-center justify-between py-2.5">
-              <div className="flex items-center gap-2.5">
-                {l.ok ? <CheckCircle2 size={14} className="text-emerald-600" /> : <AlertTriangle size={14} className="text-red-600" />}
-                <div className="text-sm">{l.d}</div>
-              </div>
-              <div className="text-xs text-muted-foreground">{l.ip} · {l.f}</div>
-            </div>
-          ))}
-        </div>
-        <BtnOutline className="mt-4">Ver historial completo</BtnOutline>
-      </Card>
+      <SecurityActivityCard />
 
       <FormDialog
         open={inviteOpen}
