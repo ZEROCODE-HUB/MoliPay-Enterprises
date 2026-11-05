@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Link,useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { userMessage } from "@/shared/lib/errors";
-import { AuthShell,PrimaryButton,SecondaryButton,SuccessCard } from "@/shared/ui/auth-kit";
-import { useOnboardingActions,useOnboardingDraft } from "../onboarding.hooks";
+import { AuthShell, PrimaryButton, SecondaryButton, SuccessCard } from "@/shared/ui/auth-kit";
+import { useOnboardingActions, useOnboardingDraft } from "../onboarding.hooks";
 
 export function RegistrationSuccessPage() {
   const navigate = useNavigate();

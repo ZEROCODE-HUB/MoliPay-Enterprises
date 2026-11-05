@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { AuthShell,PrimaryButton } from "@/shared/ui/auth-kit";
+import { AuthShell, PrimaryButton } from "@/shared/ui/auth-kit";
 import { MollyLogo } from "@/shared/ui/molly-logo";
 import { useOnboardingDraft } from "../onboarding.hooks";
 

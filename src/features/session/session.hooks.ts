@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { authClient } from "@/app/dependencies";
 import { sessionQueries } from "./session.queries";
-import type { SessionStatus,SessionUser } from "./session.types";
+import type { SessionStatus, SessionUser } from "./session.types";
 
 /*
  * Sesion del portal. Un solo origen (el AuthClient) para toda la app: reemplaza

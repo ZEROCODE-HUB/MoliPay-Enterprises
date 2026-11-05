@@ -1,11 +1,13 @@
 import { requireSupabase } from "@/infrastructure/supabase/client";
+import { invokeEdgeFunction } from "@/infrastructure/supabase/edge-functions";
 import { toAppError } from "@/infrastructure/supabase/errors";
 import { parseEnum } from "@/shared/lib/enum";
 import {
-SECURITY_EVENT_OUTCOMES,
-type SecurityEvent,
-type SecurityEventCursor,
-type SecurityEventPage,
+  SECURITY_EVENT_OUTCOMES,
+  type SecurityEvent,
+  type SecurityEventCursor,
+  type SecurityEventPage,
+  type TeamMember,
 } from "./security.types";
 
 /*
@@ -62,3 +64,58 @@ export async function listMySecurityEvents(
     nextCursor: hasMore && last ? { occurredAt: last.occurredAt, id: last.id } : null,
   };
 }
+
+// --- Equipo: la base decide quien puede ver y administrar ------------------------------
+
+const teamContext = (operation: string) => ({ context: { feature: "security", operation } });
+
+export async function listTeamMembers(): Promise<TeamMember[]> {
+  const { data, error } = await requireSupabase().rpc("team_list");
+  if (error) throw toAppError(error, teamContext("team_list").context);
+  return (
+    (data ?? []) as {
+      id: string | null;
+      full_name: string;
+      email: string;
+      role: string;
+      status: string;
+      is_self: boolean | null;
+    }[]
+  ).map((r) => ({
+    id: r.id,
+    name: r.full_name,
+    email: r.email,
+    role: r.role,
+    status: r.status,
+    isSelf: !!r.is_self,
+  }));
+}
+
+export const inviteTeamMember = (member: { name: string; email: string; role: string }) =>
+  invokeEdgeFunction("equipo-invitar", member, teamContext("invite"));
+
+export const resendTeamInvite = (memberId: string) =>
+  invokeEdgeFunction("equipo-invitar", { memberId }, teamContext("resend"));
+
+export async function updateTeamMemberRole(memberId: string, role: string) {
+  const { error } = await requireSupabase().rpc("team_update_role", {
+    p_member: memberId,
+    p_role: role,
+  });
+  if (error) throw toAppError(error, teamContext("update_role").context);
+}
+
+export async function revokeTeamMember(memberId: string) {
+  const { error } = await requireSupabase().rpc("team_revoke", { p_member: memberId });
+  if (error) throw toAppError(error, teamContext("revoke").context);
+}
+
+export const previewTeamInvite = (token: string) =>
+  invokeEdgeFunction<{ email: string; name: string; company: string }>(
+    "equipo-aceptar",
+    { token },
+    teamContext("preview_invite"),
+  );
+
+export const acceptTeamInvite = (token: string, password: string) =>
+  invokeEdgeFunction("equipo-aceptar", { token, password }, teamContext("accept_invite"));

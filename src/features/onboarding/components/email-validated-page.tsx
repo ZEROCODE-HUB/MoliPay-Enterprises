@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { AuthShell,PrimaryButton,SuccessCard } from "@/shared/ui/auth-kit";
+import { AuthShell, PrimaryButton, SuccessCard } from "@/shared/ui/auth-kit";
 
 export function EmailValidatedPage() {
   const navigate = useNavigate();

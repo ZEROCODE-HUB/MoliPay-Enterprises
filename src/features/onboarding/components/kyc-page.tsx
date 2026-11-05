@@ -1,27 +1,27 @@
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useNavigate } from "@tanstack/react-router";
 import { useSessionUser } from "@/features/session/session.hooks";
 import { applyServerErrors } from "@/shared/forms/apply-server-errors";
 import { useZodForm } from "@/shared/forms/use-zod-form";
 import {
-AuthShell,
-Field,
-FileUpload,
-FormTitle,
-SelectField,
-Stepper,
-WizardNav,
+  AuthShell,
+  Field,
+  FileUpload,
+  FormTitle,
+  SelectField,
+  Stepper,
+  WizardNav,
 } from "@/shared/ui/auth-kit";
 import {
-useKycDocuments,
-useOnboardingActions,
-useOnboardingDraft,
-useOnboardingProfile,
+  useKycDocuments,
+  useOnboardingActions,
+  useOnboardingDraft,
+  useOnboardingProfile,
 } from "../onboarding.hooks";
-import { PROVINCES,customerName } from "../onboarding.rules";
-import { addressSchema,type AddressValues } from "../onboarding.schema";
-import type { AccountType,KycDocument,KycFile,KycFiles } from "../onboarding.types";
+import { PROVINCES, customerName, personDeclared } from "../onboarding.rules";
+import { addressSchema, type AddressValues } from "../onboarding.schema";
+import type { AccountType, KycDocument, KycFile, KycFiles } from "../onboarding.types";
 import { BackToLoginLink } from "./back-to-login-link";
 
 const STEPS = ["DNI", "Servicio", "Selfie", "Residencia"];
@@ -38,6 +38,7 @@ export function KycPage() {
   const profile = useOnboardingProfile();
   const documents = useKycDocuments(profile.data?.legajo);
   const { submit } = useOnboardingActions();
+  const isCompanyAccount = (draft.accountType ?? profile.data?.accountType) === "company";
   const [step, setStep] = useState(0);
   const [files, setFiles] = useState<KycFiles>(EMPTY_FILES);
   const form = useZodForm(addressSchema, {
@@ -94,14 +95,29 @@ export function KycPage() {
       cp: address.postalCode,
       fechaNacimiento: draft.registration.birthDate ?? null,
     };
+    const declared = personDeclared({
+      ...draft.personalData,
+      ...address,
+      taxId: draft.personalData.cuit,
+      birthDate: draft.registration.birthDate,
+    });
     const profileFields = company
       ? {
+          empresa: {
+            legal_name: draft.companyData.legalName,
+            trade_name: draft.companyData.tradeName,
+            company_type: draft.companyData.companyType,
+            identification_type: draft.companyData.identificationType,
+            registration_date: draft.companyData.registrationDate,
+          },
+          representante: declared,
           tipoSociedad: draft.companyData.companyType,
           nombreLegal: draft.companyData.legalName,
           nombreFantasia: draft.companyData.tradeName,
           fechaInscripcion: draft.companyData.registrationDate,
         }
       : {
+          persona: declared,
           genero: draft.personalData.gender,
           cuitCuil: draft.personalData.cuit,
           ocupacion: draft.personalData.occupation,
@@ -121,7 +137,7 @@ export function KycPage() {
       applyServerErrors(form, e);
       return;
     }
-    navigate({ to: "/onboarding/en-proceso" });
+    navigate({ to: company ? "/onboarding/integrantes" : "/onboarding/en-proceso" });
   });
 
   return (
@@ -131,7 +147,15 @@ export function KycPage() {
       leftBody="Tus documentos se procesan en un entorno cifrado y se conservan según normativa BCRA y Ley 25.246."
       step={`Paso ${step + 1} de 4`}
     >
-      <FormTitle eyebrow="KYC · Documentación" title="Validación KYC" />
+      <FormTitle
+        eyebrow="KYC · Documentación"
+        title={isCompanyAccount ? "Documentos del representante legal" : "Validación KYC"}
+        subtitle={
+          isCompanyAccount
+            ? "Cargá tu propio DNI, comprobante y selfie. Los documentos de la empresa van más adelante."
+            : undefined
+        }
+      />
       <Stepper steps={STEPS} current={step} />
 
       {step === 0 && (

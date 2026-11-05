@@ -1,36 +1,48 @@
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useNavigate } from "@tanstack/react-router";
 import { useZodForm } from "@/shared/forms/use-zod-form";
 import { onlyDigits } from "@/shared/lib/text";
 import {
-AuthShell,
-Field,
-FormTitle,
-PrimaryButton,
-SecondaryButton,
-SelectField,
-Stepper,
-WizardNav,
+  AuthShell,
+  Field,
+  FormTitle,
+  PrimaryButton,
+  SecondaryButton,
+  SelectField,
+  Stepper,
+  WizardNav,
 } from "@/shared/ui/auth-kit";
 import {
-useDiscardForeignDraft,
-useOnboardingDraft,
-useOnboardingProfile,
+  useDiscardForeignDraft,
+  useOnboardingDraft,
+  useOnboardingProfile,
 } from "../onboarding.hooks";
-import { FUNDS_ORIGINS,GENDERS,OCCUPATIONS } from "../onboarding.rules";
-import { PERSONAL_DATA_STEP_FIELDS,personalDataSchema } from "../onboarding.schema";
+import {
+  FUNDS_ORIGINS,
+  GENDERS,
+  OCCUPATIONS,
+  COUNTRIES,
+  DOCUMENT_TYPES,
+} from "../onboarding.rules";
+import { PERSONAL_DATA_STEP_FIELDS, personalDataSchema } from "../onboarding.schema";
 import { BackToLoginLink } from "./back-to-login-link";
 
 const STEPS = ["Datos personales", "Información financiera", "Validación final"];
 
 export function PersonalDataPage() {
   const navigate = useNavigate();
-  const { accountType, personalData, setPersonalData } = useOnboardingDraft();
+  const { accountType, personalData, registration, setPersonalData } = useOnboardingDraft();
   const profile = useOnboardingProfile();
   const [step, setStep] = useState(0);
   const form = useZodForm(personalDataSchema, {
     defaultValues: {
+      firstName: personalData.firstName ?? registration.firstName ?? "",
+      lastName: personalData.lastName ?? registration.lastName ?? "",
+      nationality: personalData.nationality ?? "",
+      residenceCountry: personalData.residenceCountry ?? "",
+      documentType: personalData.documentType ?? "",
+      documentNumber: personalData.documentNumber ?? "",
       gender: personalData.gender ?? "",
       cuit: personalData.cuit ?? "",
       occupation: personalData.occupation ?? "",
@@ -40,7 +52,19 @@ export function PersonalDataPage() {
   });
   const { errors } = form.formState;
   useDiscardForeignDraft(() =>
-    form.reset({ gender: "", cuit: "", occupation: "", fundsOrigin: "", isPep: false }),
+    form.reset({
+      firstName: "",
+      lastName: "",
+      nationality: "",
+      residenceCountry: "",
+      documentType: "",
+      documentNumber: "",
+      gender: "",
+      cuit: "",
+      occupation: "",
+      fundsOrigin: "",
+      isPep: false,
+    }),
   );
   const cuitDigits = onlyDigits(form.watch("cuit")).length;
 
@@ -50,6 +74,12 @@ export function PersonalDataPage() {
     if (!saved) return;
     const current = form.getValues();
     form.reset({
+      firstName: current.firstName,
+      lastName: current.lastName,
+      nationality: current.nationality,
+      residenceCountry: current.residenceCountry,
+      documentType: current.documentType,
+      documentNumber: current.documentNumber,
       gender: current.gender || saved.gender || "",
       cuit: current.cuit || saved.cuit || "",
       occupation: current.occupation || saved.occupation || "",
@@ -81,7 +111,19 @@ export function PersonalDataPage() {
       leftBody="Estos datos son requeridos por normativa antilavado (UIF) y solo se comparten con las autoridades competentes."
       step={`Paso ${step + 1} de 3`}
     >
-      <FormTitle eyebrow="KYC · Datos personales" title="Validación de datos personales" />
+      <FormTitle
+        eyebrow="KYC · Datos personales"
+        title={
+          accountType === "company"
+            ? "Tus datos como representante legal"
+            : "Validación de datos personales"
+        }
+        subtitle={
+          accountType === "company"
+            ? "Son tus datos personales, no los de la empresa. Los de la empresa te los pedimos en el próximo paso."
+            : undefined
+        }
+      />
       <Stepper steps={STEPS} current={step} />
 
       {step === 0 && (
@@ -98,6 +140,52 @@ export function PersonalDataPage() {
                 error={fieldState.error?.message}
               />
             )}
+          />
+          <Field label="Nombre" error={errors.firstName?.message} {...form.register("firstName")} />
+          <Field label="Apellido" error={errors.lastName?.message} {...form.register("lastName")} />
+          <Controller
+            control={form.control}
+            name="nationality"
+            render={({ field, fieldState }) => (
+              <SelectField
+                label="Nacionalidad"
+                value={field.value}
+                onChange={field.onChange}
+                options={Object.keys(COUNTRIES)}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="residenceCountry"
+            render={({ field, fieldState }) => (
+              <SelectField
+                label="País de residencia"
+                value={field.value}
+                onChange={field.onChange}
+                options={Object.keys(COUNTRIES)}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="documentType"
+            render={({ field, fieldState }) => (
+              <SelectField
+                label="Tipo de documento"
+                value={field.value}
+                onChange={field.onChange}
+                options={DOCUMENT_TYPES}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+          <Field
+            label="Número de documento"
+            error={errors.documentNumber?.message}
+            {...form.register("documentNumber")}
           />
           <Field
             label="CUIT / CUIL"

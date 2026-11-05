@@ -1,7 +1,7 @@
 import { Building2 } from "lucide-react";
 import { Card } from "@/shared/ui/card";
-import { Input,Label,Select } from "@/shared/ui/form-controls";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 
 import type { AccountPageVm } from "./use-account-page";
 
@@ -53,7 +53,8 @@ export function CompanyInfoCard({
               <Label>CUIT</Label>
               <Input
                 value={form.cuit ?? companyInfo.cuit}
-                onChange={(e) => setF("cuit", e.target.value)}
+                readOnly
+                title="El CUIT lo cambia solo el equipo de MoliPay"
               />
             </div>
             <div>

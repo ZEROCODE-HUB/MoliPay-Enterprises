@@ -1,8 +1,8 @@
-import { describe,expect,it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { migrateDraftV0 } from "./onboarding.draft-migration";
-import { customerName,isProvisionalCuit,normalizeCustomerStatus } from "./onboarding.rules";
-import { companyDataSchema,personalDataSchema } from "./onboarding.schema";
-import { toAccountType,toOnboardingProfile } from "./onboarding.supabase";
+import { customerName, isProvisionalCuit, normalizeCustomerStatus } from "./onboarding.rules";
+import { companyDataSchema, personalDataSchema } from "./onboarding.schema";
+import { toAccountType, toOnboardingProfile } from "./onboarding.supabase";
 
 describe("migrateDraftV0", () => {
   it("traduce el borrador viejo sin perder datos", () => {
@@ -78,8 +78,14 @@ describe("reglas del alta", () => {
 
 describe("schemas", () => {
   const personal = {
+    firstName: "Ana",
+    lastName: "Pérez",
+    nationality: "Argentina",
+    residenceCountry: "Argentina",
+    documentType: "DNI",
+    documentNumber: "12345678",
     gender: "Femenino",
-    cuit: "20-12345678-9",
+    cuit: "20-12345678-6",
     occupation: "Otro",
     fundsOrigin: "Sueldo",
     isPep: false,
@@ -95,7 +101,8 @@ describe("schemas", () => {
 
   it("la empresa exige todos sus datos", () => {
     const company = {
-      cuit: "30123456789",
+      cuit: "30123456781",
+      identificationType: "CUIT",
       registrationDate: "2020-01-01",
       companyType: "Otro",
       legalName: "Acme SA",
@@ -103,5 +110,6 @@ describe("schemas", () => {
     };
     expect(companyDataSchema.safeParse(company).success).toBe(true);
     expect(companyDataSchema.safeParse({ ...company, tradeName: " " }).success).toBe(false);
+    expect(companyDataSchema.safeParse({ ...company, cuit: "30123456789" }).success).toBe(false);
   });
 });

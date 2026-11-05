@@ -12,7 +12,7 @@ export const sessionQueries = {
   currentCustomer: (userId: string, email: string) =>
     queryOptions({
       queryKey: sessionKeys.currentCustomer(userId),
-      queryFn: ({ signal }) => getCurrentCustomer(email, { signal }),
+      queryFn: ({ signal }) => getCurrentCustomer({ signal }),
       staleTime: STALE.moderate,
     }),
 };

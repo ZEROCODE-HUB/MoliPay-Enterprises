@@ -99,7 +99,7 @@ const SUPPORT: ErdBox[] = [
     lines: ["FK person_id o customer_id, uno solo", "Solo inserciones"],
   },
   {
-    name: "document_requirements",
+    name: "onboarding_requirements",
     x: 704,
     y: 668,
     w: 300,
@@ -128,6 +128,17 @@ SUPPORT.push({
   w: 300,
   lines: ["FK customer_id · decisión con responsable"],
 });
+
+SUPPORT.push(
+  { name: "record_versions", x: 56, y: 868, w: 300, lines: ["Foto de cada cambio, con vigencia"] },
+  {
+    name: "onboarding_statistics",
+    x: 380,
+    y: 868,
+    w: 300,
+    lines: ["Totales, sin identificadores"],
+  },
+);
 
 const EDGES: ErdEdge[] = [
   { d: "M300 116 H400", label: "1 : 0..1", lx: 350, ly: 106 },
@@ -185,7 +196,7 @@ export function ProposalErd() {
   return (
     <div className="my-4 overflow-x-auto rounded-lg border bg-background p-2">
       <svg
-        viewBox="0 0 1040 860"
+        viewBox="0 0 1040 960"
         role="img"
         aria-label="Modelo relacional de personas, cuentas, empresas y KYC"
         className="min-w-[760px] w-full"
@@ -227,7 +238,7 @@ export function ProposalErd() {
           x={40}
           y={620}
           width={980}
-          height={224}
+          height={324}
           rx={8}
           fill="none"
           strokeDasharray="5 4"

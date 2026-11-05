@@ -1,10 +1,10 @@
 import {
-AlertTriangle,
-CheckCircle2,
-History,
-Loader2,
-RefreshCw,
-ShieldAlert,
+  AlertTriangle,
+  CheckCircle2,
+  History,
+  Loader2,
+  RefreshCw,
+  ShieldAlert,
 } from "lucide-react";
 import { BtnOutline } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";

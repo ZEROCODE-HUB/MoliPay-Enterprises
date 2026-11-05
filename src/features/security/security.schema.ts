@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { passwordSchema } from "@/shared/validation/password";
-import { emailSchema,requiredText } from "@/shared/validation/primitives";
+import { emailSchema, requiredText } from "@/shared/validation/primitives";
 
 /** Cambio voluntario de clave: la politica del portal y, ademas, 12 caracteres como minimo. */
 export const changePasswordSchema = z
@@ -14,8 +14,6 @@ export const changePasswordSchema = z
     message: "Las contraseñas no coinciden.",
   });
 
-export const TEAM_ROLES = ["Owner", "Operador", "Solo lectura", "Admin"] as const;
-
 /** `existingEmails`: emails que ya estan en el equipo (no se pueden invitar de nuevo). */
 export const createInviteMemberSchema = (existingEmails: string[]) =>
   z.object({
@@ -24,7 +22,17 @@ export const createInviteMemberSchema = (existingEmails: string[]) =>
       (email) => !existingEmails.includes(email),
       "Ese email ya es miembro del equipo.",
     ),
-    role: z.enum(TEAM_ROLES),
+    role: z.enum(["admin", "operator", "viewer"]),
+  });
+
+export const acceptInviteSchema = z
+  .object({
+    password: passwordSchema.pipe(z.string().min(12, "Mínimo 12 caracteres.")),
+    confirm: z.string(),
+  })
+  .refine((v) => v.password === v.confirm, {
+    path: ["confirm"],
+    message: "Las contraseñas no coinciden.",
   });
 
 export const totpCodeSchema = z.object({

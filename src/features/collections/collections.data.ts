@@ -227,15 +227,8 @@ function rowToRecord(row: any): RecordDeBatch {
 export async function getLegajoUser(): Promise<string | null> {
   try {
     const s = requireSupabase();
-    const { data: u } = await s.auth.getUser();
-    const mail = u.user?.email;
-    if (!mail) return null;
-    const { data: cli } = await s
-      .from("clientes")
-      .select("legajo")
-      .eq("correo", mail)
-      .maybeSingle();
-    return cli?.legajo ?? null;
+    const { data: legajo } = await s.rpc("legajo_de_sesion");
+    return (legajo as string | null) ?? null;
   } catch {
     return null;
   }

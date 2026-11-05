@@ -4,6 +4,9 @@ export type SessionUser = { id: string; email: string | null };
 
 export type PersonType = "individual" | "company";
 
+/** Quien usa la cuenta: su titular o un usuario invitado al equipo de la empresa. */
+export type TeamRole = "owner" | "admin" | "operator" | "viewer";
+
 /** Cliente (empresa o persona) de la sesion. `legajo` es la identidad del cliente activo. */
 export type CurrentCustomer = {
   legajo: string;
@@ -16,4 +19,5 @@ export type CurrentCustomer = {
   cuit: string;
   cbu: string | null;
   alias: string | null;
+  teamRole: TeamRole;
 };

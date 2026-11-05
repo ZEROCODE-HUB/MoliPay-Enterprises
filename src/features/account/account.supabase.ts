@@ -19,8 +19,14 @@ export async function updateAccountCustomer(
   legajo: string,
   patch: Record<string, unknown>,
 ): Promise<void> {
-  const { error } = await requireSupabase().from("clientes").update(patch).eq("legajo", legajo);
+  const { data, error } = await requireSupabase()
+    .from("clientes")
+    .update(patch)
+    .eq("legajo", legajo)
+    .select("legajo");
   if (error) throw toAppError(error, context("update_customer"));
+  // Sin filas: RLS no dejo escribir (un usuario del equipo no edita la ficha).
+  if (!data?.length) throw new Error("Solo el titular puede editar estos datos.");
 }
 
 /** Documentos del alta, con URL firmada para verlos. */
@@ -28,7 +34,8 @@ export async function listAccountDocuments(legajo: string) {
   const { data, error } = await requireSupabase()
     .from("documentos")
     .select("tipo, url, label, created_at")
-    .eq("cliente_legajo", legajo);
+    .eq("cliente_legajo", legajo)
+    .neq("status", "superseded");
   if (error) throw toAppError(error, context("documents"));
   const docs = (data ?? []) as {
     tipo: string;

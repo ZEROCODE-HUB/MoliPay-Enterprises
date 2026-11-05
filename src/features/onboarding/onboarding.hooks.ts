@@ -1,18 +1,18 @@
-import { useEffect,useMemo,useRef } from "react";
-import { useQuery,useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useSessionUser } from "@/features/session/session.hooks";
-import { migrateDraftV0,type PersistedDraft } from "./onboarding.draft-migration";
-import { onboardingKeys,onboardingQueries } from "./onboarding.queries";
+import { migrateDraftV0, type PersistedDraft } from "./onboarding.draft-migration";
+import { onboardingKeys, onboardingQueries } from "./onboarding.queries";
 import * as api from "./onboarding.supabase";
 import type {
-AccountType,
-Address,
-CompanyData,
-OnboardingSubmission,
-PersonalData,
-Registration,
+  AccountType,
+  Address,
+  CompanyData,
+  OnboardingSubmission,
+  PersonalData,
+  Registration,
 } from "./onboarding.types";
 
 // --- Borrador del alta ----------------------------------------------------------
@@ -115,6 +115,11 @@ export function useKycDocuments(legajo: string | undefined) {
     ...onboardingQueries.documents(userId, legajo ?? ""),
     enabled: !!userId && !!legajo,
   });
+}
+
+export function useOnboardingApplication() {
+  const { userId } = useSessionIdentity();
+  return useQuery({ ...onboardingQueries.application(userId), enabled: !!userId });
 }
 
 export function useOnboardingStatus() {

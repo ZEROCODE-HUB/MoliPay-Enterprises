@@ -9,10 +9,13 @@ const context = { feature: "auth", operation: "customer_access" };
 /** Estado del cliente del email que acaba de iniciar sesion. */
 export async function getCustomerAccess(email: string): Promise<CustomerAccess> {
   const sb = requireSupabase();
+  const { data: legajo, error: legajoError } = await sb.rpc("legajo_de_sesion");
+  if (legajoError) throw toAppError(legajoError, context);
+  if (!legajo) return { status: null, onboardingComplete: null, hasOnboardingEvidence: false };
   const { data: customer, error } = await sb
     .from("clientes")
     .select("legajo, estado, onboarding_completo")
-    .eq("correo", email)
+    .eq("legajo", legajo)
     .maybeSingle();
   if (error) throw toAppError(error, context);
   if (!customer) return { status: null, onboardingComplete: null, hasOnboardingEvidence: false };

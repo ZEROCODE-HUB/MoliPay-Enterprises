@@ -32,6 +32,7 @@ import { Route as AppSeguridadRouteImport } from './routes/app.seguridad'
 import { Route as AppServiciosRouteImport } from './routes/app.servicios'
 import { Route as AppSubcuentasRouteImport } from './routes/app.subcuentas'
 import { Route as AppTransferenciasRouteImport } from './routes/app.transferencias'
+import { Route as EquipoAceptarRouteImport } from './routes/equipo.aceptar'
 import { Route as LegalesArrepentimientoRouteImport } from './routes/legales.arrepentimiento'
 import { Route as LegalesComisionesRouteImport } from './routes/legales.comisiones'
 import { Route as LegalesPrivacidadRouteImport } from './routes/legales.privacidad'
@@ -39,6 +40,7 @@ import { Route as LegalesTerminosRouteImport } from './routes/legales.terminos'
 import { Route as OnboardingDatosEmpresaRouteImport } from './routes/onboarding.datos-empresa'
 import { Route as OnboardingDatosPersonalesRouteImport } from './routes/onboarding.datos-personales'
 import { Route as OnboardingEnProcesoRouteImport } from './routes/onboarding.en-proceso'
+import { Route as OnboardingIntegrantesRouteImport } from './routes/onboarding.integrantes'
 import { Route as OnboardingKycRouteImport } from './routes/onboarding.kyc'
 import { Route as PCodeRouteImport } from './routes/p.$code'
 import { Route as RegistroEmpresaRouteImport } from './routes/registro.empresa'
@@ -168,6 +170,11 @@ const AppTransferenciasRoute = AppTransferenciasRouteImport.update({
   path: '/transferencias',
   getParentRoute: () => AppRoute,
 } as any)
+const EquipoAceptarRoute = EquipoAceptarRouteImport.update({
+  id: '/equipo/aceptar',
+  path: '/equipo/aceptar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LegalesArrepentimientoRoute = LegalesArrepentimientoRouteImport.update({
   id: '/legales/arrepentimiento',
   path: '/legales/arrepentimiento',
@@ -202,6 +209,11 @@ const OnboardingDatosPersonalesRoute =
 const OnboardingEnProcesoRoute = OnboardingEnProcesoRouteImport.update({
   id: '/onboarding/en-proceso',
   path: '/onboarding/en-proceso',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingIntegrantesRoute = OnboardingIntegrantesRouteImport.update({
+  id: '/onboarding/integrantes',
+  path: '/onboarding/integrantes',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingKycRoute = OnboardingKycRouteImport.update({
@@ -294,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/app/servicios': typeof AppServiciosRoute
   '/app/subcuentas': typeof AppSubcuentasRoute
   '/app/transferencias': typeof AppTransferenciasRoute
+  '/equipo/aceptar': typeof EquipoAceptarRoute
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
@@ -301,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/datos-empresa': typeof OnboardingDatosEmpresaRoute
   '/onboarding/datos-personales': typeof OnboardingDatosPersonalesRoute
   '/onboarding/en-proceso': typeof OnboardingEnProcesoRoute
+  '/onboarding/integrantes': typeof OnboardingIntegrantesRoute
   '/onboarding/kyc': typeof OnboardingKycRoute
   '/p/$code': typeof PCodeRoute
   '/registro/empresa': typeof RegistroEmpresaRoute
@@ -337,6 +351,7 @@ export interface FileRoutesByTo {
   '/app/servicios': typeof AppServiciosRoute
   '/app/subcuentas': typeof AppSubcuentasRoute
   '/app/transferencias': typeof AppTransferenciasRoute
+  '/equipo/aceptar': typeof EquipoAceptarRoute
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
@@ -344,6 +359,7 @@ export interface FileRoutesByTo {
   '/onboarding/datos-empresa': typeof OnboardingDatosEmpresaRoute
   '/onboarding/datos-personales': typeof OnboardingDatosPersonalesRoute
   '/onboarding/en-proceso': typeof OnboardingEnProcesoRoute
+  '/onboarding/integrantes': typeof OnboardingIntegrantesRoute
   '/onboarding/kyc': typeof OnboardingKycRoute
   '/p/$code': typeof PCodeRoute
   '/registro/empresa': typeof RegistroEmpresaRoute
@@ -383,6 +399,7 @@ export interface FileRoutesById {
   '/app/servicios': typeof AppServiciosRoute
   '/app/subcuentas': typeof AppSubcuentasRoute
   '/app/transferencias': typeof AppTransferenciasRoute
+  '/equipo/aceptar': typeof EquipoAceptarRoute
   '/legales/arrepentimiento': typeof LegalesArrepentimientoRoute
   '/legales/comisiones': typeof LegalesComisionesRoute
   '/legales/privacidad': typeof LegalesPrivacidadRoute
@@ -390,6 +407,7 @@ export interface FileRoutesById {
   '/onboarding/datos-empresa': typeof OnboardingDatosEmpresaRoute
   '/onboarding/datos-personales': typeof OnboardingDatosPersonalesRoute
   '/onboarding/en-proceso': typeof OnboardingEnProcesoRoute
+  '/onboarding/integrantes': typeof OnboardingIntegrantesRoute
   '/onboarding/kyc': typeof OnboardingKycRoute
   '/p/$code': typeof PCodeRoute
   '/registro/empresa': typeof RegistroEmpresaRoute
@@ -430,6 +448,7 @@ export interface FileRouteTypes {
     | '/app/servicios'
     | '/app/subcuentas'
     | '/app/transferencias'
+    | '/equipo/aceptar'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
@@ -437,6 +456,7 @@ export interface FileRouteTypes {
     | '/onboarding/datos-empresa'
     | '/onboarding/datos-personales'
     | '/onboarding/en-proceso'
+    | '/onboarding/integrantes'
     | '/onboarding/kyc'
     | '/p/$code'
     | '/registro/empresa'
@@ -473,6 +493,7 @@ export interface FileRouteTypes {
     | '/app/servicios'
     | '/app/subcuentas'
     | '/app/transferencias'
+    | '/equipo/aceptar'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
@@ -480,6 +501,7 @@ export interface FileRouteTypes {
     | '/onboarding/datos-empresa'
     | '/onboarding/datos-personales'
     | '/onboarding/en-proceso'
+    | '/onboarding/integrantes'
     | '/onboarding/kyc'
     | '/p/$code'
     | '/registro/empresa'
@@ -518,6 +540,7 @@ export interface FileRouteTypes {
     | '/app/servicios'
     | '/app/subcuentas'
     | '/app/transferencias'
+    | '/equipo/aceptar'
     | '/legales/arrepentimiento'
     | '/legales/comisiones'
     | '/legales/privacidad'
@@ -525,6 +548,7 @@ export interface FileRouteTypes {
     | '/onboarding/datos-empresa'
     | '/onboarding/datos-personales'
     | '/onboarding/en-proceso'
+    | '/onboarding/integrantes'
     | '/onboarding/kyc'
     | '/p/$code'
     | '/registro/empresa'
@@ -550,6 +574,7 @@ export interface RootRouteChildren {
   RegistroRoute: typeof RegistroRouteWithChildren
   ResetPasswordRoute: typeof ResetPasswordRoute
   VerificarCorreoRoute: typeof VerificarCorreoRoute
+  EquipoAceptarRoute: typeof EquipoAceptarRoute
   LegalesArrepentimientoRoute: typeof LegalesArrepentimientoRoute
   LegalesComisionesRoute: typeof LegalesComisionesRoute
   LegalesPrivacidadRoute: typeof LegalesPrivacidadRoute
@@ -557,6 +582,7 @@ export interface RootRouteChildren {
   OnboardingDatosEmpresaRoute: typeof OnboardingDatosEmpresaRoute
   OnboardingDatosPersonalesRoute: typeof OnboardingDatosPersonalesRoute
   OnboardingEnProcesoRoute: typeof OnboardingEnProcesoRoute
+  OnboardingIntegrantesRoute: typeof OnboardingIntegrantesRoute
   OnboardingKycRoute: typeof OnboardingKycRoute
   PCodeRoute: typeof PCodeRoute
 }
@@ -724,6 +750,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTransferenciasRouteImport
       parentRoute: typeof AppRoute
     }
+    '/equipo/aceptar': {
+      id: '/equipo/aceptar'
+      path: '/equipo/aceptar'
+      fullPath: '/equipo/aceptar'
+      preLoaderRoute: typeof EquipoAceptarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/legales/arrepentimiento': {
       id: '/legales/arrepentimiento'
       path: '/legales/arrepentimiento'
@@ -771,6 +804,13 @@ declare module '@tanstack/react-router' {
       path: '/onboarding/en-proceso'
       fullPath: '/onboarding/en-proceso'
       preLoaderRoute: typeof OnboardingEnProcesoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/integrantes': {
+      id: '/onboarding/integrantes'
+      path: '/onboarding/integrantes'
+      fullPath: '/onboarding/integrantes'
+      preLoaderRoute: typeof OnboardingIntegrantesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding/kyc': {
@@ -966,6 +1006,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegistroRoute: RegistroRouteWithChildren,
   ResetPasswordRoute: ResetPasswordRoute,
   VerificarCorreoRoute: VerificarCorreoRoute,
+  EquipoAceptarRoute: EquipoAceptarRoute,
   LegalesArrepentimientoRoute: LegalesArrepentimientoRoute,
   LegalesComisionesRoute: LegalesComisionesRoute,
   LegalesPrivacidadRoute: LegalesPrivacidadRoute,
@@ -973,6 +1014,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingDatosEmpresaRoute: OnboardingDatosEmpresaRoute,
   OnboardingDatosPersonalesRoute: OnboardingDatosPersonalesRoute,
   OnboardingEnProcesoRoute: OnboardingEnProcesoRoute,
+  OnboardingIntegrantesRoute: OnboardingIntegrantesRoute,
   OnboardingKycRoute: OnboardingKycRoute,
   PCodeRoute: PCodeRoute,
 }

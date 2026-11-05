@@ -1,7 +1,16 @@
 import { useNavigate } from "@tanstack/react-router";
-import { AuthShell,PrimaryButton,SecondaryButton,SuccessCard } from "@/shared/ui/auth-kit";
-import { useOnboardingStatus } from "../onboarding.hooks";
-import { CUSTOMER_STATUS_LABEL,NEXT_ONBOARDING_STEP,STATUS_MESSAGE } from "../onboarding.rules";
+import { AuthShell, PrimaryButton, SecondaryButton, SuccessCard } from "@/shared/ui/auth-kit";
+import {
+  useOnboardingApplication,
+  useOnboardingProfile,
+  useOnboardingStatus,
+} from "../onboarding.hooks";
+import {
+  CUSTOMER_MESSAGES,
+  CUSTOMER_STATUS_LABEL,
+  NEXT_ONBOARDING_STEP,
+  STATUS_MESSAGE,
+} from "../onboarding.rules";
 
 const SUBMITTED_MESSAGE =
   "Tu alta fue registrada y está siendo validada por nuestro equipo de compliance. Este proceso puede demorar hasta 24 horas hábiles. Te avisaremos por correo cuando quede habilitada.";
@@ -9,6 +18,13 @@ const SUBMITTED_MESSAGE =
 export function OnboardingStatusPage() {
   const navigate = useNavigate();
   const query = useOnboardingStatus();
+  const application = useOnboardingApplication().data;
+  const isCompany = useOnboardingProfile().data?.accountType === "company";
+  const canContinue =
+    isCompany && (application?.status === "draft" || application?.status === "changes_requested");
+  const customerMessage = application?.customerMessageCode
+    ? CUSTOMER_MESSAGES[application.customerMessageCode]
+    : undefined;
   const status = query.data?.status ?? null;
   const hasSubmittedDocuments = query.data?.hasSubmittedDocuments ?? false;
   const goToLogin = () => navigate({ to: "/login", search: { register: undefined } });
@@ -50,7 +66,7 @@ export function OnboardingStatusPage() {
         title={status ? label : "Solicitud enviada"}
         body={
           <>
-            <p>{status ? STATUS_MESSAGE[status] : SUBMITTED_MESSAGE}</p>
+            <p>{customerMessage ?? (status ? STATUS_MESSAGE[status] : SUBMITTED_MESSAGE)}</p>
             <p className="mt-3 text-xs text-black-400">
               Si tenés algún problema,{" "}
               <a
@@ -65,6 +81,11 @@ export function OnboardingStatusPage() {
         }
       >
         <div className="flex flex-col gap-2">
+          {canContinue && (
+            <PrimaryButton onClick={() => navigate({ to: "/onboarding/integrantes" })}>
+              Completar datos de la empresa
+            </PrimaryButton>
+          )}
           {status === "activado" ? (
             <PrimaryButton onClick={() => navigate({ to: "/app" })}>Ir al dashboard</PrimaryButton>
           ) : (

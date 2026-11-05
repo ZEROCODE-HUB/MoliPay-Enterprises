@@ -1,20 +1,20 @@
 import {
-countMovementsThisMonth,
-getAccountCustomer,
-listAccountDocuments,
-updateAccountCustomer,
+  countMovementsThisMonth,
+  getAccountCustomer,
+  listAccountDocuments,
+  updateAccountCustomer,
 } from "../account.supabase";
 import { useSessionUser } from "@/features/session/session.hooks";
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 import { useOnboardingDraft } from "@/features/onboarding/onboarding.hooks";
 import {
-CUSTOMER_STATUS_LABEL as ESTADO_LABEL,
-normalizeCustomerStatus as normalizarEstado,
+  CUSTOMER_STATUS_LABEL as ESTADO_LABEL,
+  normalizeCustomerStatus as normalizarEstado,
 } from "@/features/onboarding/onboarding.rules";
 import { toast } from "sonner";
-import { Activity,Shield,TrendingUp,User } from "lucide-react";
+import { Activity, Shield, TrendingUp, User } from "lucide-react";
 import { type DocReal } from "@/features/account/account.types";
-import { KIND_LABEL,kindOf } from "@/features/account/account.rules";
+import { KIND_LABEL, kindOf } from "@/features/account/account.rules";
 
 /** Estado y acciones de AccountPage: el componente solo dibuja. */
 export function useAccountPage() {
@@ -141,7 +141,6 @@ export function useAccountPage() {
         nombre: name,
         nombre_legal: form.nombreLegal || null,
         nombre_fantasia: form.nombreFantasia || null,
-        cuit: form.cuit || null,
         tipo_sociedad: form.tipo_sociedad || null,
         fecha_inscripcion: form.fecha_inscripcion || null,
         direccion: form.direccion || null,

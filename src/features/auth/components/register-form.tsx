@@ -1,10 +1,10 @@
 import { Controller } from "react-hook-form";
 import { Link } from "@tanstack/react-router";
-import { Field,PasswordField,PrimaryButton } from "@/shared/ui/auth-kit";
+import { Field, PasswordField, PrimaryButton } from "@/shared/ui/auth-kit";
 import type { AccountType } from "@/features/onboarding/onboarding.types";
 import { FieldError } from "@/shared/forms/field-error";
 import { useZodForm } from "@/shared/forms/use-zod-form";
-import { registerSchema,type RegisterValues } from "../auth.schema";
+import { registerSchema, type RegisterValues } from "../auth.schema";
 
 export function RegisterForm({
   accountType,
@@ -33,6 +33,12 @@ export function RegisterForm({
 
   return (
     <form className="space-y-4" noValidate onSubmit={form.handleSubmit(onSubmit)}>
+      {accountType === "company" && (
+        <p className="rounded-sm border border-black-100 bg-black-50 p-3 text-xs leading-relaxed text-black-500">
+          Completá tus datos como <strong>representante legal</strong>. Los datos de la empresa te
+          los pedimos después de confirmar tu correo.
+        </p>
+      )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Nombre" error={errors.firstName?.message} {...form.register("firstName")} />
         <Field label="Apellido" error={errors.lastName?.message} {...form.register("lastName")} />

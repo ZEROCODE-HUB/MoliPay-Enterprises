@@ -1,12 +1,12 @@
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useNavigate } from "@tanstack/react-router";
 import { useZodForm } from "@/shared/forms/use-zod-form";
 import { onlyDigits } from "@/shared/lib/text";
-import { AuthShell,Field,FormTitle,SelectField,Stepper,WizardNav } from "@/shared/ui/auth-kit";
-import { useOnboardingDraft,useOnboardingProfile } from "../onboarding.hooks";
-import { COMPANY_TYPES,isProvisionalCuit } from "../onboarding.rules";
-import { companyDataSchema,type CompanyDataValues } from "../onboarding.schema";
+import { AuthShell, Field, FormTitle, SelectField, Stepper, WizardNav } from "@/shared/ui/auth-kit";
+import { useOnboardingDraft, useOnboardingProfile } from "../onboarding.hooks";
+import { COMPANY_TYPES, IDENTIFICATION_TYPES, isProvisionalCuit } from "../onboarding.rules";
+import { companyDataSchema, type CompanyDataValues } from "../onboarding.schema";
 import { BackToLoginLink } from "./back-to-login-link";
 
 const STEPS = ["Datos de la empresa", "Confirmación"];
@@ -14,7 +14,8 @@ const STEPS = ["Datos de la empresa", "Confirmación"];
 const SUMMARY_ROWS: [keyof CompanyDataValues, string][] = [
   ["cuit", "CUIT de la empresa"],
   ["registrationDate", "Fecha de inscripción"],
-  ["companyType", "Tipo de identificación"],
+  ["identificationType", "Tipo de identificación"],
+  ["companyType", "Tipo societario"],
   ["legalName", "Nombre legal"],
   ["tradeName", "Nombre de fantasía"],
 ];
@@ -29,6 +30,7 @@ export function CompanyDataPage() {
       cuit: companyData.cuit ?? "",
       registrationDate: companyData.registrationDate ?? "",
       companyType: companyData.companyType ?? "",
+      identificationType: companyData.identificationType ?? "",
       legalName: companyData.legalName ?? "",
       tradeName: companyData.tradeName ?? "",
     },
@@ -45,6 +47,7 @@ export function CompanyDataPage() {
       cuit: current.cuit || (isProvisionalCuit(saved.cuit) ? "" : (saved.cuit ?? "")),
       registrationDate: current.registrationDate || saved.registrationDate || "",
       companyType: current.companyType || saved.companyType || "",
+      identificationType: current.identificationType || saved.identificationType || "",
       legalName: current.legalName || saved.legalName || "",
       tradeName: current.tradeName || saved.tradeName || "",
     });
@@ -85,10 +88,23 @@ export function CompanyDataPage() {
           />
           <Controller
             control={form.control}
-            name="companyType"
+            name="identificationType"
             render={({ field, fieldState }) => (
               <SelectField
                 label="Tipo de identificación"
+                value={field.value}
+                onChange={field.onChange}
+                options={IDENTIFICATION_TYPES}
+                error={fieldState.error?.message}
+              />
+            )}
+          />
+          <Controller
+            control={form.control}
+            name="companyType"
+            render={({ field, fieldState }) => (
+              <SelectField
+                label="Tipo societario"
                 value={field.value}
                 onChange={field.onChange}
                 options={COMPANY_TYPES}

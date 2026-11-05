@@ -1,9 +1,9 @@
 import type {
-AccountType,
-Address,
-CompanyData,
-PersonalData,
-Registration,
+  AccountType,
+  Address,
+  CompanyData,
+  PersonalData,
+  Registration,
 } from "./onboarding.types";
 
 /** Datos del borrador que se guardan en el navegador. */

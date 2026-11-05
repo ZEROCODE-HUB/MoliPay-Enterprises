@@ -1,5 +1,5 @@
-import { useState,type ReactNode } from "react";
-import { Mail,QrCode,Smartphone } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Mail, QrCode, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthActions } from "@/features/auth/auth.hooks";
 import type { TotpEnrollment } from "@/infrastructure/auth/auth-client";
@@ -8,9 +8,9 @@ import { FieldError } from "@/shared/forms/field-error";
 import { useZodForm } from "@/shared/forms/use-zod-form";
 import { userMessage } from "@/shared/lib/errors";
 import { Badge } from "@/shared/ui/badge";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
-import { Input,Label } from "@/shared/ui/form-controls";
+import { Input, Label } from "@/shared/ui/form-controls";
 import { totpCodeSchema } from "../security.schema";
 
 type Method = "email" | "totp";

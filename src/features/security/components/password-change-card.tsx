@@ -1,4 +1,4 @@
-import { CheckCircle2,Key } from "lucide-react";
+import { CheckCircle2, Key } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthActions } from "@/features/auth/auth.hooks";
 import { applyServerErrors } from "@/shared/forms/apply-server-errors";
@@ -6,7 +6,7 @@ import { FieldError } from "@/shared/forms/field-error";
 import { useZodForm } from "@/shared/forms/use-zod-form";
 import { BtnPrimary } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
-import { Input,Label } from "@/shared/ui/form-controls";
+import { Input, Label } from "@/shared/ui/form-controls";
 import { changePasswordSchema } from "../security.schema";
 
 export function PasswordChangeCard() {

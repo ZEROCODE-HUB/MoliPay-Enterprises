@@ -9,6 +9,12 @@ export type Registration = {
 };
 
 export type PersonalData = {
+  firstName: string;
+  lastName: string;
+  nationality: string;
+  residenceCountry: string;
+  documentType: string;
+  documentNumber: string;
   gender: string;
   cuit: string;
   occupation: string;
@@ -20,6 +26,7 @@ export type CompanyData = {
   cuit: string;
   registrationDate: string;
   companyType: string;
+  identificationType: string;
   legalName: string;
   tradeName: string;
 };
@@ -64,6 +71,38 @@ export type OnboardingStatus = {
   status: CustomerStatus | null;
   /** Ya envio validaciones o documentos. */
   hasSubmittedDocuments: boolean;
+};
+
+export type CompanyMember = {
+  id: string;
+  submissionId: string;
+  role: string;
+  roleLabel: string;
+  reviewState: string;
+  name: string;
+};
+
+export type BeneficialOwner = {
+  id: string;
+  submissionId: string;
+  controlLabel: string;
+  ownershipPct: number | null;
+  reviewState: string;
+  name: string;
+};
+
+export type OnboardingDocument = {
+  id: string;
+  submissionId: string | null;
+  tipo: string;
+  label: string;
+  status: string;
+};
+
+export type OnboardingApplication = {
+  id: string;
+  status: string;
+  customerMessageCode: string | null;
 };
 
 export type OnboardingSubmission = {

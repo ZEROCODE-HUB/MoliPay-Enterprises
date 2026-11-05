@@ -2,18 +2,22 @@ import { getSignedDocUrls } from "@/infrastructure/file-storage/signed-document-
 import { requireSupabase } from "@/infrastructure/supabase/client";
 import { invokeEdgeFunction } from "@/infrastructure/supabase/edge-functions";
 import { toAppError } from "@/infrastructure/supabase/errors";
-import { AppError,isAppError } from "@/shared/lib/errors";
+import { AppError, isAppError } from "@/shared/lib/errors";
 import { fileToBase64 } from "@/shared/lib/file";
-import { normalizeCustomerStatus } from "./onboarding.rules";
+import { controlTypeLabel, memberRoleLabel, normalizeCustomerStatus } from "./onboarding.rules";
 import {
-KYC_DOCUMENTS,
-type AccountType,
-type KycDocument,
-type KycFiles,
-type OnboardingProfile,
-type OnboardingStatus,
-type OnboardingSubmission,
-type Registration,
+  KYC_DOCUMENTS,
+  type AccountType,
+  type BeneficialOwner,
+  type CompanyMember,
+  type KycDocument,
+  type KycFiles,
+  type OnboardingApplication,
+  type OnboardingDocument,
+  type OnboardingProfile,
+  type OnboardingStatus,
+  type OnboardingSubmission,
+  type Registration,
 } from "./onboarding.types";
 
 /*
@@ -173,7 +177,8 @@ export async function getKycDocuments(legajo: string): Promise<Partial<KycFiles>
   const { data, error } = await requireSupabase()
     .from("documentos")
     .select("tipo, url, label")
-    .eq("cliente_legajo", legajo);
+    .eq("cliente_legajo", legajo)
+    .neq("status", "superseded");
   if (error) throw toAppError(error, context("documents").context);
   const docs = (data ?? []) as { tipo: string; url: string; label: string | null }[];
   if (docs.length === 0) return {};
@@ -214,4 +219,105 @@ export async function getOnboardingStatus(
     status: customer.estado ? normalizeCustomerStatus(customer.estado as string) : null,
     hasSubmittedDocuments: !!validation.data || !!document.data,
   };
+}
+
+// --- Empresa: integrantes, beneficiarios y documentacion -----------------------------
+
+type DeclaredRow = { declared: Record<string, unknown> };
+const nameOf = (r: DeclaredRow) =>
+  `${String(r.declared.first_name ?? "")} ${String(r.declared.last_name ?? "")}`.trim();
+
+async function rpc<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
+  const { data, error } = await requireSupabase().rpc(name, args);
+  if (error) throw toAppError(error, context(name).context);
+  return data as T;
+}
+
+export async function listCompanyMembers(): Promise<CompanyMember[]> {
+  const rows =
+    await rpc<
+      (DeclaredRow & { id: string; submission_id: string; role: string; review_state: string })[]
+    >("my_company_members");
+  return (rows ?? []).map((r) => ({
+    id: r.id,
+    submissionId: r.submission_id,
+    role: r.role,
+    roleLabel: memberRoleLabel(r.role),
+    reviewState: r.review_state,
+    name: nameOf(r),
+  }));
+}
+
+export async function listBeneficialOwners(): Promise<BeneficialOwner[]> {
+  const rows = await rpc<
+    (DeclaredRow & {
+      id: string;
+      submission_id: string;
+      control_type: string;
+      ownership_pct: number | null;
+      review_state: string;
+    })[]
+  >("my_beneficial_owners");
+  return (rows ?? []).map((r) => ({
+    id: r.id,
+    submissionId: r.submission_id,
+    controlLabel: controlTypeLabel(r.control_type),
+    ownershipPct: r.ownership_pct,
+    reviewState: r.review_state,
+    name: nameOf(r),
+  }));
+}
+
+export async function listOnboardingDocuments(): Promise<OnboardingDocument[]> {
+  const rows =
+    await rpc<
+      { id: string; submission_id: string | null; tipo: string; label: string; status: string }[]
+    >("my_onboarding_documents");
+  return (rows ?? []).map((r) => ({
+    id: r.id,
+    submissionId: r.submission_id,
+    tipo: r.tipo,
+    label: r.label,
+    status: r.status,
+  }));
+}
+
+export async function getOnboardingApplication(): Promise<OnboardingApplication | null> {
+  const rows = await rpc<{ id: string; status: string; customer_message_code: string | null }[]>(
+    "my_onboarding_application",
+  );
+  const r = rows?.[0];
+  return r ? { id: r.id, status: r.status, customerMessageCode: r.customer_message_code } : null;
+}
+
+export const declareCompanyMember = (declared: Record<string, unknown>, role: string | undefined) =>
+  rpc<string>("company_member_declare", { p_declared: declared, p_role: role });
+
+export const declareBeneficialOwner = (
+  declared: Record<string, unknown>,
+  control: string | undefined,
+  pct: number | null,
+  detail: string | null,
+) =>
+  rpc<string>("beneficial_owner_declare", {
+    p_declared: declared,
+    p_control_type: control,
+    p_pct: pct,
+    p_detail: detail,
+  });
+
+export const endCompanyMember = (id: string) => rpc("company_member_end", { p_member: id });
+export const endBeneficialOwner = (id: string) => rpc("beneficial_owner_end", { p_owner: id });
+export const submitApplication = () => rpc<string>("application_submit");
+
+export async function uploadOnboardingDocument(input: {
+  tipo: string;
+  submissionId: string | null;
+  file: File;
+}) {
+  await invokeEdgeFunction(
+    "subir-documento",
+    { tipo: input.tipo, submissionId: input.submissionId, file: await fileToBase64(input.file) },
+    context("upload_document"),
+  );
 }

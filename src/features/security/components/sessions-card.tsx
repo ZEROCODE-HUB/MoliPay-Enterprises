@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Monitor,Trash2 } from "lucide-react";
+import { Monitor, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthActions } from "@/features/auth/auth.hooks";
 import { userMessage } from "@/shared/lib/errors";
