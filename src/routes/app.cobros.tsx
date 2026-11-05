@@ -1,5 +1,5 @@
-﻿import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { PageHeader } from "@/components/portal-shell";
+﻿import { createFileRoute,Outlet } from "@tanstack/react-router";
+import { PageHeader } from "@/shared/ui/page-header";
 
 export const Route = createFileRoute("/app/cobros")({
   component: Layout,

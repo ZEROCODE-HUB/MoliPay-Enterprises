@@ -1,27 +1,27 @@
-﻿import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute,Outlet,useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
 import {
-  LayoutDashboard,
-  ArrowLeftRight,
-  Wallet,
-  Link2,
-  Receipt,
-  Upload,
-  History,
-  UserCog,
-  Shield,
-  Package,
-  Store,
-  List,
-  ShoppingCart,
-  Code2,
-  Landmark,
+LayoutDashboard,
+ArrowLeftRight,
+Wallet,
+Link2,
+Receipt,
+Upload,
+History,
+UserCog,
+Shield,
+Package,
+Store,
+List,
+ShoppingCart,
+Code2,
+Landmark,
 } from "lucide-react";
-import { PortalShell, type NavItem } from "@/components/portal-shell";
-import { SupportBot } from "@/components/support-bot";
-import { useDemoMode } from "@/contexts/demo-mode";
-import { RouteSkeleton } from "@/components/route-skeleton";
-import { requireSupabase } from "@/lib/supabase";
+import { PortalShell,type NavItem } from "@/app/portal-shell";
+import { SupportBot } from "@/app/support-bot";
+import { useDemoMode } from "@/app/demo-mode";
+import { RouteSkeleton } from "@/shared/ui/route-skeleton";
+import { useCurrentCustomer,useSessionUser } from "@/features/session/session.hooks";
 
 export const Route = createFileRoute("/app")({
   component: AppLayout,
@@ -61,36 +61,27 @@ const nav: NavItem[] = [
 function AppLayout() {
   const { role, setRole } = useDemoMode();
   const navigate = useNavigate();
-  const [userName, setUserName] = useState<string | undefined>(undefined);
-  const [userEmail, setUserEmail] = useState<string | undefined>(undefined);
+  const session = useSessionUser();
+  const customer = useCurrentCustomer();
 
   useEffect(() => {
     if (role !== "empresa") setRole("empresa");
   }, [role, setRole]);
 
+  // Guard: sin sesion no se entra al portal (la base igual protege los datos con RLS).
   useEffect(() => {
-    (async () => {
-      try {
-        const sb = requireSupabase();
-        const { data: { user } } = await sb.auth.getUser();
-        if (!user?.email) return;
-        setUserEmail(user.email);
-        const { data: cli } = await sb
-          .from("clientes")
-          .select("nombre, correo, nombre_fantasia")
-          .eq("correo", user.email)
-          .maybeSingle();
-        if (cli) {
-          setUserName(cli.nombre_fantasia || cli.nombre);
-        }
-      } catch {
-        // silencioso
-      }
-    })();
-  }, []);
+    if (session.status === "anonymous") navigate({ to: "/login", search: { register: undefined } });
+  }, [session.status, navigate]);
+
+  if (session.status !== "authenticated") return <RouteSkeleton />;
 
   return (
-    <PortalShell nav={nav} title="Portal Empresa" userName={userName} userEmail={userEmail}>
+    <PortalShell
+      nav={nav}
+      title="Portal Empresa"
+      userName={customer.data?.displayName}
+      userEmail={session.user?.email ?? undefined}
+    >
       <Outlet />
       <SupportBot />
     </PortalShell>
