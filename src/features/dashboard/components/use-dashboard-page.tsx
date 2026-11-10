@@ -1,4 +1,4 @@
-import { useMemo,useState } from "react";
+import { useEffect,useMemo,useState } from "react";
 import { toast } from "sonner";
 import { useSubaccounts } from "@/features/accounts/accounts.hooks";
 import { useCurrentCustomer } from "@/features/session/session.hooks";
@@ -47,17 +47,39 @@ export function useDashboardPage() {
   const subaccounts = useSubaccounts();
   const transactionsQuery = useDashboardTransactions(range);
   const movs = useMemo(() => transactionsQuery.data ?? [], [transactionsQuery.data]);
-  const cbuLabel = customer.data?.alias
-    ? `CVU ${customer.data.alias}`
-    : customer.data?.cbu
-      ? `CBU ${customer.data.cbu}`
-      : "";
+  const subs = useMemo(() => subaccounts.data ?? [], [subaccounts.data]);
+  // Los CVU se asignan en las subcuentas; la ficha del cliente queda de respaldo.
+  const withCvu = subs.filter((s) => s.cvu);
+  const cbuLabel =
+    withCvu.length > 1
+      ? `${withCvu.length} CVU asignadas`
+      : withCvu.length === 1
+        ? `CVU ${withCvu[0].cvu}`
+        : customer.data?.alias
+          ? `Alias ${customer.data.alias}`
+          : customer.data?.cbu
+            ? `CVU ${customer.data.cbu}`
+            : "";
   // Saldo total = disponible + retenido de todas las subcuentas (en centavos).
   const balanceTotal = useMemo(
-    () => sumMoney((subaccounts.data ?? []).flatMap((sub) => [sub.available, sub.held])),
-    [subaccounts.data],
+    () => sumMoney(subs.flatMap((sub) => [sub.available, sub.held])),
+    [subs],
   );
-  const accounts = (subaccounts.data?.length ?? 0) + 1;
+  const balanceHeld = useMemo(() => sumMoney(subs.map((sub) => sub.held)), [subs]);
+  const accounts = subs.length;
+  const accountsWithCvu = withCvu.length;
+
+  // Saldos y movimientos los mueve el backend: se releen cada 30 s mientras el panel esta abierto.
+  const { refetch: refetchSubs } = subaccounts;
+  const { refetch: refetchMovs } = transactionsQuery;
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void refetchSubs();
+      void refetchMovs();
+    }, 30_000);
+    return () => window.clearInterval(t);
+  }, [refetchSubs, refetchMovs]);
 
   const data = useMemo(() => dailySeries(movs, range), [movs, range]);
 
@@ -65,6 +87,8 @@ export function useDashboardPage() {
     const summary = summarize(movs);
     return {
       saldo: balanceTotal,
+      retenido: balanceHeld,
+      cuentasConCvu: accountsWithCvu,
       depositos: summary.deposits,
       opsDep: summary.depositCount,
       retiros: summary.withdrawals,
@@ -77,7 +101,7 @@ export function useDashboardPage() {
       pagosQR: summary.qrPayments,
       opsPagosQR: summary.qrPaymentCount,
     };
-  }, [movs, balanceTotal, accounts]);
+  }, [movs, balanceTotal, balanceHeld, accounts, accountsWithCvu]);
 
   const doExport = (fmt: "xlsx" | "pdf") => {
     const rows = movs.map((m) => ({

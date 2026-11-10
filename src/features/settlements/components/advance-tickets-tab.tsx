@@ -60,7 +60,7 @@ export function AdvanceTicketsTab({
                   <th className="text-right px-5 py-3">Tasa</th>
                   <th className="text-right px-5 py-3">Neto a recibir</th>
                   <th className="text-left px-5 py-3">Estado</th>
-                  <th className="text-right px-5 py-3">Pendiente de compensar</th>
+                  <th className="text-right px-5 py-3">Falta descontar</th>
                   <th className="text-center px-5 py-3">Acción</th>
                 </tr>
               </thead>

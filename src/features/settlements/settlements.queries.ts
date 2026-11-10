@@ -10,6 +10,7 @@ listChargebacks,
 listSaleDetail,
 listSalesByDay,
 loadBreakdown,
+loadSaleBreakdown,
 loadSettlementsOverview,
 } from "./settlements.supabase";
 
@@ -45,6 +46,12 @@ export const settlementQueries = {
       queryKey: key(s, "batches", from, to),
       queryFn: () => listBatchesByRange(from, to),
       staleTime: STALE.short,
+    }),
+  saleBreakdown: (s: Scope, idTxn: string) =>
+    queryOptions({
+      queryKey: key(s, "sale-breakdown", idTxn),
+      queryFn: () => loadSaleBreakdown(idTxn),
+      staleTime: STALE.moderate,
     }),
   breakdown: (s: Scope, batchId: string) =>
     queryOptions({

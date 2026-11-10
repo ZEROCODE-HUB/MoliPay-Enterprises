@@ -16,6 +16,8 @@ export function AdvanceRequestModal({
   operationsLoading,
   operationId,
   setOperationId,
+  advanceAmount,
+  setAdvanceAmount,
   reason,
   setReason,
   handleCreate,
@@ -29,6 +31,8 @@ export function AdvanceRequestModal({
   | "operationsLoading"
   | "operationId"
   | "setOperationId"
+  | "advanceAmount"
+  | "setAdvanceAmount"
   | "reason"
   | "setReason"
   | "handleCreate"
@@ -36,6 +40,7 @@ export function AdvanceRequestModal({
   if (!open) return null;
   const close = () => !saving && setOpen(false);
   const isEmpty = !operationsLoading && advanceOperations.length === 0;
+  const selected = advanceOperations.find((o) => o.transactionId === operationId) ?? null;
 
   return (
     <Modal open onClose={close} size="custom" className="max-w-lg">
@@ -70,9 +75,9 @@ export function AdvanceRequestModal({
                   <Clock size={14} /> Cómo sigue
                 </div>
                 <p className="text-muted-foreground">
-                  Cada adelanto corresponde a una sola operación. MoliPay evalúa tu pedido y te
-                  envía una oferta con la tasa y el neto a recibir. Se descuenta del lote donde se
-                  acredite esa operación.
+                  Cada adelanto corresponde a una operación: podés pedir todo o una parte, y el
+                  resto más adelante. MoliPay evalúa tu pedido y te envía una oferta con la tasa y
+                  el neto a recibir. Se descuenta del lote donde se acredite esa operación.
                 </p>
                 {cap && !cap.cumpleAntiguedad && (
                   <p className="text-red-700 font-semibold pt-1">
@@ -103,7 +108,10 @@ export function AdvanceRequestModal({
                           type="radio"
                           name="advance-operation"
                           checked={operationId === op.transactionId}
-                          onChange={() => setOperationId(op.transactionId)}
+                          onChange={() => {
+                            setOperationId(op.transactionId);
+                            setAdvanceAmount("");
+                          }}
                         />
                         <span className="min-w-0 flex-1">
                           <span className="block font-medium truncate">
@@ -115,20 +123,50 @@ export function AdvanceRequestModal({
                         </span>
                         <span className="text-right whitespace-nowrap">
                           <span className="block font-mono font-semibold">
-                            {formatARS(op.estimatedNet)}
+                            {formatARS(op.available)}
                           </span>
                           <span className="block text-muted-foreground">
-                            Venta {formatARS(op.amount)}
+                            Venta {formatARS(op.amount)} · neto {formatARS(op.estimatedNet)}
                           </span>
+                          {op.advanced > 0 && (
+                            <span className="block text-amber-700">
+                              Ya pediste {formatARS(op.advanced)}
+                            </span>
+                          )}
                         </span>
                       </label>
                     ))}
                   </div>
                 )}
                 <div className="text-[11px] text-muted-foreground mt-1">
-                  Podés adelantar hasta el neto estimado de la operación elegida.
+                  El neto ya descuenta Payway, la tasa MoliPay con IVA, el cierre de lote, Ingresos
+                  Brutos y Débitos y Créditos, igual que la liquidación del lote.
                 </div>
               </div>
+              {selected && (
+                <div>
+                  <Label>Monto a adelantar</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      inputMode="decimal"
+                      value={advanceAmount}
+                      onChange={(e) => setAdvanceAmount(e.target.value)}
+                      placeholder={`Hasta ${formatARS(selected.available)}`}
+                    />
+                    <BtnOutline
+                      type="button"
+                      onClick={() =>
+                        setAdvanceAmount(selected.available.toFixed(2).replace(".", ","))
+                      }
+                    >
+                      Todo
+                    </BtnOutline>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    Vacío = todo lo disponible ({formatARS(selected.available)}).
+                  </div>
+                </div>
+              )}
               <div>
                 <Label>Motivo (opcional)</Label>
                 <Input

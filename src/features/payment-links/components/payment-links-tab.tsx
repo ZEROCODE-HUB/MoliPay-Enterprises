@@ -1,6 +1,7 @@
+import { toResolvableLinkPaymentUrl } from "@/shared/lib/pay-url";
 import { formatARS } from "@/features/payment-links/payment-links.data";
 import { toast } from "sonner";
-import { Copy,Edit3,Eye,Trash2 } from "lucide-react";
+import { Copy, Edit3, Eye, Trash2 } from "lucide-react";
 import { BtnOutline } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
@@ -117,7 +118,7 @@ export function PaymentLinksTab({
                               <BtnOutline
                                 className="h-7 px-2 text-[11px]"
                                 onClick={() => {
-                                  navigator.clipboard.writeText(l.url);
+                                  navigator.clipboard.writeText(toResolvableLinkPaymentUrl(l.url));
                                   toast.success("Link copiado");
                                 }}
                               >

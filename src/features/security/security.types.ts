@@ -26,3 +26,13 @@ export type SecurityEvent = {
 export type SecurityEventCursor = { occurredAt: string; id: number };
 
 export type SecurityEventPage = { rows: SecurityEvent[]; nextCursor: SecurityEventCursor | null };
+
+/** Sesion de Supabase Auth del usuario logueado (RPC my_sessions). */
+export type AuthSession = {
+  id: string;
+  createdAt: string;
+  lastActiveAt: string;
+  ip: string | null;
+  userAgent: string | null;
+  current: boolean;
+};

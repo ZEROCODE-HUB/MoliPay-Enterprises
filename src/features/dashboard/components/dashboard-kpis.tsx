@@ -14,7 +14,14 @@ export function DashboardKpis({ kpis, cbuLabel }: Pick<DashboardPageVm, "kpis" |
             <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">
               {formatMoneyAmount(kpis.saldo)}
             </div>
-            <div className="text-xs text-black-400 mt-0.5">{cbuLabel || "Sin CVU asignada"}</div>
+            <div className="text-xs text-black-400 mt-0.5 font-mono">
+              {cbuLabel || "Sin CVU asignada"}
+            </div>
+            {kpis.retenido.cents > 0 && (
+              <div className="text-xs text-black-400 mt-0.5">
+                {formatMoneyAmount(kpis.retenido)} retenido
+              </div>
+            )}
           </div>
           <div className="w-9 h-9 rounded-sm bg-navy-50 flex items-center justify-center text-navy-500 shrink-0">
             <Wallet size={18} />
@@ -57,7 +64,7 @@ export function DashboardKpis({ kpis, cbuLabel }: Pick<DashboardPageVm, "kpis" |
               {kpis.cuentas}
             </div>
             <div className="text-xs text-black-400 mt-0.5">
-              1 principal + {kpis.cuentas - 1} subcuentas
+              {kpis.cuentasConCvu} con CVU asignada
             </div>
           </div>
           <div className="w-9 h-9 rounded-sm bg-info-bg flex items-center justify-center text-info shrink-0">

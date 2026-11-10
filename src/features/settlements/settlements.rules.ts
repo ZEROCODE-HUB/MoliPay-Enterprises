@@ -6,8 +6,8 @@ export const STATUS_TICKET_LABEL: Record<TicketStatus, string> = {
   aceptado: "Aceptado",
   cancelado: "Cancelado",
   rechazado: "Rechazado",
-  acreditado: "Acreditado",
-  compensado: "Compensado",
+  acreditado: "Depositado",
+  compensado: "Descontado",
 };
 export const STATUS_TICKET_TONE: Record<TicketStatus, "neutral" | "success" | "warn" | "danger"> = {
   pendiente: "warn",

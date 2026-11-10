@@ -99,14 +99,6 @@ export function BreakdownBatchModal({
   const q = useBatchBreakdown(batchId);
   if (!batchId) return null;
   const a = q.data;
-  const row = (label: string, v: number, fuerte = false) => (
-    <div className={`flex justify-between ${fuerte ? "font-semibold border-t pt-1.5 mt-1" : ""}`}>
-      <span className={fuerte ? "" : "text-muted-foreground"}>{label}</span>
-      <span className={`font-mono tabular-nums ${v < 0 ? "text-red-600" : ""}`}>
-        {v < 0 ? `- ${formatARS(-v)}` : formatARS(v)}
-      </span>
-    </div>
-  );
   return (
     <Modal open onClose={onClose} size="custom" className="max-w-2xl">
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -143,60 +135,7 @@ export function BreakdownBatchModal({
                   </span>
                 )}
               </div>
-              {a.origen === "archivo" ? (
-                <div className="rounded-md border p-3 space-y-1">
-                  {row("Importe bruto", Number(a.bruto))}
-                  {row(
-                    "Impuestos (referencia, informados por Payway)",
-                    -Number(a.impuestos_payway ?? 0),
-                  )}
-                  {row("Menos impuestos", Number(a.bruto) - Number(a.impuestos_payway ?? 0))}
-                  {row(
-                    `Tasa de interés PayWay (${Number(a.bruto) > 0 ? Math.round((Number(a.costo_servicio_payway ?? 0) / Number(a.bruto)) * 10000) / 100 : 0}%)`,
-                    -Number(a.costo_servicio_payway ?? 0),
-                  )}
-                  {row(`Tasa de interés MoliPay (${a.tasa_pct}%)`, -Number(a.tasa_monto ?? 0))}
-                  {Number(a.iva_tasa_monto ?? 0) > 0 &&
-                    row("IVA sobre la tasa MoliPay", -Number(a.iva_tasa_monto ?? 0))}
-                  {row(
-                    `Comisión cierre de lote (${a.cierre_pct ?? 0}%)`,
-                    -Number(a.cierre_monto ?? 0),
-                  )}
-                  {(a.impuestos ?? [])
-                    .filter((i) => Number(i.monto) > 0)
-                    .map((i) => (
-                      <div key={i.asignacion_id}>
-                        {row(
-                          `${i.nombre} (${i.codigo}${i.alicuota != null ? ` · ${i.alicuota}%` : ""})`,
-                          -Number(i.monto),
-                        )}
-                      </div>
-                    ))}
-                  {Number(a.retencion_contracargos ?? 0) > 0 &&
-                    row(
-                      "Contracargo retenido (se libera si ganás la disputa)",
-                      -Number(a.retencion_contracargos),
-                    )}
-                  {Number(a.compensacion_adelantos) > 0 &&
-                    row("Compensación de adelantos", -Number(a.compensacion_adelantos))}
-                  {Number(a.recuperacion_deuda) > 0 &&
-                    row("Recuperación de deuda (contracargos)", -Number(a.recuperacion_deuda))}
-                  {row(
-                    a.estado === "Acreditado" ? "Importe acreditado" : "Importe final a acreditar",
-                    Number(a.neto),
-                    true,
-                  )}
-                </div>
-              ) : (
-                <div className="rounded-md border p-3 space-y-1">
-                  {row("Bruto vendido", Number(a.bruto))}
-                  {row("Neto estimado", Number(a.neto), true)}
-                  <p className="text-[11px] text-muted-foreground pt-1">
-                    Payway todavía no liquidó estas ventas: el neto definitivo se conoce cuando
-                    llega la liquidación.
-                  </p>
-                </div>
-              )}
+              <BreakdownLines a={a} />
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
                   Ventas incluidas ({a.ventas.length})
@@ -250,5 +189,97 @@ export function BreakdownBatchModal({
         </div>
       </div>
     </Modal>
+  );
+}
+
+/** Como se formo el neto del lote: bruto, cada descuento y lo acreditado. */
+export function BreakdownLines({ a }: { a: BreakdownBatch }) {
+  const row = (label: string, v: number, fuerte = false) => (
+    <div className={`flex justify-between ${fuerte ? "font-semibold border-t pt-1.5 mt-1" : ""}`}>
+      <span className={fuerte ? "" : "text-muted-foreground"}>{label}</span>
+      <span className={`font-mono tabular-nums ${v < 0 ? "text-red-600" : ""}`}>
+        {v < 0 ? `- ${formatARS(-v)}` : formatARS(v)}
+      </span>
+    </div>
+  );
+  return (
+    <>
+    {a.origen === "archivo" ? (
+      <div className="rounded-md border p-3 space-y-1">
+        {row("Importe bruto", Number(a.bruto))}
+        {row(
+          "Impuestos (referencia, informados por Payway)",
+          -Number(a.impuestos_payway ?? 0),
+        )}
+        {row("Menos impuestos", Number(a.bruto) - Number(a.impuestos_payway ?? 0))}
+        {row(
+          `Tasa de interés PayWay (${Number(a.bruto) > 0 ? Math.round((Number(a.costo_servicio_payway ?? 0) / Number(a.bruto)) * 10000) / 100 : 0}%)`,
+          -Number(a.costo_servicio_payway ?? 0),
+        )}
+        {row(`Tasa de interés MoliPay (${a.tasa_pct}%)`, -Number(a.tasa_monto ?? 0))}
+        {Number(a.iva_tasa_monto ?? 0) > 0 &&
+          row("IVA sobre la tasa MoliPay", -Number(a.iva_tasa_monto ?? 0))}
+        {row(
+          `Comisión cierre de lote (${a.cierre_pct ?? 0}%)`,
+          -Number(a.cierre_monto ?? 0),
+        )}
+        {(a.impuestos ?? [])
+          .filter((i) => Number(i.monto) > 0)
+          .map((i) => (
+            <div key={i.asignacion_id}>
+              {row(
+                `${i.nombre} (${i.codigo}${i.alicuota != null ? ` · ${i.alicuota}%` : ""})`,
+                -Number(i.monto),
+              )}
+            </div>
+          ))}
+        {Number(a.retencion_contracargos ?? 0) > 0 &&
+          row(
+            "Contracargo retenido (se libera si ganás la disputa)",
+            -Number(a.retencion_contracargos),
+          )}
+        {Number(a.compensacion_adelantos) > 0 &&
+          row("Compensación de adelantos", -Number(a.compensacion_adelantos))}
+        {Number(a.recuperacion_deuda) > 0 &&
+          row("Recuperación de deuda (contracargos)", -Number(a.recuperacion_deuda))}
+        {row(
+          a.estado === "Acreditado" ? "Importe acreditado" : "Importe final a acreditar",
+          Number(a.neto),
+          true,
+        )}
+      </div>
+    ) : (
+      <div className="rounded-md border p-3 space-y-1">
+        {row("Bruto vendido", Number(a.bruto))}
+        {row("Neto estimado", Number(a.neto), true)}
+        <p className="text-[11px] text-muted-foreground pt-1">
+          Payway todavía no liquidó estas ventas: el neto definitivo se conoce cuando
+          llega la liquidación.
+        </p>
+      </div>
+    )}
+    </>
+  );
+}
+
+/** Desglose del lote de una acreditacion (movimiento `ACR-<lote>`), para el historial. */
+export function CreditBreakdown({ txid }: { txid: string }) {
+  const batchId = txid.startsWith("ACR-") ? txid.slice(4) : null;
+  const q = useBatchBreakdown(batchId);
+  if (!batchId) return null;
+  if (q.isLoading) return <p className="text-sm text-muted-foreground">Cargando desglose…</p>;
+  if (q.isError || !q.data)
+    return <p className="text-sm text-red-700">No se pudo cargar el desglose del lote.</p>;
+  const a = q.data;
+  return (
+    <div className="space-y-2 text-sm">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Detalle de la liquidación · {a.codigo} · {a.bandera}
+      </div>
+      <BreakdownLines a={a} />
+      <p className="text-[11px] text-muted-foreground">
+        {a.ventas.length} venta{a.ventas.length === 1 ? "" : "s"} del {fmtDateFull(a.fecha)}
+      </p>
+    </div>
   );
 }

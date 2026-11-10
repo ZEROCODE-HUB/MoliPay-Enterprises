@@ -4,6 +4,7 @@ import { toAppError } from "@/infrastructure/supabase/errors";
 import { parseEnum } from "@/shared/lib/enum";
 import {
   SECURITY_EVENT_OUTCOMES,
+  type AuthSession,
   type SecurityEvent,
   type SecurityEventCursor,
   type SecurityEventPage,
@@ -119,3 +120,32 @@ export const previewTeamInvite = (token: string) =>
 
 export const acceptTeamInvite = (token: string, password: string) =>
   invokeEdgeFunction("equipo-aceptar", { token, password }, teamContext("accept_invite"));
+
+// --- Sesiones activas: auth.sessions via RPC, solo las del usuario -------------------
+
+export async function listMySessions(): Promise<AuthSession[]> {
+  const { data, error } = await requireSupabase().rpc("my_sessions");
+  if (error) throw toAppError(error, { feature: "security", operation: "my_sessions" });
+  return (
+    (data ?? []) as {
+      id: string;
+      created_at: string;
+      last_active_at: string;
+      ip: string | null;
+      user_agent: string | null;
+      is_current: boolean | null;
+    }[]
+  ).map((r) => ({
+    id: r.id,
+    createdAt: r.created_at,
+    lastActiveAt: r.last_active_at,
+    ip: r.ip,
+    userAgent: r.user_agent,
+    current: !!r.is_current,
+  }));
+}
+
+export async function revokeMySession(sessionId: string) {
+  const { error } = await requireSupabase().rpc("my_session_revoke", { p_session: sessionId });
+  if (error) throw toAppError(error, { feature: "security", operation: "my_session_revoke" });
+}

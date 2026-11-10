@@ -28,6 +28,17 @@ export function describeUserAgent(ua: string | null): string | null {
   return [browser, os].filter(Boolean).join(" · ") || null;
 }
 
+/** Ultima actividad de una sesion en palabras ("Hace 2 horas"). */
+export function lastSeenLabel(iso: string, now = Date.now()): string {
+  const minutes = Math.floor((now - new Date(iso).getTime()) / 60_000);
+  if (minutes < 5) return "Activa ahora";
+  if (minutes < 60) return `Hace ${minutes} minutos`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return hours === 1 ? "Hace 1 hora" : `Hace ${hours} horas`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "Hace 1 día" : `Hace ${days} días`;
+}
+
 export const TEAM_ROLES = [
   {
     value: "admin",

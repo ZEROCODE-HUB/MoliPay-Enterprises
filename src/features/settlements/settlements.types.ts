@@ -37,7 +37,12 @@ export type AdvanceableOperation = {
   reference: string;
   brand: string;
   amount: number;
+  /** Neto de la venta en su lote (con Payway, tasa, IVA, cierre, IIBB y DyC). */
   estimatedNet: number;
+  /** Ya pedido o adelantado de esta operacion. */
+  advanced: number;
+  /** Lo que queda por adelantar: neto - adelantado. */
+  available: number;
   batchDate: string;
 };
 
@@ -264,4 +269,31 @@ export type SettlementsOverview = {
   fees: FeeBrand[];
   taxes: Tax[];
   exceptions: Excepcion[];
+};
+
+/** Desglose de una venta dentro de su lote (RPC venta_desglose). */
+export type SaleBreakdown = {
+  estado: string;
+  monto: number;
+  lote?: {
+    id: string;
+    codigo: string;
+    bandera: string;
+    fecha: string;
+    fecha_acreditacion: string | null;
+    bruto: number;
+    ventas: number;
+  };
+  lineas?: {
+    concepto: string;
+    clase: "payway" | "molipay" | "impuesto" | "iibb" | "dyc";
+    monto: number;
+    total_lote: number;
+  }[];
+  descuentos?: number;
+  contracargo_retenido?: number;
+  adelanto_compensado?: number;
+  neto?: number;
+  otros_del_lote?: number;
+  contracargo: { estado: string; tipo: string | null; importe: number } | null;
 };

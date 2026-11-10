@@ -45,7 +45,7 @@ export function SettlementsPage() {
   return (
     <>
       <PageHeader
-        title="SettlementsPage"
+        title="Liquidaciones"
         description="Cuánta plata te falta cobrar, cuánto tenés por acreditar y calendario de acreditaciones. Solicitá el adelanto ahí mismo."
         action={
           <div className="flex gap-2">

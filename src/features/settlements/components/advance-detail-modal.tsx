@@ -101,7 +101,7 @@ export function AdvanceDetailModal({
                   </div>
                   <div className="flex justify-between border-t border-emerald-200 pt-1">
                     <span className="text-muted-foreground font-semibold">
-                      Pendiente de compensar
+                      Falta descontar
                     </span>
                     <span className="font-mono font-bold">
                       {formatARS(pendingCompensar(detail))}
@@ -223,7 +223,7 @@ export function AdvanceDetailModal({
                             "Neto acreditado": detail.netoARecibir ?? 0,
                             Acreditado: fmtDateFull(detail.fechaAcreditacion),
                             Compensado: detail.compensado ?? 0,
-                            "Pendiente de compensar": pendingCompensar(detail),
+                            "Falta descontar": pendingCompensar(detail),
                           },
                         ],
                         { sheetName: "Adelanto" },

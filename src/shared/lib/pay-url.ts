@@ -20,8 +20,13 @@ const trimSlash = (s: string) => s.replace(/\/+$/, "");
  */
 export const PAY_APP_ORIGIN = "https://molly-pay-enterprises.vercel.app";
 
-/** Origen con el que se construyen las URLs de pago. */
-export const APP_ORIGIN: string = PAY_APP_ORIGIN;
+/**
+ * Origen con el que se construyen las URLs de pago. En desarrollo (vite dev)
+ * es el del navegador, asi el link copiado abre el checkout local
+ * (http://localhost:8080/p/CODE); en el build de produccion, el deploy.
+ */
+export const APP_ORIGIN: string =
+  import.meta.env.DEV && typeof window !== "undefined" ? window.location.origin : PAY_APP_ORIGIN;
 
 /**
  * URL canónica de branding de MoliPay (subdominio pay). Solo marketing, no resuelve.

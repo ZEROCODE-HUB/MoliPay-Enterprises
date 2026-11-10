@@ -54,7 +54,7 @@ export function SettlementsKpis({
       </Card>
       <Card className="border-l-4 border-l-amber-600">
         <div className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-          <Percent size={12} /> Adelanto a compensar
+          <Percent size={12} /> Adelanto a descontar
         </div>
         <div className="font-display tabular-nums text-xl md:text-2xl font-bold mt-1 text-amber-700">
           {summaryQ.isLoading ? "—" : formatARS(res?.adelanto_pendiente_compensar ?? 0)}
@@ -64,6 +64,11 @@ export function SettlementsKpis({
             ? `Deuda por contracargos: ${formatARS(res!.deuda_contracargos)}`
             : `Disponible para adelanto: ${formatARS(available)}`}
         </div>
+        {(res?.adelanto_pendiente_compensar ?? 0) > 0 && (
+          <div className="text-[11px] text-muted-foreground mt-0.5">
+            Ya lo recibiste: se descuenta de la acreditación del lote de esa venta.
+          </div>
+        )}
       </Card>
     </div>
   );

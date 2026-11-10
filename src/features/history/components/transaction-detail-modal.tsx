@@ -14,6 +14,8 @@ type ReceiptOwner,
 } from "../history.rules";
 import type { Party,TransactionDetail } from "../history.types";
 import { downloadReceipt,shareReceipt } from "./receipt-actions";
+import { CreditBreakdown } from "@/features/settlements/components/batch-breakdown-modal";
+import { SaleBreakdown } from "@/features/settlements/components/sale-breakdown";
 
 const formatDateTime = (iso: string) => {
   const d = new Date(iso);
@@ -138,6 +140,17 @@ export function TransactionDetailModal({
           <div className="mb-1 text-xs text-muted-foreground">TXID</div>
           <div className="break-all font-mono text-sm font-medium">{detail.txid}</div>
         </div>
+
+        {detail.kind === "acreditacion_lote" && (
+          <div className="border-b pb-5">
+            <CreditBreakdown txid={detail.txid} />
+          </div>
+        )}
+        {detail.kind === "tarjeta" && (
+          <div className="border-b pb-5">
+            <SaleBreakdown txid={detail.txid} />
+          </div>
+        )}
 
         <PartyBlock title="Desde" dot="bg-emerald-500" party={detail.from} />
         <PartyBlock title="Hacia" dot="bg-blue-500" party={detail.to} showBank />

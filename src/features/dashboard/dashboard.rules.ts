@@ -18,12 +18,15 @@ const byKind = (transactions: DashboardTransaction[], kind: string) =>
 const total = (transactions: DashboardTransaction[], kind: string) =>
   sumMoney(byKind(transactions, kind).map((t) => t.amount));
 
+/** Salidas de plata: retiros y transferencias enviadas. */
+const isWithdrawal = (t: DashboardTransaction) => t.kind === "retiro" || t.kind === "transferencia";
+
 export function summarize(transactions: DashboardTransaction[]): DashboardSummary {
   return {
     deposits: total(transactions, "deposito"),
     depositCount: byKind(transactions, "deposito").length,
-    withdrawals: total(transactions, "retiro"),
-    withdrawalCount: byKind(transactions, "retiro").length,
+    withdrawals: sumMoney(transactions.filter(isWithdrawal).map((t) => t.amount)),
+    withdrawalCount: transactions.filter(isWithdrawal).length,
     cardCollections: total(transactions, "tarjeta"),
     cardCollectionCount: byKind(transactions, "tarjeta").length,
     qrCollections: total(transactions, "cobro_pct"),
@@ -33,7 +36,9 @@ export function summarize(transactions: DashboardTransaction[]): DashboardSummar
   };
 }
 
-const dayKey = (d: Date) => d.toISOString().slice(0, 10);
+// Dia local (no UTC): una venta de las 22 h en Argentina es de ese dia, no del siguiente.
+const dayKey = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const dayLabel = (d: Date) =>
   `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
 
@@ -57,7 +62,7 @@ export function dailySeries(transactions: DashboardTransaction[], range: DateRan
   for (const d of eachDay(range.start, range.end))
     cents.set(dayKey(d), { label: dayLabel(d), deposits: 0, qr: 0, card: 0 });
   for (const t of transactions) {
-    const bucket = cents.get(t.occurredAt.slice(0, 10));
+    const bucket = t.occurredAt ? cents.get(dayKey(new Date(t.occurredAt))) : undefined;
     if (!bucket) continue;
     if (t.kind === "deposito") bucket.deposits += t.amount.cents;
     else if (t.kind === "cobro_pct") bucket.qr += t.amount.cents;

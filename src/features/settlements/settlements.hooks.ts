@@ -63,6 +63,14 @@ export function useBatchesByRange(from: string | null, to: string | null) {
   });
 }
 
+export function useSaleBreakdown(idTxn: string | null | undefined) {
+  const { scope, ready } = useScope();
+  return useQuery({
+    ...settlementQueries.saleBreakdown(scope, idTxn ?? ""),
+    enabled: ready && !!idTxn,
+  });
+}
+
 export function useBatchBreakdown(batchId: string | null | undefined) {
   const { scope, ready } = useScope();
   return useQuery({

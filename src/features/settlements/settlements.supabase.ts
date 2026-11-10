@@ -1,27 +1,35 @@
+import { toDecimalString, type Money } from "@/shared/lib/money";
 import { requireSupabase } from "@/infrastructure/supabase/client";
 import { toAppError } from "@/infrastructure/supabase/errors";
 import { callRpc } from "@/infrastructure/supabase/rpc";
 import { fmtDate } from "./settlements.rules";
 import type {
-AdvanceableOperation,
-BatchAcredDetail,
-BatchCompany,
-BatchSale,
-BreakdownBatch,
-CapAdvance,
-ChargebackCompany,
-DayCalV3,
-DayCredit,
-Excepcion,
-FeeBrand,
-SaleDayCompany,
-SaleDetailCompany,
-SettlementsOverview,
-SettlementsSummary,
-Tax,
-Ticket,
-TicketStatus,
+  SaleBreakdown,
+  AdvanceableOperation,
+  BatchAcredDetail,
+  BatchCompany,
+  BatchSale,
+  BreakdownBatch,
+  CapAdvance,
+  ChargebackCompany,
+  DayCalV3,
+  DayCredit,
+  Excepcion,
+  FeeBrand,
+  SaleDayCompany,
+  SaleDetailCompany,
+  SettlementsOverview,
+  SettlementsSummary,
+  Tax,
+  Ticket,
+  TicketStatus,
 } from "./settlements.types";
+
+export async function loadSaleBreakdown(idTxn: string): Promise<SaleBreakdown | null> {
+  const { data, error } = await requireSupabase().rpc("venta_desglose", { p_id_txn: idTxn });
+  if (error) throw toAppError(error);
+  return (data as SaleBreakdown | null) ?? null;
+}
 
 export async function loadBreakdown(batchId: string): Promise<BreakdownBatch> {
   const sb = requireSupabase();
@@ -374,6 +382,8 @@ type AdvanceableOperationRow = {
   bandera: string;
   monto_operacion: number | string;
   neto_estimado: number | string;
+  ya_adelantado?: number | string | null;
+  disponible?: number | string | null;
   fecha_lote: string;
 };
 
@@ -389,17 +399,27 @@ export async function listAdvanceableOperations(): Promise<AdvanceableOperation[
     brand: r.bandera,
     amount: Number(r.monto_operacion),
     estimatedNet: Number(r.neto_estimado),
+    advanced: Number(r.ya_adelantado ?? 0),
+    available: Number(r.disponible ?? r.neto_estimado),
     batchDate: r.fecha_lote,
   }));
 }
 
-/** El monto lo calcula el servidor a partir de la operacion. */
-export function requestAdvance(input: { transactionId: string; reason: string | null }) {
-  return callRpc<{ adelanto_id?: string } | null>(
+/**
+ * Pide un adelanto de una operacion. `amount` en null = todo lo disponible.
+ * El servidor valida el monto contra el neto de la operacion y el tope.
+ */
+export function requestAdvance(input: {
+  transactionId: string;
+  reason: string | null;
+  amount: Money | null;
+}) {
+  return callRpc<{ adelanto_id?: string; monto_solicitado?: number } | null>(
     "adelanto_solicitar",
     {
       p_transaction_id: input.transactionId,
       p_motivo: input.reason,
+      p_monto: input.amount ? toDecimalString(input.amount) : null,
     },
     { context: { feature: "settlements", operation: "advance_request" } },
   );

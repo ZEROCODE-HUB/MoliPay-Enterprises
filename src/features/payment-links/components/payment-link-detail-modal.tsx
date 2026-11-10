@@ -1,7 +1,8 @@
+import { toResolvableLinkPaymentUrl } from "@/shared/lib/pay-url";
 import { Modal } from "@/shared/ui/modal";
 import { formatARS } from "@/features/payment-links/payment-links.data";
 import { toast } from "sonner";
-import { Copy,Edit3,Share2,X } from "lucide-react";
+import { Copy, Edit3, Share2, X } from "lucide-react";
 import { BtnOutline } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
 import { linkDisplayStatus } from "@/features/payment-links/products.rules";
@@ -45,13 +46,13 @@ export function PaymentLinkDetailModal({
             </div>
             <div className="p-6 space-y-4">
               <div className="font-mono text-sm break-all p-3 bg-muted rounded">
-                {detailLink.url}
+                {toResolvableLinkPaymentUrl(detailLink.url)}
               </div>
               <div className="flex gap-2">
                 <BtnOutline
                   className="flex-1 text-xs"
                   onClick={() => {
-                    navigator.clipboard.writeText(detailLink.url);
+                    navigator.clipboard.writeText(toResolvableLinkPaymentUrl(detailLink.url));
                     toast.success("Link copiado");
                   }}
                 >
@@ -69,9 +70,12 @@ export function PaymentLinkDetailModal({
                 <BtnOutline
                   className="flex-1 text-xs"
                   onClick={() => {
-                    if (navigator.share) navigator.share({ url: detailLink.url }).catch(() => {});
+                    if (navigator.share)
+                      navigator
+                        .share({ url: toResolvableLinkPaymentUrl(detailLink.url) })
+                        .catch(() => {});
                     else {
-                      navigator.clipboard.writeText(detailLink.url);
+                      navigator.clipboard.writeText(toResolvableLinkPaymentUrl(detailLink.url));
                       toast.success("Link copiado");
                     }
                   }}

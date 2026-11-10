@@ -1,10 +1,11 @@
+import { parseMoneyInput } from "@/shared/lib/money";
 import { useConfirm } from "@/shared/ui/confirm-provider";
 import { userMessage } from "@/shared/lib/errors";
 import {
-useAdvanceActions,
-useAdvanceableOperations,
-useSettlementsOverview,
-useSettlementsSummary,
+  useAdvanceActions,
+  useAdvanceableOperations,
+  useSettlementsOverview,
+  useSettlementsSummary,
 } from "../settlements.hooks";
 import jsPDF from "jspdf";
 import { useState } from "react";
@@ -13,14 +14,11 @@ import { downloadXlsx } from "@/shared/lib/download";
 import { formatARS } from "@/features/collections/collections.data";
 import "jspdf-autotable";
 import {
-type TabSection,
-type Ticket,
-type TicketStatus,
+  type TabSection,
+  type Ticket,
+  type TicketStatus,
 } from "@/features/settlements/settlements.types";
-import {
-STATUS_TICKET_LABEL,
-fmtDateFull,
-} from "@/features/settlements/settlements.rules";
+import { STATUS_TICKET_LABEL, fmtDateFull } from "@/features/settlements/settlements.rules";
 
 /** Estado y acciones de SettlementsPage: el componente solo dibuja. */
 export function useSettlementsPage() {
@@ -52,6 +50,8 @@ export function useSettlementsPage() {
   const [open, setOpen] = useState(false);
   const [operationId, setOperationId] = useState("");
   const [reason, setReason] = useState("");
+  /** Monto a adelantar; vacio = todo lo disponible de la operacion. */
+  const [advanceAmount, setAdvanceAmount] = useState("");
   const [saving, setSaving] = useState(false);
   const [detail, setDetail] = useState<Ticket | null>(null);
   const [aceptoOferta, setAceptoOferta] = useState(false);
@@ -71,12 +71,14 @@ export function useSettlementsPage() {
     setSelectedDate(date);
     setOperationId("");
     setReason("");
+    setAdvanceAmount("");
     setOpen(true);
   };
   const openGeneral = () => {
     setSelectedDate(null);
     setOperationId("");
     setReason("");
+    setAdvanceAmount("");
     setOpen(true);
   };
 
@@ -91,12 +93,23 @@ export function useSettlementsPage() {
       );
       return;
     }
+    const op = (advanceOperationsQuery.data ?? []).find((o) => o.transactionId === operationId);
+    const amount = advanceAmount.trim() ? parseMoneyInput(advanceAmount) : null;
+    if (advanceAmount.trim() && (!amount || amount.cents <= 0)) {
+      toast.error("Ingresá un monto válido");
+      return;
+    }
+    if (amount && op && amount.cents > Math.round(op.available * 100)) {
+      toast.error(`Podés adelantar hasta ${formatARS(op.available)} de esta operación`);
+      return;
+    }
     setSaving(true);
     try {
-      // El servidor valida la operacion, la antiguedad y el tope, y calcula el monto.
+      // El servidor valida la operacion, la antiguedad, el monto y el tope.
       const row = await advanceActions.request({
         transactionId: operationId,
         reason: reason || null,
+        amount,
       });
       setOpen(false);
       toast.success(
@@ -174,7 +187,7 @@ export function useSettlementsPage() {
           Estado: STATUS_TICKET_LABEL[t.estado],
         })),
       ],
-      { sheetName: "SettlementsPage" },
+      { sheetName: "Liquidaciones" },
     );
     toast.success("Excel descargado");
   };
@@ -258,6 +271,8 @@ export function useSettlementsPage() {
     operationsLoading: advanceOperationsQuery.isPending,
     operationId,
     setOperationId,
+    advanceAmount,
+    setAdvanceAmount,
     reason,
     setReason,
     saving,
