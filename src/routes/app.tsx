@@ -1,27 +1,31 @@
-import { createFileRoute,Outlet,useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import {
-LayoutDashboard,
-ArrowLeftRight,
-Wallet,
-Link2,
-Receipt,
-Upload,
-History,
-UserCog,
-Shield,
-Package,
-Store,
-List,
-ShoppingCart,
-Code2,
-Landmark,
+  LayoutDashboard,
+  ArrowLeftRight,
+  Wallet,
+  Link2,
+  Receipt,
+  Upload,
+  History,
+  UserCog,
+  Shield,
+  Package,
+  Store,
+  List,
+  ShoppingCart,
+  Code2,
+  Landmark,
 } from "lucide-react";
-import { PortalShell,type NavItem } from "@/app/portal-shell";
+import { PortalShell, type NavItem } from "@/app/portal-shell";
 import { SupportBot } from "@/app/support-bot";
 import { useDemoMode } from "@/app/demo-mode";
 import { RouteSkeleton } from "@/shared/ui/route-skeleton";
-import { useCurrentCustomer,useSessionUser } from "@/features/session/session.hooks";
+import { useCurrentCustomer, useSessionUser, useSignOut } from "@/features/session/session.hooks";
+import { useMfaState } from "@/features/auth/auth.hooks";
+import { MfaChallenge } from "@/features/auth/components/mfa-challenge";
+import { NewSessionBanner } from "@/features/security/components/new-session-banner";
+import { AuthShell, PrimaryButton, SuccessCard } from "@/shared/ui/auth-kit";
 
 export const Route = createFileRoute("/app")({
   component: AppLayout,
@@ -63,6 +67,10 @@ function AppLayout() {
   const navigate = useNavigate();
   const session = useSessionUser();
   const customer = useCurrentCustomer();
+  const mfa = useMfaState();
+  const signOut = useSignOut();
+  const leave = () =>
+    void signOut().finally(() => navigate({ to: "/login", search: { register: undefined } }));
 
   useEffect(() => {
     if (role !== "empresa") setRole("empresa");
@@ -73,7 +81,27 @@ function AppLayout() {
     if (session.status === "anonymous") navigate({ to: "/login", search: { register: undefined } });
   }, [session.status, navigate]);
 
-  if (session.status !== "authenticated") return <RouteSkeleton />;
+  if (session.status !== "authenticated" || mfa.isPending) return <RouteSkeleton />;
+
+  // Con 2FA activo no se entra con la clave sola: falla cerrado si no se puede verificar.
+  if (mfa.isError)
+    return (
+      <AuthShell leftEyebrow="Seguridad" leftTitle="Verificamos tu sesión.">
+        <SuccessCard
+          variant="error"
+          title="No pudimos verificar la seguridad de tu sesión"
+          body="Revisá tu conexión e intentá de nuevo."
+        >
+          <PrimaryButton onClick={() => void mfa.refetch()}>Reintentar</PrimaryButton>
+        </SuccessCard>
+      </AuthShell>
+    );
+  if (mfa.data.challengeRequired)
+    return (
+      <AuthShell leftEyebrow="Seguridad" leftTitle="Tu cuenta tiene verificación en dos pasos.">
+        <MfaChallenge onVerified={() => undefined} onCancel={leave} />
+      </AuthShell>
+    );
 
   return (
     <PortalShell
@@ -82,6 +110,7 @@ function AppLayout() {
       userName={customer.data?.displayName}
       userEmail={session.user?.email ?? undefined}
     >
+      <NewSessionBanner />
       <Outlet />
       <SupportBot />
     </PortalShell>

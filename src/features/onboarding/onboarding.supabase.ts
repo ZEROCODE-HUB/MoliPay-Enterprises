@@ -18,6 +18,8 @@ import {
   type OnboardingStatus,
   type OnboardingSubmission,
   type Registration,
+  type EconomicActivity,
+  type Locality,
 } from "./onboarding.types";
 
 /*
@@ -245,6 +247,8 @@ export async function listCompanyMembers(): Promise<CompanyMember[]> {
     roleLabel: memberRoleLabel(r.role),
     reviewState: r.review_state,
     name: nameOf(r),
+    taxId: String(r.declared.tax_id ?? "").replace(/\D/g, ""),
+    position: r.declared.position ? String(r.declared.position) : null,
   }));
 }
 
@@ -309,6 +313,63 @@ export const declareBeneficialOwner = (
 export const endCompanyMember = (id: string) => rpc("company_member_end", { p_member: id });
 export const endBeneficialOwner = (id: string) => rpc("beneficial_owner_end", { p_owner: id });
 export const submitApplication = () => rpc<string>("application_submit");
+
+type LocalityRow = {
+  province_code: string;
+  name: string;
+  department: string | null;
+  postal_code: string | null;
+};
+const toLocality = (r: LocalityRow): Locality => ({
+  provinceCode: r.province_code.trim(),
+  name: r.name,
+  department: r.department,
+  postalCode: r.postal_code?.trim() ?? null,
+});
+
+/** Localidades de una provincia (codigo ISO de ar_provinces). */
+export async function listLocalities(provinceCode: string): Promise<Locality[]> {
+  const { data, error } = await requireSupabase()
+    .from("ar_localities")
+    .select("province_code, name, department, postal_code")
+    .eq("province_code", provinceCode)
+    .order("name");
+  if (error) throw toAppError(error, context("localities").context);
+  return ((data ?? []) as LocalityRow[]).map(toLocality);
+}
+
+/** Localidades de un codigo postal de 4 digitos (puede haber varias). */
+export async function listLocalitiesByPostalCode(postalCode: string): Promise<Locality[]> {
+  const { data, error } = await requireSupabase()
+    .from("ar_localities")
+    .select("province_code, name, department, postal_code")
+    .eq("postal_code", postalCode)
+    .order("name");
+  if (error) throw toAppError(error, context("localities_by_postal_code").context);
+  return ((data ?? []) as LocalityRow[]).map(toLocality);
+}
+
+/** Catalogo CLAE para elegir la actividad de la empresa. */
+export async function listEconomicActivities(): Promise<EconomicActivity[]> {
+  const { data, error } = await requireSupabase()
+    .from("economic_activities")
+    .select("code, description, sector")
+    .order("sector")
+    .order("description");
+  if (error) throw toAppError(error, context("economic_activities").context);
+  return ((data ?? []) as { code: string; description: string; sector: string }[]).map((r) => ({
+    code: r.code.trim(),
+    description: r.description,
+    sector: r.sector,
+  }));
+}
+
+/**
+ * Si el CUIT ya pertenece a otra cuenta. Se consulta al escribirlo, para no
+ * enterarse recien al enviar el alta. La base vuelve a controlarlo al registrar.
+ */
+export const isCuitAvailable = (cuit: string) =>
+  rpc<boolean>("cuit_available", { p_cuit: cuit.replace(/\D/g, "") });
 
 export async function uploadOnboardingDocument(input: {
   tipo: string;

@@ -22,13 +22,82 @@ export type PersonalData = {
   isPep: boolean;
 };
 
+/**
+ * Datos Generales de la empresa: los campos del F.0186. Las listas se guardan
+ * con la etiqueta que ve el usuario; companyProfilePayload las pasa a la base.
+ */
 export type CompanyData = {
+  legalName: string;
   cuit: string;
+  legalStreet: string;
+  legalLocality: string;
+  /** Nombre de provincia (PROVINCE_CATALOG); texto si el pais no es Argentina. */
+  legalProvince: string;
+  legalCountry: string;
+  legalPostalCode: string;
+  phone: string;
+  email: string;
+  registryBody: string;
+  registryProvince: string;
+  constitutionDate: string;
+  registryNumber: string;
   registrationDate: string;
+  registryBook: string;
+  registryVolume: string;
+  registryFolio: string;
+  activityCode: string;
+  activityDescription: string;
+  vatCondition: string;
+  incomeTaxCondition: string;
+  iibbNumber: string;
+  tradeName: string;
   companyType: string;
   identificationType: string;
-  legalName: string;
-  tradeName: string;
+};
+
+/** Localidad con su codigo postal numerico (tabla ar_localities). */
+export type Locality = {
+  provinceCode: string;
+  name: string;
+  /** Departamento: distingue localidades con el mismo nombre en una provincia. */
+  department: string | null;
+  postalCode: string | null;
+};
+
+/** Actividad del nomenclador CLAE de ARCA (tabla economic_activities). */
+export type EconomicActivity = { code: string; description: string; sector: string };
+
+/** Representante legal o apoderado (F.0186 y los datos que ya pedia el sistema). */
+export type CompanyPersonData = {
+  firstName: string;
+  lastName: string;
+  gender: string;
+  documentType: string;
+  documentNumber: string;
+  nationality: string;
+  birthDate: string;
+  birthPlace: string;
+  address: string;
+  city: string;
+  province: string;
+  residenceCountry: string;
+  postalCode: string;
+  taxId: string;
+  email: string;
+  phone: string;
+  position: string;
+  maritalStatus: string;
+  spouseName: string;
+  spouseNationality: string;
+  spouseGender: string;
+  spouseTaxId: string;
+  /** "SI" | "NO" | "" (sin responder: la DJ PEP no tiene valor por defecto). */
+  isPep: string;
+  pepPosition: string;
+  pepJurisdiction: string;
+  pepFrom: string;
+  /** Año o "Actualidad". */
+  pepTo: string;
 };
 
 export type Address = {
@@ -80,6 +149,9 @@ export type CompanyMember = {
   roleLabel: string;
   reviewState: string;
   name: string;
+  /** CUIT/CUIL declarado (solo digitos), para no cargar dos veces a la misma persona. */
+  taxId: string;
+  position: string | null;
 };
 
 export type BeneficialOwner = {

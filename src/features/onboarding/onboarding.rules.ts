@@ -60,9 +60,6 @@ export const COMPANY_TYPES = [
   "Otro",
 ];
 
-/** Tipo de identificacion de la empresa. Lista a confirmar con Compliance. */
-export const IDENTIFICATION_TYPES = ["CUIT", "CDI"];
-
 export const DOCUMENT_TYPES = ["DNI", "Pasaporte", "LE", "LC"];
 
 /** Nombre que ve el usuario -> codigo ISO 3166-1 que se guarda. */

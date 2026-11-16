@@ -82,9 +82,16 @@ export const LINE_KIND_OPTIONS: Array<{ key: LineKind | "all"; label: string }> 
 
 const LINE_KIND_LABEL = new Map(LINE_KIND_OPTIONS.map((t) => [t.key, t.label]));
 
-/** Las lineas de impuesto muestran cual (IVA, DyC, IIBB) con su alicuota. */
-export const lineLabel = (l: Pick<TransactionLine, "lineKind" | "detail">) =>
-  l.lineKind === "impuesto" && l.detail
+/**
+ * Las lineas de impuesto muestran cual (IVA, DyC, IIBB) con su alicuota. En una
+ * acreditacion de lote la comision tambien trae su etiqueta ("Comisión cierre de lote (0,45%)").
+ */
+export const lineLabel = (
+  l: Pick<TransactionLine, "lineKind" | "detail"> & { operationKind?: string },
+) =>
+  l.detail &&
+  (l.lineKind === "impuesto" ||
+    (l.lineKind === "comision" && l.operationKind === "acreditacion_lote"))
     ? l.detail
     : (LINE_KIND_LABEL.get(l.lineKind) ?? l.lineKind);
 

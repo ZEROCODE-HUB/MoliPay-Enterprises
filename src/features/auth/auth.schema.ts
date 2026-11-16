@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { passwordSchema } from "@/shared/validation/password";
-import { emailSchema,requiredText } from "@/shared/validation/primitives";
+import { emailSchema, requiredText } from "@/shared/validation/primitives";
 
 export const loginSchema = z.object({
   email: emailSchema,
@@ -32,3 +32,11 @@ export const resetPasswordSchema = z
     path: ["confirm"],
     message: "Las contraseñas no coinciden.",
   });
+
+/** Codigo de la app de autenticacion (TOTP): 6 digitos, con o sin espacio. */
+export const mfaCodeSchema = z.object({
+  code: z
+    .string()
+    .transform((v) => v.replace(/\s/g, ""))
+    .pipe(z.string().regex(/^\d{6}$/, "Ingresá los 6 dígitos del código.")),
+});

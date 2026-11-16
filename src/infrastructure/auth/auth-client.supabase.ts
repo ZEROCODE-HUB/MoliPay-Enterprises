@@ -1,7 +1,7 @@
-import type { SupabaseClient,User } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { supabase } from "@/infrastructure/supabase/client";
 import { AppError } from "@/shared/lib/errors";
-import type { AuthClient,AuthUser } from "./auth-client";
+import type { AuthClient, AuthUser } from "./auth-client";
 import { getAuthErrorMessage } from "./auth-errors";
 
 const toAuthUser = (user: User | null | undefined): AuthUser | null =>
@@ -96,8 +96,38 @@ export function createSupabaseAuthClient(): AuthClient {
         });
       }
     },
+    async getMfaState() {
+      const sb = client();
+      const [factors, level] = await Promise.all([
+        sb.auth.mfa.listFactors(),
+        sb.auth.mfa.getAuthenticatorAssuranceLevel(),
+      ]);
+      if (factors.error)
+        throw toAuthError(factors.error, "mfa_factors", "No se pudo leer el segundo factor.");
+      if (level.error)
+        throw toAuthError(level.error, "mfa_level", "No se pudo leer el segundo factor.");
+      return {
+        factors: factors.data.totp.map((f) => ({
+          id: f.id,
+          name: f.friendly_name ?? "App de autenticación",
+          createdAt: f.created_at,
+        })),
+        challengeRequired: level.data.nextLevel === "aal2" && level.data.currentLevel !== "aal2",
+      };
+    },
     async enrollTotp() {
-      const { data, error } = await client().auth.mfa.enroll({ factorType: "totp" });
+      const sb = client();
+      // Un alta que no se termino deja un factor sin verificar: se descarta antes de crear otro.
+      const existing = await sb.auth.mfa.listFactors();
+      for (const f of existing.data?.all ?? []) {
+        if (f.factor_type === "totp" && f.status === "unverified")
+          await sb.auth.mfa.unenroll({ factorId: f.id });
+      }
+      const { data, error } = await sb.auth.mfa.enroll({
+        factorType: "totp",
+        // El nombre tiene que ser unico por usuario.
+        friendlyName: `App de autenticación ${new Date().toLocaleDateString("es-AR")} ${Date.now() % 10000}`,
+      });
       if (error) throw toAuthError(error, "mfa_enroll", "No se pudo configurar el segundo factor.");
       return { factorId: data.id, qrSvg: data.totp.qr_code ?? "", secret: data.totp.secret };
     },
@@ -116,6 +146,15 @@ export function createSupabaseAuthClient(): AuthClient {
         code,
       });
       if (error) throw toAuthError(error, "mfa_verify", "Código inválido o verificación fallida.");
+    },
+    async unenrollFactor(factorId) {
+      const { error } = await client().auth.mfa.unenroll({ factorId });
+      if (error)
+        throw toAuthError(
+          error,
+          "mfa_unenroll",
+          "No se pudo desactivar el segundo factor. Volvé a iniciar sesión e intentalo de nuevo.",
+        );
     },
     async sendSignInLink(email) {
       const { error } = await client().auth.signInWithOtp({

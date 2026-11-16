@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { getRouteApi,Link,useNavigate } from "@tanstack/react-router";
-import { AuthShell,Field,FormTitle,PrimaryButton,SuccessCard } from "@/shared/ui/auth-kit";
+import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
+import { AuthShell, Field, FormTitle, PrimaryButton, SuccessCard } from "@/shared/ui/auth-kit";
 import { applyServerErrors } from "@/shared/forms/apply-server-errors";
 import { useZodForm } from "@/shared/forms/use-zod-form";
 import { useAuthActions } from "../auth.hooks";

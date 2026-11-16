@@ -1,12 +1,12 @@
-import { useEffect,useRef,useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller } from "react-hook-form";
 import { useNavigate } from "@tanstack/react-router";
 import {
-AuthShell,
-FormTitle,
-PasswordField,
-PrimaryButton,
-SuccessCard,
+  AuthShell,
+  FormTitle,
+  PasswordField,
+  PrimaryButton,
+  SuccessCard,
 } from "@/shared/ui/auth-kit";
 import { applyServerErrors } from "@/shared/forms/apply-server-errors";
 import { useZodForm } from "@/shared/forms/use-zod-form";

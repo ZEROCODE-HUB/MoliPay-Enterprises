@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { getRouteApi,useNavigate } from "@tanstack/react-router";
+import { getRouteApi, useNavigate } from "@tanstack/react-router";
 import { AuthShell } from "@/shared/ui/auth-kit";
 import { useDemoMode } from "@/app/demo-mode";
-import { useOnboardingActions,useOnboardingDraft } from "@/features/onboarding/onboarding.hooks";
+import { useOnboardingActions, useOnboardingDraft } from "@/features/onboarding/onboarding.hooks";
 import type { AccountType } from "@/features/onboarding/onboarding.types";
 import { userMessage } from "@/shared/lib/errors";
 import { useAuthActions } from "../auth.hooks";

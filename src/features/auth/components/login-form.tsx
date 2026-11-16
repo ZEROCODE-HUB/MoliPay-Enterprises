@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Controller } from "react-hook-form";
 import { Link } from "@tanstack/react-router";
-import { Field,PasswordField,PrimaryButton,SuccessCard } from "@/shared/ui/auth-kit";
+import { Field, PasswordField, PrimaryButton, SuccessCard } from "@/shared/ui/auth-kit";
 import { useOnboardingActions } from "@/features/onboarding/onboarding.hooks";
 import { isEmailNotConfirmed } from "@/infrastructure/auth/auth-errors";
 import { userMessage } from "@/shared/lib/errors";
@@ -10,6 +10,7 @@ import { useZodForm } from "@/shared/forms/use-zod-form";
 import { emailSchema } from "@/shared/validation/primitives";
 import { useAuthActions } from "../auth.hooks";
 import { loginSchema } from "../auth.schema";
+import { MfaChallenge } from "./mfa-challenge";
 
 const SUPPORT_EMAIL = "soporte@molipay.com.ar";
 
@@ -76,8 +77,10 @@ function PendingVerificationCard({ email, onBack }: { email: string; onBack: () 
 }
 
 export function LoginForm({ onSuccess }: { onSuccess: (email: string) => void | Promise<void> }) {
-  const { signIn } = useAuthActions();
+  const { signIn, getMfaState, signOut } = useAuthActions();
   const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  /** Email de la cuenta que paso la clave y falta el codigo del segundo factor. */
+  const [mfaEmail, setMfaEmail] = useState<string | null>(null);
   const form = useZodForm(loginSchema, { defaultValues: { email: "", password: "" } });
   const { errors, isSubmitting } = form.formState;
 
@@ -93,8 +96,29 @@ export function LoginForm({ onSuccess }: { onSuccess: (email: string) => void | 
       applyServerErrors(form, e);
       return;
     }
-    await onSuccess(user.email ?? email);
+    const loggedEmail = user.email ?? email;
+    // Con 2FA la clave sola deja la sesion en aal1: se pide el codigo antes de entrar.
+    try {
+      if ((await getMfaState()).challengeRequired) {
+        setMfaEmail(loggedEmail);
+        return;
+      }
+    } catch {
+      // Si no se puede leer, el portal vuelve a controlarlo al entrar.
+    }
+    await onSuccess(loggedEmail);
   });
+
+  if (mfaEmail)
+    return (
+      <MfaChallenge
+        onVerified={() => onSuccess(mfaEmail)}
+        onCancel={() => {
+          setMfaEmail(null);
+          void signOut();
+        }}
+      />
+    );
 
   if (pendingEmail)
     return <PendingVerificationCard email={pendingEmail} onBack={() => setPendingEmail(null)} />;

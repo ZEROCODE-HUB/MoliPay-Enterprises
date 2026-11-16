@@ -14,6 +14,8 @@ import {
   WizardNav,
 } from "@/shared/ui/auth-kit";
 import {
+  CUIT_TAKEN_MESSAGE,
+  useCuitAvailability,
   useDiscardForeignDraft,
   useOnboardingDraft,
   useOnboardingProfile,
@@ -30,9 +32,11 @@ import { BackToLoginLink } from "./back-to-login-link";
 
 const STEPS = ["Datos personales", "Información financiera", "Validación final"];
 
+/** Persona humana. La empresa usa RepresentativeDataPage (ver PersonalDataEntry). */
 export function PersonalDataPage() {
   const navigate = useNavigate();
-  const { accountType, personalData, registration, setPersonalData } = useOnboardingDraft();
+  const { personalData, registration, setPersonalData } = useOnboardingDraft();
+  const cuitAvailability = useCuitAvailability();
   const profile = useOnboardingProfile();
   const [step, setStep] = useState(0);
   const form = useZodForm(personalDataSchema, {
@@ -90,40 +94,29 @@ export function PersonalDataPage() {
 
   const next = async () => {
     if (!(await form.trigger(PERSONAL_DATA_STEP_FIELDS[step]))) return;
+    // El CUIT/CUIL de otra cuenta se avisa aca, no al enviar el alta.
+    if (step === 0 && (await cuitAvailability.check(form.getValues("cuit"))) === false) {
+      form.setError("cuit", { message: CUIT_TAKEN_MESSAGE });
+      return;
+    }
     if (step < STEPS.length - 1) {
       setStep(step + 1);
       return;
     }
     await form.handleSubmit((values) => {
       setPersonalData(values);
-      navigate({ to: accountType === "company" ? "/onboarding/datos-empresa" : "/onboarding/kyc" });
+      navigate({ to: "/onboarding/kyc" });
     })();
   };
 
   return (
     <AuthShell
       leftEyebrow="Paso 3 · Datos personales"
-      leftTitle={
-        accountType === "company"
-          ? "Datos del representante legal."
-          : "Completá tu perfil regulatorio."
-      }
+      leftTitle="Completá tu perfil regulatorio."
       leftBody="Estos datos son requeridos por normativa antilavado (UIF) y solo se comparten con las autoridades competentes."
       step={`Paso ${step + 1} de 3`}
     >
-      <FormTitle
-        eyebrow="KYC · Datos personales"
-        title={
-          accountType === "company"
-            ? "Tus datos como representante legal"
-            : "Validación de datos personales"
-        }
-        subtitle={
-          accountType === "company"
-            ? "Son tus datos personales, no los de la empresa. Los de la empresa te los pedimos en el próximo paso."
-            : undefined
-        }
-      />
+      <FormTitle eyebrow="KYC · Datos personales" title="Validación de datos personales" />
       <Stepper steps={STEPS} current={step} />
 
       {step === 0 && (

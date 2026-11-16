@@ -2,6 +2,7 @@ import type {
   AccountType,
   Address,
   CompanyData,
+  CompanyPersonData,
   PersonalData,
   Registration,
 } from "./onboarding.types";
@@ -12,6 +13,8 @@ export type PersistedDraft = {
   registration: Partial<Registration>;
   personalData: Partial<PersonalData>;
   companyData: Partial<CompanyData>;
+  /** Persona juridica: el representante legal (quien hace el alta). */
+  representative?: Partial<CompanyPersonData>;
   address: Partial<Address>;
   emailVerified: boolean;
 };

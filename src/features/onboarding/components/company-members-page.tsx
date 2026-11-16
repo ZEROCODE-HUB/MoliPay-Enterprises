@@ -20,16 +20,18 @@ import * as api from "../onboarding.supabase";
 import {
   COMPANY_DOCUMENTS,
   CONTROL_TYPES,
-  MEMBER_ROLES,
   PERSON_DOCUMENTS,
   REVIEW_STATE_LABEL,
   companyPersonDeclared,
   missingOnboardingItems,
 } from "../onboarding.rules";
-import type { CompanyPersonValues } from "../onboarding.schema";
+import type { CompanyMemberValues, CompanyPersonValues } from "../onboarding.schema";
+import { companyPersonPayload } from "../company-onboarding.rules";
+import { useOnboardingDraft } from "../onboarding.hooks";
 import type { OnboardingDocument } from "../onboarding.types";
 import { BackToLoginLink } from "./back-to-login-link";
 import { CompanyPersonForm } from "./company-person-form";
+import { CompanyMemberForm } from "./company-member-form";
 
 const STEPS = ["Integrantes", "Beneficiarios", "Documentación", "Confirmación"];
 const REPRESENTATIVE = "legal_representative";
@@ -152,7 +154,7 @@ export function CompanyMembersPage() {
   const queryClient = useQueryClient();
   const userId = useSessionUser().user?.id ?? "";
   const [step, setStep] = useState(0);
-  const [role, setRole] = useState("");
+  const companyType = useOnboardingDraft((s) => s.companyData.companyType);
   const [control, setControl] = useState("");
   const [pct, setPct] = useState("");
   const [detail, setDetail] = useState("");
@@ -170,9 +172,9 @@ export function CompanyMembersPage() {
   const ownerRows = owners.data ?? [];
   const documentRows = documents.data ?? [];
 
+  // El primero es quien hizo el alta; puede haber otros representantes legales.
   const representative = memberRows.find((m) => m.role === REPRESENTATIVE);
-  const otherMembers = memberRows.filter((m) => m.role !== REPRESENTATIVE);
-  const roleOptions = Object.keys(MEMBER_ROLES).filter((l) => MEMBER_ROLES[l] !== REPRESENTATIVE);
+  const otherMembers = memberRows.filter((m) => m.id !== representative?.id);
   const companyDocsLoaded = COMPANY_DOCUMENTS.filter((d) =>
     documentRows.some((row) => row.tipo === d.tipo && row.submissionId === null),
   ).length;
@@ -221,10 +223,9 @@ export function CompanyMembersPage() {
       );
     });
 
-  const addMember = (values: CompanyPersonValues) =>
+  const addMember = (values: CompanyMemberValues, role: string) =>
     run(async () => {
-      await api.declareCompanyMember(companyPersonDeclared(values), MEMBER_ROLES[role]);
-      setRole("");
+      await api.declareCompanyMember(companyPersonPayload(values), role);
       setAddingMember(false);
     }, "Persona agregada. Falta cargar su documento.");
 
@@ -313,13 +314,19 @@ export function CompanyMembersPage() {
             <SectionHeader
               title="Otras personas de la empresa"
               optional
-              text="Titulares, cotitulares, apoderados o firmantes. Si no querés cargarlos ahora, podés continuar."
+              text="Otros representantes legales o apoderados. Si no querés cargarlos ahora, podés continuar."
             />
             {otherMembers.map((m) => (
               <PersonCard
                 key={m.id}
                 name={m.name}
-                detail={`${m.roleLabel} · ${REVIEW_STATE_LABEL[m.reviewState] ?? m.reviewState}`}
+                detail={[
+                  m.roleLabel,
+                  m.position,
+                  REVIEW_STATE_LABEL[m.reviewState] ?? m.reviewState,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
                 disabled={busy}
                 onRemove={() => void run(() => api.endCompanyMember(m.id), "Persona quitada")}
               >
@@ -335,20 +342,11 @@ export function CompanyMembersPage() {
               </PersonCard>
             ))}
             {addingMember ? (
-              <CompanyPersonForm
-                title="Nueva persona"
-                submitLabel="Guardar persona"
+              <CompanyMemberForm
+                companyType={companyType}
+                members={memberRows}
                 disabled={busy}
-                canSubmit={!!role}
                 onCancel={() => setAddingMember(false)}
-                extra={
-                  <SelectField
-                    label="Carácter en la empresa"
-                    value={role}
-                    onChange={setRole}
-                    options={roleOptions}
-                  />
-                }
                 onSubmit={addMember}
               />
             ) : (

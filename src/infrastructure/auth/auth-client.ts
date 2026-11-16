@@ -13,6 +13,16 @@ export type AuthUser = {
 
 export type TotpEnrollment = { factorId: string; qrSvg: string; secret: string };
 
+/** Segundo factor verificado (app de autenticacion). */
+export type MfaFactor = { id: string; name: string; createdAt: string };
+
+export type MfaState = {
+  /** Factores TOTP verificados del usuario. */
+  factors: MfaFactor[];
+  /** Tiene 2FA y la sesion todavia no lo verifico (aal1 -> aal2): hay que pedir el codigo. */
+  challengeRequired: boolean;
+};
+
 export interface AuthClient {
   /** Usuario de la sesion guardada (null si no hay). */
   getCurrentUser(): Promise<AuthUser | null>;
@@ -31,8 +41,14 @@ export interface AuthClient {
   updatePassword(newPassword: string): Promise<void>;
   /** Confirma la clave actual antes de un cambio sensible. */
   verifyCurrentPassword(password: string): Promise<void>;
+  /** Factores del usuario y si la sesion actual tiene que verificar el segundo factor. */
+  getMfaState(): Promise<MfaState>;
+  /** Alta de un TOTP (descarta altas a medio hacer). Queda activo al verificar el primer codigo. */
   enrollTotp(): Promise<TotpEnrollment>;
+  /** Verifica un codigo TOTP: activa el factor nuevo o sube la sesion a aal2 al iniciar sesion. */
   verifyTotp(factorId: string, code: string): Promise<void>;
+  /** Quita un segundo factor (Supabase exige una sesion aal2). */
+  unenrollFactor(factorId: string): Promise<void>;
   /**
    * Manda un enlace de acceso y crea el usuario si no existe.
    * Hoy lo usa la invitacion de equipo de Seguridad (ver PENDIENTES).

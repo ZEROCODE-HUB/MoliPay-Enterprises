@@ -1,7 +1,7 @@
-import { getRouteApi,useNavigate } from "@tanstack/react-router";
-import { useEffect,useRef,useState } from "react";
-import { AuthShell,PrimaryButton,SuccessCard } from "@/shared/ui/auth-kit";
-import { useOnboardingActions,useOnboardingDraft } from "@/features/onboarding/onboarding.hooks";
+import { getRouteApi, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { AuthShell, PrimaryButton, SuccessCard } from "@/shared/ui/auth-kit";
+import { useOnboardingActions, useOnboardingDraft } from "@/features/onboarding/onboarding.hooks";
 import { userMessage } from "@/shared/lib/errors";
 
 type Status = "loading" | "ok" | "error";

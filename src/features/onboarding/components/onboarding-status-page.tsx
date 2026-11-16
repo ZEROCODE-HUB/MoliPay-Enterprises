@@ -32,7 +32,7 @@ export function OnboardingStatusPage() {
   if (query.isPending) {
     return (
       <AuthShell
-        leftEyebrow="Paso 6 · Revisión"
+        leftEyebrow="Último paso · Revisión"
         leftTitle="Cargando tu estado..."
         leftBody="Consultando el estado de tu solicitud."
         step="Cargando..."
@@ -56,7 +56,7 @@ export function OnboardingStatusPage() {
 
   return (
     <AuthShell
-      leftEyebrow="Paso 6 · Revisión"
+      leftEyebrow="Último paso · Revisión"
       leftTitle="Tu solicitud fue enviada."
       leftBody={status ? NEXT_ONBOARDING_STEP[status] : SUBMITTED_MESSAGE}
       step={label}

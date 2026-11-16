@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PersonalDataPage } from "@/features/onboarding/components/personal-data-page";
+import { PersonalDataEntry } from "@/features/onboarding/components/personal-data-entry";
 
 export const Route = createFileRoute("/onboarding/datos-personales")({
   head: () => ({
@@ -8,5 +8,5 @@ export const Route = createFileRoute("/onboarding/datos-personales")({
       { name: "robots", content: "noindex" },
     ],
   }),
-  component: PersonalDataPage,
+  component: PersonalDataEntry,
 });

@@ -3,6 +3,9 @@ import { STALE } from "@/app/query-client";
 import { privateScope } from "@/shared/lib/query-scope";
 import {
   getKycDocuments,
+  listEconomicActivities,
+  listLocalities,
+  listLocalitiesByPostalCode,
   getOnboardingApplication,
   getOnboardingProfile,
   getOnboardingStatus,
@@ -26,7 +29,33 @@ export const onboardingKeys = {
   application: (userId: string) => [...onboardingKeys.all(userId), "application"] as const,
 };
 
+/** Catalogos publicos (no dependen del usuario). */
+export const catalogKeys = {
+  economicActivities: () => ["catalog", "economic-activities"] as const,
+  localities: (provinceCode: string) => ["catalog", "localities", provinceCode] as const,
+  localitiesByPostalCode: (postalCode: string) =>
+    ["catalog", "localities", "postal-code", postalCode] as const,
+};
+
 export const onboardingQueries = {
+  economicActivities: () =>
+    queryOptions({
+      queryKey: catalogKeys.economicActivities(),
+      queryFn: listEconomicActivities,
+      staleTime: STALE.long,
+    }),
+  localities: (provinceCode: string) =>
+    queryOptions({
+      queryKey: catalogKeys.localities(provinceCode),
+      queryFn: () => listLocalities(provinceCode),
+      staleTime: STALE.long,
+    }),
+  localitiesByPostalCode: (postalCode: string) =>
+    queryOptions({
+      queryKey: catalogKeys.localitiesByPostalCode(postalCode),
+      queryFn: () => listLocalitiesByPostalCode(postalCode),
+      staleTime: STALE.long,
+    }),
   profile: (userId: string, email: string) =>
     queryOptions({
       queryKey: onboardingKeys.profile(userId, email),

@@ -20,11 +20,14 @@ import {
   useOnboardingProfile,
 } from "../onboarding.hooks";
 import { PROVINCES, customerName, personDeclared } from "../onboarding.rules";
+import { companyPersonPayload, companyProfilePayload } from "../company-onboarding.rules";
 import { addressSchema, type AddressValues } from "../onboarding.schema";
 import type { AccountType, KycDocument, KycFile, KycFiles } from "../onboarding.types";
 import { BackToLoginLink } from "./back-to-login-link";
 
 const STEPS = ["DNI", "Servicio", "Selfie", "Residencia"];
+/** Empresa: el domicilio real del representante ya se cargo con sus datos. */
+const COMPANY_STEPS = ["DNI", "Comprobante de domicilio", "Selfie"];
 
 const EMPTY_FILES: KycFiles = { idFront: null, idBack: null, utilityBill: null, selfie: null };
 
@@ -41,6 +44,8 @@ export function KycPage() {
   const isCompanyAccount = (draft.accountType ?? profile.data?.accountType) === "company";
   const [step, setStep] = useState(0);
   const [files, setFiles] = useState<KycFiles>(EMPTY_FILES);
+  const [cuitTaken, setCuitTaken] = useState(false);
+  const steps = isCompanyAccount ? COMPANY_STEPS : STEPS;
   const form = useZodForm(addressSchema, {
     defaultValues: {
       line1: draft.address.line1 ?? "",
@@ -75,8 +80,8 @@ export function KycPage() {
   const setFile = (doc: KycDocument) => (value: KycFile) =>
     setFiles((f) => ({ ...f, [doc]: value }));
 
-  const finish = form.handleSubmit(async (address: AddressValues) => {
-    draft.setAddress(address);
+  const send = async (address: AddressValues | null) => {
+    if (address) draft.setAddress(address);
     // Si el borrador se perdio (p. ej. entro directo con login), se completa con lo del servidor.
     const accountType: AccountType | null = draft.accountType ?? profile.data?.accountType ?? null;
     const email = draft.registration.email || sessionEmail;
@@ -87,14 +92,32 @@ export function KycPage() {
       return;
     }
     const company = accountType === "company";
-    const base = {
-      direccion: address.line1,
-      direccion2: address.line2,
-      ciudad: address.city,
-      provincia: address.province,
-      cp: address.postalCode,
-      fechaNacimiento: draft.registration.birthDate ?? null,
-    };
+    if (company && (!draft.companyData.legalName || !draft.representative.taxId)) {
+      form.setError("root.server", {
+        message:
+          "Faltan los datos de la empresa o del representante legal. Completalos para seguir.",
+      });
+      return;
+    }
+    const c = draft.companyData;
+    // Empresa: el domicilio de la cuenta es el legal de la empresa.
+    const base = company
+      ? {
+          direccion: c.legalStreet,
+          direccion2: null,
+          ciudad: c.legalLocality,
+          provincia: c.legalProvince,
+          cp: c.legalPostalCode,
+          fechaNacimiento: draft.representative.birthDate ?? null,
+        }
+      : {
+          direccion: address?.line1,
+          direccion2: address?.line2,
+          ciudad: address?.city,
+          provincia: address?.province,
+          cp: address?.postalCode,
+          fechaNacimiento: draft.registration.birthDate ?? null,
+        };
     const declared = personDeclared({
       ...draft.personalData,
       ...address,
@@ -103,14 +126,8 @@ export function KycPage() {
     });
     const profileFields = company
       ? {
-          empresa: {
-            legal_name: draft.companyData.legalName,
-            trade_name: draft.companyData.tradeName,
-            company_type: draft.companyData.companyType,
-            identification_type: draft.companyData.identificationType,
-            registration_date: draft.companyData.registrationDate,
-          },
-          representante: declared,
+          empresa: companyProfilePayload(c),
+          representante: companyPersonPayload(draft.representative),
           tipoSociedad: draft.companyData.companyType,
           nombreLegal: draft.companyData.legalName,
           nombreFantasia: draft.companyData.tradeName,
@@ -135,17 +152,49 @@ export function KycPage() {
       });
     } catch (e) {
       applyServerErrors(form, e);
+      // Si igual llega (p. ej. otra cuenta lo registro en el medio), se ofrece corregirlo.
+      setCuitTaken(/CUIT/i.test(form.formState.errors.root?.server?.message ?? String(e)));
       return;
     }
     navigate({ to: company ? "/onboarding/integrantes" : "/onboarding/en-proceso" });
-  });
+  };
+  // La empresa envia sin handleSubmit (no tiene el paso de domicilio): estado propio.
+  const [sending, setSending] = useState(false);
+  const submitAll = async (address: AddressValues | null) => {
+    setSending(true);
+    try {
+      await send(address);
+    } finally {
+      setSending(false);
+    }
+  };
+  const finish = form.handleSubmit((address: AddressValues) => submitAll(address));
+
+  const serverError = errors.root?.server && (
+    <div className="space-y-2">
+      <p className="text-sm text-red-600">{errors.root.server.message}</p>
+      {cuitTaken && (
+        <button
+          type="button"
+          className="text-sm font-semibold text-red-500 underline"
+          onClick={() =>
+            void navigate({
+              to: isCompanyAccount ? "/onboarding/datos-empresa" : "/onboarding/datos-personales",
+            })
+          }
+        >
+          Corregir el CUIT
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <AuthShell
-      leftEyebrow="Paso 5 · Verificación de identidad"
+      leftEyebrow={isCompanyAccount ? "Paso 5 · Identidad" : "Paso 4 · Identidad"}
       leftTitle="Validamos tu identidad de forma segura."
       leftBody="Tus documentos se procesan en un entorno cifrado y se conservan según normativa BCRA y Ley 25.246."
-      step={`Paso ${step + 1} de 4`}
+      step={`Paso ${step + 1} de ${steps.length}`}
     >
       <FormTitle
         eyebrow="KYC · Documentación"
@@ -156,7 +205,7 @@ export function KycPage() {
             : undefined
         }
       />
-      <Stepper steps={STEPS} current={step} />
+      <Stepper steps={steps} current={step} />
 
       {step === 0 && (
         <div className="space-y-4">
@@ -169,7 +218,9 @@ export function KycPage() {
 
       {step === 1 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-black-800">Cargá un servicio a tu nombre</h2>
+          <h2 className="text-lg font-semibold text-black-800">
+            {isCompanyAccount ? "Comprobante de tu domicilio" : "Cargá un servicio a tu nombre"}
+          </h2>
           <FileUpload
             label="Factura de servicio"
             hint="Debe contener tu dirección y no debe tener más de 3 meses de antigüedad."
@@ -195,11 +246,14 @@ export function KycPage() {
             onChange={setFile("selfie")}
             accept="image/*"
           />
+          {isCompanyAccount && serverError}
           <WizardNav
             onBack={() => setStep(1)}
-            onNext={() => setStep(3)}
-            nextDisabled={!stepComplete}
-            nextLabel="Siguiente"
+            onNext={() => (isCompanyAccount ? void submitAll(null) : setStep(3))}
+            nextDisabled={!stepComplete || sending}
+            nextLabel={
+              isCompanyAccount ? (sending ? "Enviando..." : "Registrar empresa") : "Siguiente"
+            }
           />
         </div>
       )}
@@ -234,9 +288,7 @@ export function KycPage() {
             error={errors.postalCode?.message}
             {...form.register("postalCode")}
           />
-          {errors.root?.server && (
-            <p className="text-sm text-red-600">{errors.root.server.message}</p>
-          )}
+          {serverError}
           <WizardNav
             onBack={() => setStep(2)}
             onNext={() => void finish()}
