@@ -1,13 +1,13 @@
 import { STATUS_TO_DB } from "@/features/accounts/accounts.supabase";
 import { TYPE_TO_DB } from "@/features/accounts/accounts.supabase";
 import { toast } from "sonner";
-import { formatMoneyAmount,type Money } from "@/shared/lib/money";
+import { formatMoneyAmount, type Money } from "@/shared/lib/money";
 import type {
-Subaccount,
-SubaccountInput,
-SubaccountMovement,
-SubaccountStatus,
-SubaccountType,
+  Subaccount,
+  SubaccountInput,
+  SubaccountMovement,
+  SubaccountStatus,
+  SubaccountType,
 } from "../accounts.types";
 
 /*

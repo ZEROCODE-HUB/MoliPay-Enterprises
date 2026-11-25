@@ -13,6 +13,7 @@ import { TEAM_ROLES, teamRoleLabel } from "../security.rules";
 import { resendTeamInvite, revokeTeamMember, updateTeamMemberRole } from "../security.supabase";
 import type { TeamMember } from "../security.types";
 import { InviteMemberDialog } from "./invite-member-dialog";
+import { LoadingLines } from "@/shared/ui/table-skeleton";
 
 export function TeamCard() {
   const userId = useSessionUser().user?.id ?? "";
@@ -46,7 +47,7 @@ export function TeamCard() {
   return (
     <Card>
       <div className="mb-1 flex items-center justify-between">
-        <h3 className="font-semibold">Usuarios del equipo</h3>
+        <h3 className="font-medium">Usuarios del equipo</h3>
         {canManage && (
           <BtnOutline className="h-9 px-3 text-xs" onClick={() => setInviteOpen(true)}>
             <Plus size={12} /> Invitar
@@ -58,7 +59,7 @@ export function TeamCard() {
       </p>
 
       {query.isError && <p className="py-3 text-sm text-red-700">{userMessage(query.error)}</p>}
-      {query.isPending && <p className="py-3 text-sm text-muted-foreground">Cargando…</p>}
+      {query.isPending && <LoadingLines label="Cargando…" />}
 
       <div className="divide-y">
         {members.map((m) => {
@@ -69,7 +70,7 @@ export function TeamCard() {
               className="flex flex-wrap items-center justify-between gap-2 py-3"
             >
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">
+                <div className="truncate text-sm font-medium">
                   {m.name}
                   {m.isSelf && <span className="font-normal text-muted-foreground"> (vos)</span>}
                 </div>
@@ -101,7 +102,7 @@ export function TeamCard() {
                 {editable && m.status === "invited" && (
                   <button
                     type="button"
-                    className="text-xs font-semibold text-primary hover:underline disabled:opacity-50"
+                    className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
                     disabled={action.isPending}
                     onClick={() =>
                       action.mutate(() =>
@@ -117,7 +118,7 @@ export function TeamCard() {
                 {editable && (
                   <button
                     type="button"
-                    className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-50"
+                    className="text-xs font-medium text-red-600 hover:underline disabled:opacity-50"
                     disabled={action.isPending}
                     onClick={() => void revoke(m)}
                   >

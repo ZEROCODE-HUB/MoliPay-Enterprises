@@ -1,4 +1,4 @@
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 import { MollyLogo } from "@/shared/ui/molly-logo";
 import { Link } from "@tanstack/react-router";
 

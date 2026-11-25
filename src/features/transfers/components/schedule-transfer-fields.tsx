@@ -1,9 +1,9 @@
 import { toast } from "sonner";
 import { formatMoney } from "@/shared/lib/format";
 import { moneyInputToNumber } from "@/shared/lib/money";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
-import { Input,Label,Select } from "@/shared/ui/form-controls";
-import { Clock,ShieldCheck,Users } from "lucide-react";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
+import { Clock, ShieldCheck, Users } from "lucide-react";
 
 import type { ProgramarVm } from "./use-schedule-transfer-form";
 

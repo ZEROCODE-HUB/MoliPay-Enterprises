@@ -44,7 +44,7 @@ export function SecurityActivityCard() {
   return (
     <Card>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 font-semibold">
+        <h3 className="flex items-center gap-2 font-medium">
           <History size={16} /> Registro de actividad
         </h3>
         <button

@@ -1,12 +1,12 @@
 import { Pagination } from "@/shared/ui/pagination";
-import type { Batch,RecordDeBatch } from "@/features/collections/collections.data";
+import type { Batch, RecordDeBatch } from "@/features/collections/collections.data";
 import {
-formatARS,
-methodPaymentLabels,
-statusCatalog,
+  formatARS,
+  methodPaymentLabels,
+  statusCatalog,
 } from "@/features/collections/collections.data";
-import { Copy,ExternalLink,FileSpreadsheet } from "lucide-react";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { Copy, ExternalLink, FileSpreadsheet } from "lucide-react";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 import { toResolvableLinkPaymentUrl } from "@/shared/lib/pay-url";
 import { Card } from "@/shared/ui/card";
 import { RECORD_STATUS_BADGE } from "@/features/collections/collection-batch.rules";
@@ -84,13 +84,13 @@ export function CollectionBatchBody({
       <div className="grid md:grid-cols-2 gap-4 mb-6">
         {/* Info general */}
         <Card>
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-            Informacion general
+          <h4 className="font-display text-sm font-medium text-foreground mb-3">
+            Información general
           </h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">ID</span>
-              <span className="font-semibold">{batch.id}</span>
+              <span className="font-medium">{batch.id}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Estado</span>
@@ -113,40 +113,38 @@ export function CollectionBatchBody({
 
         {/* Estadisticas */}
         <Card>
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-            Estadisticas
-          </h4>
+          <h4 className="font-display text-sm font-medium text-foreground mb-3">Estadisticas</h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total registros</span>
-              <span className="font-semibold">{totalRecords}</span>
+              <span className="font-medium">{totalRecords}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">% Cobrado</span>
-              <span className="font-semibold text-emerald-600">{pctCollected}%</span>
+              <span className="font-medium text-emerald-600">{pctCollected}%</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Pagos completos</span>
-              <span className="font-semibold text-emerald-600">{collecteds}</span>
+              <span className="font-medium text-emerald-600">{collecteds}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Pagos parciales</span>
-              <span className="font-semibold text-amber-600">{partials}</span>
+              <span className="font-medium text-amber-600">{partials}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Pendientes</span>
-              <span className="font-semibold text-muted-foreground">{pendings}</span>
+              <span className="font-medium text-muted-foreground">{pendings}</span>
             </div>
             {overdues > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Vencidos</span>
-                <span className="font-semibold text-red-600">{overdues}</span>
+                <span className="font-medium text-red-600">{overdues}</span>
               </div>
             )}
             {withError > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Con error</span>
-                <span className="font-semibold text-red-600">{withError}</span>
+                <span className="font-medium text-red-600">{withError}</span>
               </div>
             )}
           </div>
@@ -154,13 +152,11 @@ export function CollectionBatchBody({
 
         {/* Configuracion */}
         <Card>
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-            Configuracion
-          </h4>
+          <h4 className="font-display text-sm font-medium text-foreground mb-3">Configuración</h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Medios de pago</span>
-              <span className="font-semibold text-right max-w-[180px]">
+              <span className="font-medium text-right max-w-[180px]">
                 {batch.mediosPago
                   .map((m) => methodPaymentLabels[m as keyof typeof methodPaymentLabels])
                   .join(", ")}
@@ -169,7 +165,7 @@ export function CollectionBatchBody({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Pagos parciales</span>
               <span
-                className={`font-semibold ${batch.pagosParcialesHabilitado ? "text-emerald-600" : "text-muted-foreground"}`}
+                className={`font-medium ${batch.pagosParcialesHabilitado ? "text-emerald-600" : "text-muted-foreground"}`}
               >
                 {batch.pagosParcialesHabilitado ? "Habilitados" : "Deshabilitados"}
               </span>
@@ -177,49 +173,47 @@ export function CollectionBatchBody({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Notificaciones</span>
               <span
-                className={`font-semibold ${batch.notificacionesHabilitado ? "text-emerald-600" : "text-muted-foreground"}`}
+                className={`font-medium ${batch.notificacionesHabilitado ? "text-emerald-600" : "text-muted-foreground"}`}
               >
                 {batch.notificacionesHabilitado ? "Habilitadas" : "Deshabilitadas"}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Cuenta</span>
-              <span className="font-semibold">Operaciones</span>
+              <span className="font-medium">Operaciones</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Tasa interes</span>
-              <span className="font-semibold">{batch.tasaInteres}%</span>
+              <span className="font-medium">{batch.tasaInteres}%</span>
             </div>
           </div>
         </Card>
 
         {/* Montos */}
         <Card>
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
-            Montos
-          </h4>
+          <h4 className="font-display text-sm font-medium text-foreground mb-3">Montos</h4>
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Total</span>
-              <span className="font-display tabular-nums font-semibold text-lg">
+              <span className="font-display tabular-nums font-medium text-lg">
                 {formatARS(amountTotal)}
               </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Cobrado</span>
-              <span className="font-display tabular-nums font-semibold text-emerald-600">
+              <span className="font-display tabular-nums font-medium text-emerald-600">
                 {formatARS(amountCollected)}
               </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Pendiente</span>
-              <span className="font-display tabular-nums font-semibold text-amber-600">
+              <span className="font-display tabular-nums font-medium text-amber-600">
                 {formatARS(amountTotal - amountCollected)}
               </span>
             </div>
             <div className="h-3 rounded-full bg-muted overflow-hidden mt-2">
               <div
-                className="h-full rounded-full bg-primary transition-all"
+                className="h-full rounded-full bg-primary transition-[width]"
                 style={{ width: `${pctCollected}%` }}
               />
             </div>
@@ -232,7 +226,7 @@ export function CollectionBatchBody({
       <Card className="p-0 overflow-hidden">
         <div className="px-5 py-4 border-b flex items-center justify-between">
           <div>
-            <div className="font-semibold">Registros del lote</div>
+            <div className="font-medium">Registros del lote</div>
             <div className="text-xs text-muted-foreground">{totalRecords} registros</div>
           </div>
         </div>
@@ -240,17 +234,15 @@ export function CollectionBatchBody({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="text-left px-3 py-3 font-semibold text-xs uppercase">Descripcion</th>
-                <th className="text-right px-3 py-3 font-semibold text-xs uppercase">Monto</th>
-                <th className="text-right px-3 py-3 font-semibold text-xs uppercase">Pagado</th>
-                <th className="text-left px-3 py-3 font-semibold text-xs uppercase">Entidad</th>
-                <th className="text-left px-3 py-3 font-semibold text-xs uppercase">Usuario</th>
-                <th className="text-left px-3 py-3 font-semibold text-xs uppercase">
-                  Vencimientos
-                </th>
-                <th className="text-left px-3 py-3 font-semibold text-xs uppercase">Medios</th>
-                <th className="text-left px-3 py-3 font-semibold text-xs uppercase">Estado</th>
-                <th className="text-left px-3 py-3 font-semibold text-xs uppercase">Link</th>
+                <th className="text-left px-3 py-3">Descripción</th>
+                <th className="text-right px-3 py-3">Monto</th>
+                <th className="text-right px-3 py-3">Pagado</th>
+                <th className="text-left px-3 py-3">Entidad</th>
+                <th className="text-left px-3 py-3">Usuario</th>
+                <th className="text-left px-3 py-3">Vencimientos</th>
+                <th className="text-left px-3 py-3">Medios</th>
+                <th className="text-left px-3 py-3">Estado</th>
+                <th className="text-left px-3 py-3">Link</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -258,21 +250,21 @@ export function CollectionBatchBody({
                 return (
                   <tr key={r.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-3 py-3 max-w-[180px]">
-                      <div className="font-semibold truncate" title={r.descripcion}>
+                      <div className="font-medium truncate" title={r.descripcion}>
                         {r.descripcion}
                       </div>
-                      <div className="text-[10px] text-muted-foreground font-mono">{r.id}</div>
+                      <div className="text-[11px] text-muted-foreground font-mono">{r.id}</div>
                     </td>
-                    <td className="px-3 py-3 text-right font-semibold whitespace-nowrap">
+                    <td className="px-3 py-3 text-right font-medium whitespace-nowrap">
                       <span className="font-mono tabular-nums">{formatARS(r.monto)}</span>
                     </td>
                     <td className="px-3 py-3 text-right whitespace-nowrap">
                       <span
                         className={
                           r.montoPagado >= r.monto
-                            ? "text-emerald-600 font-semibold font-mono tabular-nums"
+                            ? "text-emerald-600 font-medium font-mono tabular-nums"
                             : r.montoPagado > 0
-                              ? "text-amber-600 font-semibold font-mono tabular-nums"
+                              ? "text-amber-600 font-medium font-mono tabular-nums"
                               : "text-muted-foreground font-mono tabular-nums"
                         }
                       >
@@ -316,13 +308,13 @@ export function CollectionBatchBody({
                     </td>
                     <td className="px-3 py-3">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                        className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${
                           RECORD_STATUS_BADGE[r.estado]?.style ?? ""
                         }`}
                       >
                         {RECORD_STATUS_BADGE[r.estado]?.label ?? r.estado}
                       </span>
-                      <div className="mt-1 text-[10px] text-muted-foreground">
+                      <div className="mt-1 text-[11px] text-muted-foreground">
                         {r.fechaPago && `Pagado: ${r.fechaPago.slice(0, 10)}`}
                       </div>
                     </td>
@@ -350,7 +342,7 @@ export function CollectionBatchBody({
                         <span className="text-[11px] text-muted-foreground">-</span>
                       )}
                       {r.emailEnviado && (
-                        <div className="text-[10px] text-emerald-600 mt-0.5">Email enviado</div>
+                        <div className="text-[11px] text-emerald-600 mt-0.5">Email enviado</div>
                       )}
                     </td>
                   </tr>

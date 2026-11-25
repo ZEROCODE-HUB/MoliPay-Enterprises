@@ -1,9 +1,9 @@
 import {
-type FrequentRecipient,
-type Scheduled,
-type Template,
+  type FrequentRecipient,
+  type Scheduled,
+  type Template,
 } from "@/features/transfers/transfer-store";
-import { useEffect,useRef,useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { detectIdentifierKind } from "@/features/transfers/recipient-validation";
 import { toast } from "sonner";
 import { validateRecipient } from "@/features/transfers/recipient-bdc";

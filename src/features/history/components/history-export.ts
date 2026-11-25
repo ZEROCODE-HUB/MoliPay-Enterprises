@@ -2,13 +2,13 @@ import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { toast } from "sonner";
 import { downloadXlsx } from "@/shared/lib/download";
-import { formatMoneyAmount,toDecimalString } from "@/shared/lib/money";
+import { formatMoneyAmount, toDecimalString } from "@/shared/lib/money";
 import {
-STATUS_LABEL,
-formatSignedMoney,
-lineLabel,
-lineTotals,
-operationLabel,
+  STATUS_LABEL,
+  formatSignedMoney,
+  lineLabel,
+  lineTotals,
+  operationLabel,
 } from "../history.rules";
 import type { TransactionLine } from "../history.types";
 

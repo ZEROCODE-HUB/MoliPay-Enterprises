@@ -1,13 +1,13 @@
 import { Pagination } from "@/shared/ui/pagination";
 import { formatARS } from "@/features/collections/collections.data";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
-import { Eye,Plus } from "lucide-react";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
+import { Eye, Plus } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
 import {
-STATUS_TICKET_LABEL,
-STATUS_TICKET_TONE,
-fmtDateFull,
-pendingCompensar,
+  STATUS_TICKET_LABEL,
+  STATUS_TICKET_TONE,
+  fmtDateFull,
+  pendingCompensar,
 } from "@/features/settlements/settlements.rules";
 
 import type { SettlementsPageVm } from "./use-settlements-page";
@@ -53,15 +53,15 @@ export function AdvanceTicketsTab({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="text-left px-5 py-3">Número</th>
-                  <th className="text-left px-5 py-3">Fecha</th>
-                  <th className="text-right px-5 py-3">Monto pedido</th>
-                  <th className="text-right px-5 py-3">Tasa</th>
-                  <th className="text-right px-5 py-3">Neto a recibir</th>
-                  <th className="text-left px-5 py-3">Estado</th>
-                  <th className="text-right px-5 py-3">Falta descontar</th>
-                  <th className="text-center px-5 py-3">Acción</th>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left px-4 py-2.5">Número</th>
+                  <th className="text-left px-4 py-2.5">Fecha</th>
+                  <th className="text-right px-4 py-2.5">Monto pedido</th>
+                  <th className="text-right px-4 py-2.5">Tasa</th>
+                  <th className="text-right px-4 py-2.5">Neto a recibir</th>
+                  <th className="text-left px-4 py-2.5">Estado</th>
+                  <th className="text-right px-4 py-2.5">Falta descontar</th>
+                  <th className="text-center px-4 py-2.5">Acción</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -78,11 +78,11 @@ export function AdvanceTicketsTab({
                 ) : (
                   tickPaginated.map((t) => (
                     <tr key={t.id} className="hover:bg-muted/30">
-                      <td className="px-5 py-3 font-mono font-semibold">{t.id}</td>
+                      <td className="px-5 py-3 font-mono font-medium">{t.id}</td>
                       <td className="px-5 py-3 text-xs text-muted-foreground">
                         {fmtDateFull(t.fecha)}
                       </td>
-                      <td className="px-5 py-3 font-mono tabular-nums text-right font-semibold">
+                      <td className="px-5 py-3 font-mono tabular-nums text-right font-medium">
                         {formatARS(t.montoSolicitado)}
                       </td>
                       <td className="px-5 py-3 font-mono tabular-nums text-right text-xs">

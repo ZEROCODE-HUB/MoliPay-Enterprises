@@ -1,5 +1,5 @@
 import { type Scheduled } from "@/features/transfers/transfer-store";
-import { Calendar,Clock,Edit3,Play,X } from "lucide-react";
+import { Calendar, Clock, Edit3, Play, X } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
 import { STATUS_TONE } from "@/features/transfers/transfers.rules";
 
@@ -19,7 +19,7 @@ export function ScheduledTransfers({
     return (
       <div className="text-center py-12 text-muted-foreground">
         <Calendar size={32} className="mx-auto mb-3 opacity-50" />
-        <p className="font-semibold">No tenes transferencias programadas</p>
+        <p className="font-medium">No tenes transferencias programadas</p>
         <p className="text-sm mt-1">Usa la pestana "Programar" para agendar una transferencia.</p>
       </div>
     );
@@ -30,7 +30,7 @@ export function ScheduledTransfers({
       {items.map((s) => (
         <div key={s.id} className="flex items-center justify-between py-3">
           <div className="min-w-0">
-            <div className="text-sm font-semibold">{s.destinatario}</div>
+            <div className="text-sm font-medium">{s.destinatario}</div>
             <div className="text-xs text-muted-foreground">
               @{s.alias} · <span className="font-mono">{s.monto}</span> · {s.concepto}
             </div>

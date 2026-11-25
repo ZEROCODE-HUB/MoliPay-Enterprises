@@ -7,14 +7,14 @@ export function Input(
   return (
     <input
       {...p}
-      className={`w-full h-10 px-3 rounded-sm border border-black-100 bg-white text-sm text-black-700 outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100 placeholder:text-black-300 disabled:bg-plata-100 disabled:text-black-300 ${p.className ?? ""}`}
+      className={`w-full h-10 px-3 rounded-md border border-border bg-card text-sm text-foreground outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100 placeholder:text-muted-foreground disabled:bg-muted/40 disabled:text-muted-foreground ${p.className ?? ""}`}
     />
   );
 }
 
 export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
   return (
-    <label htmlFor={htmlFor} className="text-xs font-semibold text-black-700 mb-1.5 block">
+    <label htmlFor={htmlFor} className="text-xs font-medium text-foreground mb-1.5 block">
       {children}
     </label>
   );

@@ -1,14 +1,14 @@
-import type { Batch,RecordDeBatch } from "@/features/collections/collections.data";
+import type { Batch, RecordDeBatch } from "@/features/collections/collections.data";
 import { type ReactNode } from "react";
 import {
-getLegajoUser,
-pauseBatchDB,
-resumeBatchDB,
-startBatchDB,
+  getLegajoUser,
+  pauseBatchDB,
+  resumeBatchDB,
+  startBatchDB,
 } from "@/features/collections/collections.data";
-import { LinkIcon,Pause,Play,PlayIcon,Trash2 } from "lucide-react";
+import { LinkIcon, Pause, Play, PlayIcon, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { buildResolvableUrl,toResolvableLinkPaymentUrl } from "@/shared/lib/pay-url";
+import { buildResolvableUrl, toResolvableLinkPaymentUrl } from "@/shared/lib/pay-url";
 import { downloadXlsx } from "@/shared/lib/download";
 import { RECORD_STATUS_BADGE } from "@/features/collections/collection-batch.rules";
 

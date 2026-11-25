@@ -1,10 +1,10 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 import {
-getBatchByIdDB,
-getRecordsByBatchIdDB,
-type Batch,
-type RecordDeBatch,
+  getBatchByIdDB,
+  getRecordsByBatchIdDB,
+  type Batch,
+  type RecordDeBatch,
 } from "@/features/collections/collections.data";
 import { route } from "@/features/collections/collection-batch.rules";
 

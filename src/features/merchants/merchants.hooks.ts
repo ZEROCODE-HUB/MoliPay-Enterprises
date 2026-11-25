@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCurrentCustomer,useSessionUser } from "@/features/session/session.hooks";
+import { useCurrentCustomer, useSessionUser } from "@/features/session/session.hooks";
 import { merchantQueries } from "./merchants.queries";
 
 /** Comercios del cliente activo. Espera a tener usuario y cliente. */

@@ -1,10 +1,11 @@
 import { useSettlementChargebacks } from "../settlements.hooks";
 import { useState } from "react";
-import { Label,Select } from "@/shared/ui/form-controls";
+import { Label, Select } from "@/shared/ui/form-controls";
 import { formatARS } from "@/features/collections/collections.data";
 import { Badge } from "@/shared/ui/badge";
 import { fmtDateFull } from "@/features/settlements/settlements.rules";
 import { Pagination } from "@/shared/ui/pagination";
+import { SkeletonRows } from "@/shared/ui/table-skeleton";
 
 /** 9.6 Contracargos: que venta le desconocieron y donde se le desconto. */
 export function ChargebacksCompanyTab() {
@@ -47,12 +48,12 @@ export function ChargebacksCompanyTab() {
         <div className="text-xs text-right">
           <div className="text-muted-foreground">
             Contracargos: <b>{rows.length}</b> · Total{" "}
-            <span className="font-mono font-semibold">
+            <span className="font-mono font-medium">
               {formatARS(rows.reduce((a, c) => a + Number(c.importe), 0))}
             </span>
           </div>
           {deuda > 0 && (
-            <div className="text-red-700 font-semibold mt-0.5">
+            <div className="text-red-700 font-medium mt-0.5">
               Deuda pendiente: <span className="font-mono">{formatARS(deuda)}</span> · se descuenta
               de tus próximas acreditaciones
             </div>
@@ -62,22 +63,18 @@ export function ChargebacksCompanyTab() {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-              <th className="text-left px-5 py-3">Fecha</th>
-              <th className="text-left px-5 py-3">Bandera</th>
-              <th className="text-left px-5 py-3">Venta original</th>
-              <th className="text-right px-5 py-3">Importe</th>
-              <th className="text-left px-5 py-3">Lote</th>
-              <th className="text-center px-5 py-3">Estado</th>
+            <tr className="border-b bg-muted/50">
+              <th className="text-left px-4 py-2.5">Fecha</th>
+              <th className="text-left px-4 py-2.5">Bandera</th>
+              <th className="text-left px-4 py-2.5">Venta original</th>
+              <th className="text-right px-4 py-2.5">Importe</th>
+              <th className="text-left px-4 py-2.5">Lote</th>
+              <th className="text-center px-4 py-2.5">Estado</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {q.isLoading ? (
-              <tr>
-                <td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">
-                  Cargando…
-                </td>
-              </tr>
+              <SkeletonRows columns={6} rows={6} />
             ) : q.isError ? (
               <tr>
                 <td colSpan={6} className="px-5 py-10 text-center text-sm text-red-700">
@@ -112,7 +109,7 @@ export function ChargebacksCompanyTab() {
                       <span className="text-muted-foreground">{c.motivo ?? "—"}</span>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-right font-mono tabular-nums font-semibold text-red-600">
+                  <td className="px-5 py-3 text-right font-mono tabular-nums font-medium text-red-600">
                     - {formatARS(c.importe)}
                   </td>
                   <td className="px-5 py-3 text-xs">
@@ -124,10 +121,10 @@ export function ChargebacksCompanyTab() {
                     <div className="flex flex-col items-center gap-0.5">
                       <Badge tone={tone(c.estado)}>{c.estado}</Badge>
                       {c.mediacion && (
-                        <span className="text-[10px] text-muted-foreground">{c.mediacion}</span>
+                        <span className="text-[11px] text-muted-foreground">{c.mediacion}</span>
                       )}
                       {Number(c.pendiente_recuperar) > 0 && (
-                        <span className="text-[10px] text-red-700 font-mono">
+                        <span className="text-[11px] text-red-700 font-mono">
                           debe {formatARS(c.pendiente_recuperar)}
                         </span>
                       )}

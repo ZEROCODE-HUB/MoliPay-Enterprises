@@ -1,4 +1,4 @@
-import { Input,Label,Select } from "@/shared/ui/form-controls";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
 import { FormDialog } from "@/shared/ui/form-dialog";
 import { type Sub } from "./subaccount-view";
 

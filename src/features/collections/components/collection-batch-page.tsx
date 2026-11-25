@@ -1,12 +1,13 @@
 import { createBatchActions } from "./collection-batch-actions";
 import { CollectionBatchBody } from "./collection-batch-body";
 import { useCollectionBatchPage } from "./use-collection-batch-page";
-import { removeBatchDB,statusCatalog } from "@/features/collections/collections.data";
-import { AlertCircle,ArrowLeft } from "lucide-react";
+import { removeBatchDB, statusCatalog } from "@/features/collections/collections.data";
+import { AlertCircle, ArrowLeft } from "lucide-react";
 import { BtnOutline } from "@/shared/ui/button";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { STATUS_STYLES } from "@/features/collections/collection-batch.rules";
+import { LoadingLines } from "@/shared/ui/table-skeleton";
 
 export function CollectionBatchPage() {
   const vm = useCollectionBatchPage();
@@ -33,7 +34,7 @@ export function CollectionBatchPage() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3" />
-        <p className="text-sm text-muted-foreground">Cargando lote...</p>
+        <LoadingLines label="Cargando lote…" />
       </div>
     );
   }
@@ -42,7 +43,7 @@ export function CollectionBatchPage() {
     return (
       <div className="text-center py-12">
         <AlertCircle size={40} className="mx-auto mb-3 text-muted-foreground" />
-        <h2 className="font-semibold">Lote no encontrado</h2>
+        <h2 className="font-medium">Lote no encontrado</h2>
         <p className="text-sm text-muted-foreground mt-1">
           El lote con ID {id} no existe o fue eliminado.
         </p>
@@ -84,13 +85,13 @@ export function CollectionBatchPage() {
           <ArrowLeft size={18} />
         </button>
         <div className="flex-1">
-          <h2 className="text-lg font-semibold">{batch.nombre}</h2>
+          <h2 className="text-lg font-medium">{batch.nombre}</h2>
           <p className="text-xs text-muted-foreground">
             ID: {batch.id} · Periodo: {batch.periodo}
           </p>
         </div>
         <span
-          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+          className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
             STATUS_STYLES[batch.estado]
           }`}
         >

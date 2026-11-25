@@ -57,8 +57,8 @@ export function CompanyPersonForm({
   });
 
   return (
-    <div className="space-y-4 rounded-sm border border-black-100 p-4">
-      <h3 className="text-sm font-semibold text-black-800">{title}</h3>
+    <div className="space-y-4 rounded-md border border-border p-4">
+      <h3 className="text-sm font-medium text-foreground">{title}</h3>
       {extra}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nombre" error={errors.firstName?.message} {...form.register("firstName")} />

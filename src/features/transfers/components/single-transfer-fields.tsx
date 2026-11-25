@@ -1,9 +1,9 @@
 import { toast } from "sonner";
 import { SummaryQuote } from "@/features/transfers/components/summary-quote";
 import { formatMoney } from "@/shared/lib/format";
-import { Save,Users,X } from "lucide-react";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
-import { Input,Label,Select } from "@/shared/ui/form-controls";
+import { Save, Users, X } from "lucide-react";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
 import { RecipientValidatedCard } from "./transfers-parts";
 
 import type { UnicaVm } from "./use-single-transfer-form";

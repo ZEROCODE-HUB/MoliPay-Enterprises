@@ -1,9 +1,9 @@
 import jsPDF from "jspdf";
 import {
-formatAmount,
-formatDateReceipt,
-nameFileReceipt,
-type DataReceipt,
+  formatAmount,
+  formatDateReceipt,
+  nameFileReceipt,
+  type DataReceipt,
 } from "@/shared/lib/receipt/receipt";
 
 function onlyDigits(v: string): string {

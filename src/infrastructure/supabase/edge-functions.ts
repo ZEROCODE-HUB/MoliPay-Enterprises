@@ -1,4 +1,4 @@
-import { AppError,type AppErrorContext,type AppErrorKind } from "@/shared/lib/errors";
+import { AppError, type AppErrorContext, type AppErrorKind } from "@/shared/lib/errors";
 import { requireSupabase } from "./client";
 
 /**

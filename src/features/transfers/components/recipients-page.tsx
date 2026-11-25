@@ -1,14 +1,14 @@
 import { useRecipientsPage } from "@/features/transfers/components/use-recipients-page";
 import { PageHeader } from "@/shared/ui/page-header";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
-import { Plus,Upload } from "lucide-react";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
+import { Plus, Upload } from "lucide-react";
 import { Stat } from "@/shared/ui/card";
 import { formatMoney } from "@/shared/lib/format";
 import { sumDecimals } from "@/shared/lib/money";
 import { RecipientsTable } from "@/features/transfers/components/recipients-table";
 import { NewRecipientDialog } from "@/features/transfers/components/new-recipient-dialog";
 import { FormDialog } from "@/shared/ui/form-dialog";
-import { Input,Label,Select } from "@/shared/ui/form-controls";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { deleteFrequentRecipient } from "@/features/transfers/transfer-store";
 import { toast } from "sonner";
@@ -39,7 +39,7 @@ export function RecipientsPage() {
     <>
       <PageHeader
         title="Mis destinatarios"
-        description="Agenda de contactos frecuentes con etiquetas y validacion CBU."
+        description="Agenda de contactos frecuentes con etiquetas y validacion CBU"
         action={
           <div className="flex gap-2">
             <BtnOutline>
@@ -70,13 +70,13 @@ export function RecipientsPage() {
         open={!!transfer}
         onClose={() => setTransfer(null)}
         title={`Transferir a ${transfer?.n ?? ""}`}
-        description="Confirma el monto y la subcuenta de origen para enviar la transferencia."
+        description="Confirma el monto y la subcuenta de origen para enviar la transferencia"
         submitLabel={sending ? "Enviando..." : "Enviar transferencia"}
         onSubmit={handleTransfer}
       >
         {transfer && (
           <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
-            <div className="font-semibold text-sm text-foreground">{transfer.n}</div>
+            <div className="font-medium text-sm text-foreground">{transfer.n}</div>
             <div className="text-muted-foreground">
               @{transfer.a} · {transfer.b}
             </div>
@@ -110,7 +110,7 @@ export function RecipientsPage() {
           <Input
             value={concept}
             onChange={(e) => setConcept(e.target.value)}
-            placeholder="Pago factura, sueldo, etc."
+            placeholder="Pago factura, sueldo, etc"
           />
         </div>
       </FormDialog>

@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { downloadReceiptPdf } from "@/shared/lib/receipt/receipt-pdf";
 import { compartirComprobante } from "@/shared/lib/receipt/receipt-image";
-import { toReceipt,type ReceiptOwner } from "../history.rules";
+import { toReceipt, type ReceiptOwner } from "../history.rules";
 import type { TransactionDetail } from "../history.types";
 
 export function downloadReceipt(detail: TransactionDetail, owner: ReceiptOwner) {

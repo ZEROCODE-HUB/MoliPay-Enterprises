@@ -1,17 +1,17 @@
-import { useMemo,useState } from "react";
+import { useMemo, useState } from "react";
 import {
-CreditCard,
-FileText,
-Globe,
-GraduationCap,
-Wifi,
-Zap,
-type LucideIcon,
+  CreditCard,
+  FileText,
+  Globe,
+  GraduationCap,
+  Wifi,
+  Zap,
+  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { moneyInputToNumber } from "@/shared/lib/money";
-import { type Item,type SectionTab,type Tab } from "@/features/services/services.types";
-import { daysUntil,history,parseDate,services } from "@/features/services/services.rules";
+import { type Item, type SectionTab, type Tab } from "@/features/services/services.types";
+import { daysUntil, history, parseDate, services } from "@/features/services/services.rules";
 
 /** Estado y acciones de ServicesPage: el componente solo dibuja. */
 export function useServicesPage() {

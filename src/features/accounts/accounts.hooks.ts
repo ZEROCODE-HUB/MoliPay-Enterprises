@@ -1,12 +1,12 @@
-import { useQuery,useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { accountsRepository } from "@/app/dependencies";
-import { useCurrentCustomer,useSessionUser } from "@/features/session/session.hooks";
-import { accountsKeys,createAccountsQueries } from "./accounts.queries";
+import { useCurrentCustomer, useSessionUser } from "@/features/session/session.hooks";
+import { accountsKeys, createAccountsQueries } from "./accounts.queries";
 import type {
-InternalTransferInput,
-Subaccount,
-SubaccountInput,
-SubaccountStatus,
+  InternalTransferInput,
+  Subaccount,
+  SubaccountInput,
+  SubaccountStatus,
 } from "./accounts.types";
 
 const accountsQueries = createAccountsQueries(accountsRepository);

@@ -1,9 +1,10 @@
-import { ArrowDownLeft,ArrowUpRight,Download,Filter,ChevronUp,History } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Download, Filter, ChevronUp, History } from "lucide-react";
 import { BtnOutline } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/form-controls";
 import { fmtMov } from "./subaccount-view";
 
 import type { SubaccountDetailModalVm } from "./use-subaccount-detail-modal";
+import { TableSkeleton } from "@/shared/ui/table-skeleton";
 
 export function SubaccountMovementsSection({
   onVerHistory,
@@ -34,7 +35,7 @@ export function SubaccountMovementsSection({
   return (
     <section>
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-        <h3 className="text-sm font-semibold">Historial de movimientos</h3>
+        <h3 className="text-sm font-medium">Historial de movimientos</h3>
         <div className="flex gap-2">
           <BtnOutline className="h-8 px-3 text-[11px]" onClick={onVerHistory}>
             <History size={12} /> HISTORIAL COMPLETO
@@ -56,20 +57,16 @@ export function SubaccountMovementsSection({
         <div className="mb-3 p-3 bg-muted/30 rounded-lg border space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
             <div>
-              <label className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
-                Buscar
-              </label>
+              <label className="block text-[11px] text-muted-foreground mb-1">Buscar</label>
               <Input
                 value={filterSearch}
                 onChange={(e) => setFilterSearch(e.target.value)}
-                placeholder="TXID, CVU o entidad..."
+                placeholder="TXID, CVU o entidad"
                 className="h-9 text-sm w-full"
               />
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-1">
-                Tipo
-              </label>
+              <label className="block text-[11px] text-muted-foreground mb-1">Tipo</label>
               <select
                 value={filterKind}
                 onChange={(e) => setFilterKind(e.target.value as "todos" | "ingreso" | "egreso")}
@@ -91,7 +88,7 @@ export function SubaccountMovementsSection({
 
       <div className="max-h-[280px] overflow-y-auto border rounded-lg divide-y">
         {loadingMoves ? (
-          <p className="p-4 text-sm text-muted-foreground text-center">Cargando movimientos…</p>
+          <TableSkeleton label="Cargando movimientos…" rows={5} />
         ) : filtMoves.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground text-center">
             Sin movimientos registrados
@@ -115,11 +112,11 @@ export function SubaccountMovementsSection({
               <div className="min-w-0 flex-1">
                 <div className="flex justify-between items-start gap-2">
                   <div>
-                    <p className="text-sm font-semibold">{m.titulo}</p>
+                    <p className="text-sm font-medium">{m.titulo}</p>
                     <p className="text-[11px] font-mono text-muted-foreground mt-0.5">{m.txid}</p>
                   </div>
                   <span
-                    className={`font-mono tabular-nums text-sm font-semibold whitespace-nowrap shrink-0 ${m.tipo === "ingreso" ? "text-emerald-700" : "text-red-700"}`}
+                    className={`font-mono tabular-nums text-sm font-medium whitespace-nowrap shrink-0 ${m.tipo === "ingreso" ? "text-emerald-700" : "text-red-700"}`}
                   >
                     {fmtMov(m)}
                   </span>

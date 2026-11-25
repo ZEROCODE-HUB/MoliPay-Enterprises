@@ -123,7 +123,7 @@ export function CompanyRegistrySection({ form }: Props) {
   return (
     <>
       <FieldGroup title="Inscripción">
-        <p className="-mt-2 text-xs text-black-400">
+        <p className="-mt-2 text-xs text-muted-foreground">
           Completamos el organismo y el lugar según el domicilio legal: cambialos si la sociedad se
           inscribió en otro registro.
         </p>
@@ -255,13 +255,13 @@ export function CompanySummarySection({ form, goTo }: Props & Pick<CompanyDataPa
   return (
     <div className="space-y-5">
       {SUMMARY.map((block) => (
-        <section key={block.title} className="rounded-sm border border-black-100">
-          <div className="flex items-center justify-between border-b border-black-100 px-4 py-2.5">
-            <h3 className="text-sm font-semibold text-black-800">{block.title}</h3>
+        <section key={block.title} className="rounded-md border border-border">
+          <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+            <h3 className="text-sm font-medium text-foreground">{block.title}</h3>
             <button
               type="button"
               onClick={() => goTo(block.step)}
-              className="text-xs font-semibold text-red-500 hover:underline"
+              className="text-xs font-medium text-red-500 hover:underline"
             >
               Editar
             </button>
@@ -272,8 +272,8 @@ export function CompanySummarySection({ form, goTo }: Props & Pick<CompanyDataPa
                 key={key}
                 className="grid grid-cols-1 gap-1 py-2.5 text-sm sm:grid-cols-[minmax(0,180px)_1fr] sm:gap-4"
               >
-                <dt className="text-black-400">{label}</dt>
-                <dd className="break-words font-semibold text-black-800">{value(key) || "—"}</dd>
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd className="break-words font-medium text-foreground">{value(key) || "—"}</dd>
               </div>
             ))}
           </dl>

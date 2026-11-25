@@ -1,15 +1,15 @@
 import {
-Building2,
-CreditCard,
-Droplet,
-FileText,
-Flame,
-GraduationCap,
-Phone,
-Wifi,
-Zap,
+  Building2,
+  CreditCard,
+  Droplet,
+  FileText,
+  Flame,
+  GraduationCap,
+  Phone,
+  Wifi,
+  Zap,
 } from "lucide-react";
-import { type Item,type TxHist } from "./services.types";
+import { type Item, type TxHist } from "./services.types";
 
 export const services: Item[] = [
   {

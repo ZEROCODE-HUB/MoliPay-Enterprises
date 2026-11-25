@@ -1,14 +1,14 @@
 import * as XLSX from "xlsx";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect,useRef,useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import {
-createBatchDB,
-generateId,
-getLegajoUser,
-type Batch,
-type MethodPayment,
-type RecordDeBatch,
+  createBatchDB,
+  generateId,
+  getLegajoUser,
+  type Batch,
+  type MethodPayment,
+  type RecordDeBatch,
 } from "@/features/collections/collections.data";
 import { toast } from "sonner";
 import { moneyInputToNumber } from "@/shared/lib/money";

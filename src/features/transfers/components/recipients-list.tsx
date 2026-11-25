@@ -1,5 +1,5 @@
 import { type FrequentRecipient } from "@/features/transfers/transfer-store";
-import { ArrowUpRight,Trash2,Users } from "lucide-react";
+import { ArrowUpRight, Trash2, Users } from "lucide-react";
 import { type Recipient } from "@/features/transfers/transfers.types";
 
 /* ===== Destinatarios frecuentes ===== */
@@ -16,7 +16,7 @@ export function RecipientsList({
     return (
       <div className="text-center py-12 text-muted-foreground">
         <Users size={32} className="mx-auto mb-3 opacity-50" />
-        <p className="font-semibold">No tenes destinatarios frecuentes</p>
+        <p className="font-medium">No tenes destinatarios frecuentes</p>
         <p className="text-sm mt-1">Los destinatarios se guardan al confirmar una transferencia.</p>
       </div>
     );
@@ -27,7 +27,7 @@ export function RecipientsList({
       {items.map((f) => (
         <div key={f.id} className="flex items-center justify-between py-3">
           <div className="min-w-0">
-            <div className="text-sm font-semibold">{f.nombre}</div>
+            <div className="text-sm font-medium">{f.nombre}</div>
             <div className="text-xs text-muted-foreground truncate">
               {f.alias ? `@${f.alias} · ` : ""}
               <span className="font-mono">{f.cbu}</span>

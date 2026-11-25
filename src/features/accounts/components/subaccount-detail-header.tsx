@@ -1,4 +1,4 @@
-import { Pencil,Trash2,Lock,Pause } from "lucide-react";
+import { Pencil, Trash2, Lock, Pause, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/shared/ui/badge";
 import { Input } from "@/shared/ui/form-controls";
@@ -26,7 +26,7 @@ export function SubaccountDetailHeader({
   return (
     <section>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold">Informacion general</h3>
+        <h3 className="text-sm font-medium">Información general</h3>
         <div className="flex gap-1">
           <button
             onClick={async () => {
@@ -66,13 +66,11 @@ export function SubaccountDetailHeader({
       <div className="space-y-3 text-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <span className="text-[11px] uppercase tracking-wide text-muted-foreground">
-              Nombre
-            </span>
-            <p className="font-semibold mt-0.5">{sub.n}</p>
+            <span className="text-[11px] text-muted-foreground">Nombre</span>
+            <p className="font-medium mt-0.5">{sub.n}</p>
           </div>
           <div>
-            <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Email</span>
+            <span className="text-[11px] text-muted-foreground">Email</span>
             <div className="flex items-center gap-1.5 mt-0.5">
               {editEmail ? (
                 <div className="flex items-center gap-1 flex-1">
@@ -85,7 +83,7 @@ export function SubaccountDetailHeader({
                     onClick={() => {
                       setEditEmail(false);
                     }}
-                    className="h-8 px-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 rounded border"
+                    className="h-8 px-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50 rounded border"
                   >
                     OK
                   </button>
@@ -96,7 +94,7 @@ export function SubaccountDetailHeader({
                     }}
                     className="h-8 px-2 text-xs text-muted-foreground hover:bg-muted rounded border"
                   >
-                    ✕
+                    <X size={16} aria-hidden />
                   </button>
                 </div>
               ) : (

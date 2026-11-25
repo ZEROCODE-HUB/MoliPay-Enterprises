@@ -1,4 +1,4 @@
-import { Input,Label,Select } from "@/shared/ui/form-controls";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
 import { FormDialog } from "@/shared/ui/form-dialog";
 import { formatMoneyAmount } from "@/shared/lib/money";
 
@@ -37,7 +37,7 @@ export function InternalTransferFields({
       open={transfOpen}
       onClose={() => setTransfOpen(false)}
       title="Transferir entre subcuentas"
-      description="Movimiento interno · acreditacion inmediata, sin comision."
+      description="Movimiento interno · acreditacion inmediata, sin comision"
       submitLabel="Transferir"
       onSubmit={onSubmitTransfer}
     >
@@ -78,7 +78,7 @@ export function InternalTransferFields({
         <Input
           value={transfConcept}
           onChange={(e) => setTransfConcept(e.target.value)}
-          placeholder="Barrido fin de dia, fondeo, etc."
+          placeholder="Barrido fin de dia, fondeo, etc"
         />
       </div>
     </FormDialog>

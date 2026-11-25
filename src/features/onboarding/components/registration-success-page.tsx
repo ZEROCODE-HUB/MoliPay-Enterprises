@@ -37,10 +37,10 @@ export function RegistrationSuccessPage() {
           <>
             <p>
               Enviamos un correo a{" "}
-              <span className="font-semibold text-black-800">{email ?? "tu email"}</span>. Revisá tu
+              <span className="font-medium text-foreground">{email ?? "tu email"}</span>. Revisá tu
               bandeja y hacé clic en el link para validar la cuenta.
             </p>
-            <p className="mt-3 text-xs text-black-400">
+            <p className="mt-3 text-xs text-muted-foreground">
               Si no lo recibís, revisá spam o{" "}
               <button
                 type="button"

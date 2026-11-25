@@ -1,5 +1,5 @@
 import { Modal } from "@/shared/ui/modal";
-import { Check,Loader2,ShieldCheck } from "lucide-react";
+import { Check, Loader2, ShieldCheck } from "lucide-react";
 import { formatMoney } from "@/shared/lib/format";
 import { type StepTransfer } from "@/features/transfers/transfer-ui.types";
 import { STEPS } from "@/features/transfers/transfer-ui.rules";
@@ -18,9 +18,9 @@ export function TransferProcessingOverlay({
         <div className="mx-auto mb-5 h-16 w-16 rounded-full bg-[color:var(--brand-soft)] flex items-center justify-center">
           <Loader2 size={30} className="animate-spin text-[color:var(--brand-primary)]" />
         </div>
-        <div className="text-lg font-semibold">Procesando transferencia</div>
+        <div className="text-lg font-medium">Procesando transferencia</div>
         {amount != null && (
-          <div className="mt-1 font-display tabular-nums text-2xl font-bold">
+          <div className="mt-1 font-display tabular-nums text-2xl font-medium">
             {formatMoney(amount)}
           </div>
         )}
@@ -50,7 +50,7 @@ export function TransferProcessingOverlay({
                     hecho
                       ? "text-muted-foreground"
                       : enCurso
-                        ? "font-semibold"
+                        ? "font-medium"
                         : "text-muted-foreground/70"
                   }
                 >

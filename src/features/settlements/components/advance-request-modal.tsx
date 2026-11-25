@@ -6,6 +6,7 @@ import { Input, Label } from "@/shared/ui/form-controls";
 import { fmtDateFull } from "@/features/settlements/settlements.rules";
 
 import type { SettlementsPageVm } from "./use-settlements-page";
+import { LoadingLines } from "@/shared/ui/table-skeleton";
 
 export function AdvanceRequestModal({
   open,
@@ -46,7 +47,7 @@ export function AdvanceRequestModal({
     <Modal open onClose={close} size="custom" className="max-w-lg">
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="px-6 py-4 border-b flex items-center justify-between">
-          <div className="font-semibold">Solicitar adelanto</div>
+          <div className="font-medium">Solicitar adelanto</div>
           <button onClick={close} className="p-1 hover:bg-muted rounded">
             <X size={16} />
           </button>
@@ -80,7 +81,7 @@ export function AdvanceRequestModal({
                   el neto a recibir. Se descuenta del lote donde se acredite esa operación.
                 </p>
                 {cap && !cap.cumpleAntiguedad && (
-                  <p className="text-red-700 font-semibold pt-1">
+                  <p className="text-red-700 font-medium pt-1">
                     El adelanto se habilita a partir de los {cap.antiguedadMinima} días de operación
                     (llevás {cap.antiguedadDias ?? 0}).
                   </p>
@@ -96,7 +97,7 @@ export function AdvanceRequestModal({
               <div>
                 <Label>Operación a adelantar</Label>
                 {operationsLoading ? (
-                  <p className="text-sm text-muted-foreground py-3">Cargando operaciones…</p>
+                  <LoadingLines label="Cargando operaciones…" />
                 ) : (
                   <div className="max-h-64 overflow-y-auto border rounded-md divide-y">
                     {advanceOperations.map((op) => (
@@ -122,7 +123,7 @@ export function AdvanceRequestModal({
                           </span>
                         </span>
                         <span className="text-right whitespace-nowrap">
-                          <span className="block font-mono font-semibold">
+                          <span className="block font-mono font-medium">
                             {formatARS(op.available)}
                           </span>
                           <span className="block text-muted-foreground">

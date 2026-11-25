@@ -12,14 +12,10 @@ export function SiteFooter() {
           <p className="mt-6 text-sm text-white/50 leading-relaxed max-w-[260px]">
             © 2026 MOLIPAY. Todos los derechos reservados.
           </p>
-          <p className="mt-4 font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">
-            PSPCP · Marco BCRA
-          </p>
+          <p className="mt-4 font-sans text-xs font-medium text-red-400">PSPCP · Marco BCRA</p>
         </div>
         <div>
-          <div className="font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">
-            Enlaces útiles
-          </div>
+          <div className="font-sans text-xs font-medium text-red-400">Enlaces útiles</div>
           <ul className="mt-5 space-y-3 font-sans text-sm text-white/70">
             <li>
               <Link to="/legales/privacidad" className="hover:text-white transition-colors">
@@ -44,9 +40,7 @@ export function SiteFooter() {
           </ul>
         </div>
         <div>
-          <div className="font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">
-            Contactanos
-          </div>
+          <div className="font-sans text-xs font-medium text-red-400">Contactanos</div>
           <ul className="mt-5 space-y-3 font-sans text-sm text-white/70">
             <li>
               <a
@@ -72,13 +66,9 @@ export function SiteFooter() {
           </ul>
         </div>
         <div>
-          <div className="font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">
-            Ente fiscalizador
-          </div>
+          <div className="font-sans text-xs font-medium text-red-400">Ente fiscalizador</div>
           <div className="mt-5 border border-white/10 p-4 bg-black-800">
-            <div className="font-sans text-[0.6rem] tracking-[0.14em] uppercase text-red-400">
-              BCRA
-            </div>
+            <div className="font-sans text-xs font-medium text-red-400">BCRA</div>
             <div className="mt-1.5 font-sans text-sm text-white/80 leading-relaxed">
               Banco Central de la República Argentina
             </div>
@@ -86,7 +76,7 @@ export function SiteFooter() {
               href="https://www.bcra.gob.ar"
               target="_blank"
               rel="noreferrer"
-              className="mt-2 inline-block font-sans text-[0.6rem] tracking-[0.14em] uppercase text-white hover:text-red-400 transition-colors"
+              className="mt-2 inline-block font-sans text-xs font-medium text-white hover:text-red-400 transition-colors"
             >
               bcra.gob.ar →
             </a>

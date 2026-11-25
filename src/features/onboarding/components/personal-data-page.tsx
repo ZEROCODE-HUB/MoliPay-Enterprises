@@ -185,7 +185,7 @@ export function PersonalDataPage() {
             placeholder="20-12345678-9"
             className="font-mono"
             error={
-              errors.cuit?.message ?? (cuitDigits > 11 ? "Máximo 11 dígitos permitidos" : undefined)
+              errors.cuit?.message ?? (cuitDigits > 11 ? "Maximo 11 dígitos permitidos" : undefined)
             }
             hint={cuitDigits > 0 ? `${cuitDigits}/11 dígitos` : undefined}
             {...form.register("cuit")}
@@ -228,7 +228,7 @@ export function PersonalDataPage() {
 
       {step === 2 && (
         <div className="space-y-5">
-          <div className="rounded-sm border border-black-100 bg-black-50 p-5 text-xs leading-relaxed text-black-500">
+          <div className="rounded-md border border-border bg-black-50 p-5 text-xs leading-relaxed text-muted-foreground">
             Se consideran <strong>PEPs</strong> a los Funcionarios Públicos Nacionales, Provinciales
             y Municipales (tanto Nacionales como Extranjeros) de los Poderes Ejecutivo, Legislativo
             y Judicial, que ocupan o que ocuparon altos cargos jerárquicos, así como también a sus
@@ -240,7 +240,7 @@ export function PersonalDataPage() {
             name="isPep"
             render={({ field }) => (
               <div className="flex items-center justify-between gap-4 py-2">
-                <span className="text-sm font-semibold text-black-800">
+                <span className="text-sm font-medium text-foreground">
                   ¿Es persona políticamente expuesta?
                 </span>
                 <button
@@ -254,7 +254,7 @@ export function PersonalDataPage() {
                   }`}
                 >
                   <span
-                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                    className={`inline-block h-5 w-5 transform rounded-full bg-card shadow transition-transform duration-200 ${
                       field.value ? "translate-x-[22px]" : "translate-x-0.5"
                     }`}
                   />

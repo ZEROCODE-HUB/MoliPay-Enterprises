@@ -4,14 +4,14 @@ import { CollectionsKpis } from "@/features/collections/components/collections-k
 import { CollectionsCharts } from "@/features/collections/components/collections-charts";
 import { Card } from "@/shared/ui/card";
 import {
-CartesianGrid,
-Legend,
-Line,
-LineChart,
-ResponsiveContainer,
-Tooltip,
-XAxis,
-YAxis,
+  CartesianGrid,
+  Legend,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
 import { formatARS } from "@/features/collections/collections.data";
 import { CollectionsRecentBatches } from "@/features/collections/components/collections-recent-batches";
@@ -32,8 +32,8 @@ export function CollectionsPage() {
       <CollectionsCharts {...vm} />
 
       {/* Evolucion de pagos */}
-      <Card className="mb-6">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+      <Card className="mb-4">
+        <h4 className="font-display text-sm font-medium text-foreground mb-3">
           Evolucion de pagos
         </h4>
         <ResponsiveContainer width="100%" height={240}>

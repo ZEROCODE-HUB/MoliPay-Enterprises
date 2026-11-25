@@ -1,6 +1,6 @@
 import { requireSupabase } from "@/infrastructure/supabase/client";
 import { toAppError } from "@/infrastructure/supabase/errors";
-import { sumMoney,moneyFromCents,moneyFromDecimal,toDecimalString } from "@/shared/lib/money";
+import { sumMoney, moneyFromCents, moneyFromDecimal, toDecimalString } from "@/shared/lib/money";
 
 const context = (operation: string) => ({ feature: "payment-links", operation });
 

@@ -1,6 +1,6 @@
-import { describe,expect,it,vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
-import { accountsKeys,createAccountsQueries } from "./accounts.queries";
+import { accountsKeys, createAccountsQueries } from "./accounts.queries";
 import type { AccountsRepository } from "./accounts.repository";
 
 function fakeRepository(): AccountsRepository {

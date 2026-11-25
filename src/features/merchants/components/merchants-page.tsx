@@ -1,12 +1,13 @@
 import { Pagination } from "@/shared/ui/pagination";
-import { useMemo,useState,useEffect } from "react";
-import { Search,Store } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Search, Store } from "lucide-react";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
-import { Input,Select } from "@/shared/ui/form-controls";
+import { Input, Select } from "@/shared/ui/form-controls";
 import { useMyMerchants } from "../merchants.hooks";
 import type { Merchant } from "../merchants.types";
+import { TableSkeleton } from "@/shared/ui/table-skeleton";
 
 const statusTone = (status: string): "neutral" | "success" | "warn" | "danger" => {
   const e = status.toLowerCase();
@@ -68,58 +69,56 @@ export function MerchantsPage() {
     <>
       <PageHeader
         title="Mis comercios"
-        description="Los comercios asociados a tu cuenta."
+        description="Los comercios asociados a tu cuenta"
         action={
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="bg-white border border-black-100 rounded-md px-4 py-2 flex items-center gap-2">
+            <div className="bg-card border border-border rounded-md px-4 py-2 flex items-center gap-2">
               <Store size={14} className="text-moli-orange" />
-              <span className="font-semibold text-black-700">{merchants.length}</span> comercios
+              <span className="font-medium text-foreground">{merchants.length}</span> comercios
             </div>
-            <div className="bg-white border border-black-100 rounded-md px-4 py-2 flex items-center gap-2">
+            <div className="bg-card border border-border rounded-md px-4 py-2 flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-success inline-block" />
-              <span className="font-semibold text-black-700">{actives}</span> activos
+              <span className="font-medium text-foreground">{actives}</span> activos
             </div>
           </div>
         }
       />
 
-      <Card className="mb-4 p-3">
-        <div className="flex flex-wrap gap-2">
-          <div className="relative w-full sm:flex-1 sm:min-w-[220px]">
-            <Search
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar por nombre, legajo o email..."
-              className="pl-9"
-            />
-          </div>
-          <Select value={level} onChange={(e) => setLevel(e.target.value)}>
-            <option>Todos</option>
-            {levels.map((n) => (
-              <option key={n}>{n}</option>
-            ))}
-          </Select>
-          <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option>Todos</option>
-            {statuses.map((e) => (
-              <option key={e}>{e}</option>
-            ))}
-          </Select>
+      <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3">
+        <div className="relative w-full sm:flex-1 sm:min-w-[220px]">
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por nombre, legajo o email"
+            className="pl-9"
+          />
         </div>
-      </Card>
+        <Select value={level} onChange={(e) => setLevel(e.target.value)}>
+          <option>Todos</option>
+          {levels.map((n) => (
+            <option key={n}>{n}</option>
+          ))}
+        </Select>
+        <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option>Todos</option>
+          {statuses.map((e) => (
+            <option key={e}>{e}</option>
+          ))}
+        </Select>
+      </div>
 
       {loading ? (
-        <Card className="p-6 text-sm text-muted-foreground">Cargando comercios…</Card>
+        <TableSkeleton label="Cargando comercios…" rows={5} />
       ) : (
         <Card className="p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
+                <tr className="text-[11px] border-b bg-muted/30">
                   <th className="text-left px-4 py-2.5">Comercio</th>
                   <th className="text-left px-4 py-2.5">Legajo</th>
                   <th className="text-left px-4 py-2.5">Nivel</th>
@@ -131,23 +130,23 @@ export function MerchantsPage() {
               <tbody>
                 {paginated.map((c) => (
                   <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
                         <span className="h-8 w-8 shrink-0 rounded-full inline-flex items-center justify-center bg-moli-orange/10 text-moli-orange">
                           <Store size={15} />
                         </span>
-                        <span className="font-semibold">{c.name}</span>
+                        <span className="font-medium">{c.name}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
                       {c.legajo}
                     </td>
-                    <td className="px-4 py-3">{c.level}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5">{c.level}</td>
+                    <td className="px-4 py-2.5">
                       <Badge tone={statusTone(c.status)}>{c.status}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{c.user}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{c.createdAt}</td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{c.user}</td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground">{c.createdAt}</td>
                   </tr>
                 ))}
                 {paginated.length === 0 && (

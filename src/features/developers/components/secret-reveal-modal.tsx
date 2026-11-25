@@ -1,5 +1,5 @@
 import { BtnPrimary } from "@/shared/ui/button";
-import { Modal,ModalBody,ModalFooter,ModalHeader,useModalTitleId } from "@/shared/ui/modal";
+import { Modal, ModalBody, ModalFooter, ModalHeader, useModalTitleId } from "@/shared/ui/modal";
 import { CopyableField } from "./copyable-field";
 
 export type RevealedSecret = { title: string; rows: [label: string, value: string][] };

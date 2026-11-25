@@ -2,7 +2,7 @@ import { BatchParametersStep } from "./batch-parameters-step";
 import { BatchFileStep } from "./batch-file-step";
 import { BatchSummaryStep } from "./batch-summary-step";
 import { useNewCollectionPage } from "./use-new-collection-page";
-import { ArrowLeft,Check } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 
 export function NewCollectionPage() {
   const vm = useNewCollectionPage();
@@ -22,7 +22,7 @@ export function NewCollectionPage() {
         {["Parametros generales", "Carga de CSV", "Confirmacion"].map((label, i) => (
           <div key={label} className="flex items-center gap-2">
             <div
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition ${
                 i === step
                   ? "bg-primary text-primary-foreground"
                   : i < step

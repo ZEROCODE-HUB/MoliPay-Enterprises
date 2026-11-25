@@ -23,7 +23,7 @@ export function RowRecipient({
     <div className="flex justify-between gap-2">
       <span className="text-muted-foreground">{label}</span>
       <span
-        className={`truncate ${strong ? "font-semibold" : "font-medium"} ${mono ? "font-mono" : ""}`}
+        className={`truncate ${strong ? "font-medium" : "font-medium"} ${mono ? "font-mono" : ""}`}
       >
         {value}
       </span>
@@ -40,12 +40,12 @@ export function RecipientValidatedCard({ d }: { d: CoelsaResult }) {
     <div className="mt-2 border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 rounded-lg p-3">
       <div className="flex items-center gap-2 mb-2">
         <ShieldCheck size={14} className="text-green-600" />
-        <span className="text-[11px] font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">
+        <span className="text-[11px] font-medium text-green-700 dark:text-green-400">
           Validado — {tipo}
         </span>
         {d.activa !== undefined && (
           <span
-            className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+            className={`text-[11px] font-medium px-1.5 py-0.5 rounded-full ${
               d.activa
                 ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
                 : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"

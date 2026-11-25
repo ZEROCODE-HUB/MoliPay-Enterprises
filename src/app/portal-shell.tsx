@@ -1,14 +1,14 @@
-import { Link,useRouterState,useNavigate } from "@tanstack/react-router";
+import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
-Menu,
-LogOut,
-MoreHorizontal,
-ChevronDown,
-ChevronLeft,
-ChevronRight,
-type LucideIcon,
+  Menu,
+  LogOut,
+  MoreHorizontal,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  type LucideIcon,
 } from "lucide-react";
-import { useMemo,useState,type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { MollyLogo } from "@/shared/ui/molly-logo";
 import { useDemoMode } from "@/app/demo-mode";
 import { authClient } from "@/app/dependencies";
@@ -57,27 +57,27 @@ export function PortalShell({
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-plata-50">
-      <header className="h-14 border-b border-black-100 bg-white flex items-center justify-between px-4 lg:px-6 shrink-0">
+    <div className="min-h-screen flex flex-col bg-muted/40 dark:bg-background">
+      <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 lg:px-6 shrink-0">
         <div className="flex items-center gap-3">
           <button
-            className="lg:hidden p-2 -ml-2 text-black-600 hover:text-black-800"
+            className="lg:hidden p-2 -ml-2 text-muted-foreground hover:text-foreground"
             onClick={() => setOpen((v) => !v)}
             aria-label="Abrir menú"
           >
             <Menu size={20} />
           </button>
           <MollyLogo size={28} />
-          <span className="hidden md:inline text-sm text-black-400 border-l border-black-100 pl-3 ml-1">
+          <span className="hidden md:inline text-sm text-muted-foreground border-l border-border pl-3 ml-1">
             {title}
           </span>
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex flex-col items-end leading-tight">
-            <span className="text-xs text-black-400">{userEmail ?? "Sesión activa"}</span>
-            <span className="text-sm font-semibold text-black-700">{userName ?? "Usuario"}</span>
+            <span className="text-xs text-muted-foreground">{userEmail ?? "Sesión activa"}</span>
+            <span className="text-sm font-medium text-foreground">{userName ?? "Usuario"}</span>
           </div>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold bg-red-50 text-red-500">
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium bg-muted text-foreground ring-1 ring-inset ring-border">
             {userName
               ? userName
                   .split(" ")
@@ -89,7 +89,7 @@ export function PortalShell({
           </div>
           <button
             onClick={onLogout}
-            className="hidden md:inline-flex items-center gap-1 text-xs text-black-400 hover:text-black-700 transition-colors"
+            className="hidden md:inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <LogOut size={14} /> Salir
           </button>
@@ -108,14 +108,12 @@ export function PortalShell({
             }`}
           >
             {!collapsed && (
-              <span className="text-xs font-semibold uppercase tracking-wider text-white/60 truncate">
-                Navegación
-              </span>
+              <span className="text-xs font-medium text-white/50 truncate">Navegación</span>
             )}
             <button
               type="button"
               onClick={() => setCollapsed((v) => !v)}
-              className="p-2 rounded-sm text-white/60 hover:text-white hover:bg-navy-600 transition-colors"
+              className="p-2 rounded-md text-white/50 hover:text-white hover:bg-white/6 transition-colors"
               title={collapsed ? "Expandir menú" : "Minimizar menú"}
               aria-label={collapsed ? "Expandir menú" : "Minimizar menú"}
             >
@@ -146,7 +144,7 @@ export function PortalShell({
         </main>
       </div>
 
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 h-16 bg-white border-t border-black-100 flex items-stretch z-30">
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 h-16 bg-card border-t border-border flex items-stretch z-30">
         {mainNav.map((item) => {
           const active = path === item.to;
           const Icon = item.icon;
@@ -154,8 +152,8 @@ export function PortalShell({
             <Link
               key={item.to}
               to={item.to}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] ${
-                active ? "text-moli-orange font-semibold" : "text-black-400"
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 text-[11px] ${
+                active ? "text-primary font-medium" : "text-muted-foreground"
               }`}
             >
               <Icon size={20} strokeWidth={1.75} />
@@ -166,7 +164,7 @@ export function PortalShell({
         {more.length > 0 && (
           <button
             onClick={() => setOpen(true)}
-            className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] text-black-400"
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[11px] text-muted-foreground"
           >
             <MoreHorizontal size={20} strokeWidth={1.75} />
             <span>Más</span>
@@ -263,8 +261,8 @@ function SidebarLink({
         aria-label={item.label}
         className={`flex items-center justify-center w-11 h-11 mx-auto mb-1 rounded-lg transition-colors ${
           active
-            ? "bg-moli-orange text-white font-semibold"
-            : "text-white/80 hover:text-white hover:bg-navy-600"
+            ? "bg-white/12 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+            : "text-white/70 hover:text-white hover:bg-white/6"
         }`}
       >
         <Icon size={20} strokeWidth={1.75} />
@@ -276,16 +274,16 @@ function SidebarLink({
     <Link
       to={item.to}
       onClick={onNavigate}
-      className={`flex items-center gap-3 px-3 py-2 rounded-sm text-sm mb-0.5 transition-colors ${
+      className={`relative flex items-center gap-3 h-9 px-3 rounded-md text-sm mb-0.5 transition-colors ${
         nested ? "pl-9" : ""
       } ${
         nested
           ? active
-            ? "bg-moli-orange-dark text-white font-semibold"
-            : "text-white/60 hover:text-white hover:bg-navy-600/50"
+            ? "bg-white/10 text-white font-medium before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-primary"
+            : "text-white/60 hover:text-white hover:bg-white/6"
           : active
-            ? "bg-moli-orange text-white font-semibold"
-            : "text-white/80 hover:text-white hover:bg-navy-600"
+            ? "bg-white/12 text-white font-medium shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
+            : "text-white/70 hover:text-white hover:bg-white/6"
       }`}
     >
       {!nested && <Icon size={18} strokeWidth={1.75} />}
@@ -313,10 +311,10 @@ function SidebarGroup({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`w-full flex items-center gap-3 px-3 py-2 rounded-sm text-sm transition-colors ${
+        className={`w-full flex items-center gap-3 h-9 px-3 rounded-md text-sm transition-colors ${
           containsActive
-            ? "text-moli-orange font-semibold"
-            : "text-white/80 hover:text-white hover:bg-navy-600"
+            ? "text-white font-medium"
+            : "text-white/70 hover:text-white hover:bg-white/6"
         }`}
         aria-expanded={expanded}
       >

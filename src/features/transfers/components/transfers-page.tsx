@@ -4,10 +4,10 @@ import { SaveRecipientPrompt } from "./save-recipient-prompt";
 import { useTransfersPage } from "./use-transfers-page";
 import { TransferProcessingOverlay } from "@/features/transfers/components/transfer-processing-overlay";
 import {
-cancelScheduledTransfer,
-createDraft,
-deleteDraft,
-deleteFrequentRecipient,
+  cancelScheduledTransfer,
+  createDraft,
+  deleteDraft,
+  deleteFrequentRecipient,
 } from "@/features/transfers/transfer-store";
 import { toDataError } from "@/infrastructure/supabase/errors";
 import { toast } from "sonner";
@@ -70,7 +70,7 @@ export function TransfersPage() {
     <>
       <PageHeader
         title="Transferir"
-        description="Envios inmediatos, programados y a CBU, CVU o alias."
+        description="Envios inmediatos, programados y a CBU, CVU o alias"
         action={
           <BtnOutline onClick={() => setTemplatesOpen(true)}>
             <FileText size={14} /> Plantillas
@@ -86,43 +86,35 @@ export function TransfersPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="bg-card border rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Disponible hoy
-          </div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+          <div className="text-[11px] text-muted-foreground">Disponible hoy</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
             {formatMoney(totalAvailable)}
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
+          <div className="text-[11px] text-muted-foreground mt-0.5 truncate">
             {subaccounts.length} subcuentas
           </div>
         </div>
         <div className="bg-card border rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Enviado este mes
-          </div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+          <div className="text-[11px] text-muted-foreground">Enviado este mes</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
             {formatMoney(sentMonth.monto)}
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">
+          <div className="text-[11px] text-muted-foreground mt-0.5">
             {sentMonth.ops} operaciones
           </div>
         </div>
         <div className="bg-card border rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Programadas
-          </div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+          <div className="text-[11px] text-muted-foreground">Programadas</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
             {scheduled.length}
           </div>
         </div>
         <div className="bg-card border rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Subcuentas
-          </div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+          <div className="text-[11px] text-muted-foreground">Subcuentas</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
             {subaccounts.length}
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">activas</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">activas</div>
         </div>
       </div>
 
@@ -139,7 +131,7 @@ export function TransfersPage() {
                   if (t.key === "programadas") void refreshScheduledTransfers();
                   setTab(t.key);
                 }}
-                className={`shrink-0 px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 md:border-b-0 md:border-l-2 md:text-left transition-colors ${
+                className={`shrink-0 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 md:border-b-0 md:border-l-2 md:text-left transition-colors ${
                   tab === t.key
                     ? "border-primary text-primary bg-[color:var(--brand-soft)]/50 md:bg-[color:var(--brand-soft)]/40"
                     : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"

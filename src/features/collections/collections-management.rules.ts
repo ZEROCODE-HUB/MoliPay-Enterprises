@@ -1,4 +1,4 @@
-import { statusCatalog,type BatchStatus } from "@/features/collections/collections.data";
+import { statusCatalog, type BatchStatus } from "@/features/collections/collections.data";
 
 export const STATUS_LABEL: Record<BatchStatus, string> = {
   cargado: "Cargado / Pendiente",

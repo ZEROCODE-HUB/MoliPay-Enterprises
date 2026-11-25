@@ -1,20 +1,20 @@
-import { useMemo,useState,useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import { userMessage } from "@/shared/lib/errors";
 import { useSubaccounts } from "@/features/accounts/accounts.hooks";
 import { useCurrentCustomer } from "@/features/session/session.hooks";
-import { useTransactionDetailLoader,useTransactionLines } from "../history.hooks";
-import { lineTotals,singleAccountCbu,type ReceiptOwner } from "../history.rules";
+import { useTransactionDetailLoader, useTransactionLines } from "../history.hooks";
+import { lineTotals, singleAccountCbu, type ReceiptOwner } from "../history.rules";
 import type {
-HistoryFilters,
-LineKind,
-TransactionDetail,
-TransactionLine,
+  HistoryFilters,
+  LineKind,
+  TransactionDetail,
+  TransactionLine,
 } from "../history.types";
-import { exportLinesPdf,exportLinesXlsx } from "./history-export";
-import { downloadReceipt,shareReceipt } from "./receipt-actions";
-import { route,PAGE_SIZE } from "@/features/history/history.rules";
+import { exportLinesPdf, exportLinesXlsx } from "./history-export";
+import { downloadReceipt, shareReceipt } from "./receipt-actions";
+import { route, PAGE_SIZE } from "@/features/history/history.rules";
 
 /** Estado y acciones de HistoryPage: el componente solo dibuja. */
 export function useHistoryPage() {

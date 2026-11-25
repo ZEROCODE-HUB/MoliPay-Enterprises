@@ -15,7 +15,7 @@ export function Row({ label, value }: { label: string; value: string }) {
       <span className="text-muted-foreground shrink-0">{label}</span>
       {/* `break-all` porque los valores son ids: en pantallas angostas un
           comprobante o un codigo de operacion no tienen donde cortar. */}
-      <span className="font-semibold font-mono text-right break-all min-w-0">{value}</span>
+      <span className="font-medium font-mono text-right break-all min-w-0">{value}</span>
     </div>
   );
 }

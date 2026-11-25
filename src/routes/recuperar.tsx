@@ -6,7 +6,7 @@ export const Route = createFileRoute("/recuperar")({
     email: (search.email as string) ?? "",
   }),
   head: () => ({
-    meta: [{ title: "Recuperar contraseña — MoliPay" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "Recuperar contrasena — MoliPay" }, { name: "robots", content: "noindex" }],
   }),
   component: RecoverPasswordPage,
 });

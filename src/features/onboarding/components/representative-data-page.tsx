@@ -4,7 +4,12 @@ import { useSessionUser } from "@/features/session/session.hooks";
 import { useZodForm } from "@/shared/forms/use-zod-form";
 import { AuthShell, FormTitle, Stepper, WizardNav } from "@/shared/ui/auth-kit";
 import { useDiscardForeignDraft, useOnboardingDraft } from "../onboarding.hooks";
-import { COMPANY_MEMBER_STEP_FIELDS, companyMemberSchema } from "../onboarding.schema";
+import {
+  COMPANY_MEMBER_STEP_FIELDS,
+  companyMemberIssues,
+  companyMemberSchema,
+  fieldsUpTo,
+} from "../onboarding.schema";
 import { BackToLoginLink } from "./back-to-login-link";
 import { EMPTY_COMPANY_MEMBER } from "../company-onboarding.rules";
 import {
@@ -46,17 +51,30 @@ export function RepresentativeDataPage() {
   }, [hasCompany, navigate]);
 
   const next = async () => {
-    if (!(await form.trigger(COMPANY_MEMBER_STEP_FIELDS[step]))) return;
+    const ok = await form.trigger(COMPANY_MEMBER_STEP_FIELDS[step]);
+    // Reglas que cruzan campos (DNI/CUIT, CP/provincia, edad, cónyuge, PEP): en el paso, no al final.
+    const allowed = fieldsUpTo(COMPANY_MEMBER_STEP_FIELDS, step) as string[];
+    const cross = companyMemberIssues(form.getValues()).filter((i) => allowed.includes(i.path));
+    for (const i of cross) form.setError(i.path as never, { type: "custom", message: i.message });
+    if (!ok || cross.length > 0) return;
     // Se guarda en cada paso: si se corta, retoma donde quedo.
     setRepresentative(form.getValues());
     if (step < STEPS.length - 1) {
       setStep(step + 1);
       return;
     }
-    await form.handleSubmit((values) => {
-      setRepresentative(values);
-      void navigate({ to: "/onboarding/kyc" });
-    })();
+    await form.handleSubmit(
+      (values) => {
+        setRepresentative(values);
+        void navigate({ to: "/onboarding/kyc" });
+      },
+      // Si quedo algo mal en un paso anterior, se vuelve a ese paso para mostrarlo.
+      (errors) => {
+        const first = Object.keys(errors)[0];
+        const target = COMPANY_MEMBER_STEP_FIELDS.findIndex((f) => (f as string[]).includes(first));
+        if (target >= 0) setStep(target);
+      },
+    )();
   };
 
   return (

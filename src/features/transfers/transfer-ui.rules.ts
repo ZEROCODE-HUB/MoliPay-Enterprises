@@ -1,11 +1,11 @@
 import {
-cotizarTransfer,
-type FeeConfig,
-type Quote,
-type TaxAplicado,
+  cotizarTransfer,
+  type FeeConfig,
+  type Quote,
+  type TaxAplicado,
 } from "@/features/transfers/transfer-store";
 import { formatMoney } from "@/shared/lib/format";
-import { useEffect,useRef,useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { type StepTransfer } from "./transfer-ui.types";
 
 export const fmtPct = (n: number) => `${n.toLocaleString("es-AR", { maximumFractionDigits: 2 })}%`;

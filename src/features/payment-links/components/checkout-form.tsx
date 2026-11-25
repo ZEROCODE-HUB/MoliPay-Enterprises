@@ -1,14 +1,14 @@
 import { moneyInputToNumber } from "@/shared/lib/money";
 import {
-isDevWithTestCard,
-isPaywayTestCardApproved,
-testCardFitsMethod,
+  isDevWithTestCard,
+  isPaywayTestCardApproved,
+  testCardFitsMethod,
 } from "@/features/payment-links/payway-test-card";
-import { CreditCard,FlaskConical,Loader2,Lock,ShieldCheck } from "lucide-react";
+import { CreditCard, FlaskConical, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { Card } from "@/shared/ui/card";
-import { Input,Label } from "@/shared/ui/form-controls";
+import { Input, Label } from "@/shared/ui/form-controls";
 import { BtnPrimary } from "@/shared/ui/button";
-import { formatARS,isCardMethod } from "@/features/payment-links/checkout.rules";
+import { formatARS, isCardMethod } from "@/features/payment-links/checkout.rules";
 
 import type { CheckoutPageVm } from "./use-checkout-page";
 
@@ -82,11 +82,11 @@ export function CheckoutForm({
         <div className="grid md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] gap-6 items-start">
           {/* Resumen del cobro */}
           <Card className="p-6 shadow-xl border-0">
-            <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground mb-1">
+            <div className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground mb-1">
               <ShieldCheck size={14} className="text-emerald-600" />{" "}
               {data.comercio_nombre || "MoliPay"}
             </div>
-            <div className="text-3xl font-black tracking-tight text-[color:var(--brand-dark)]">
+            <div className="text-3xl font-medium tracking-tight text-[color:var(--brand-dark)]">
               {formatARS(moneyInputToNumber(amountPay))}
             </div>
             <div className="text-xs text-muted-foreground">Total a abonar</div>
@@ -96,12 +96,12 @@ export function CheckoutForm({
                 {data.detalle.map((p, i) => (
                   <div key={i} className="flex items-center justify-between px-3 py-2.5 text-sm">
                     <div className="min-w-0">
-                      <div className="font-semibold truncate">{p.producto_nombre}</div>
+                      <div className="font-medium truncate">{p.producto_nombre}</div>
                       <div className="text-[11px] text-muted-foreground">
                         {p.cantidad} × {formatARS(p.precio_unitario)}
                       </div>
                     </div>
-                    <div className="font-mono tabular-nums font-semibold">
+                    <div className="font-mono tabular-nums font-medium">
                       {formatARS(p.precio_unitario * p.cantidad)}
                     </div>
                   </div>
@@ -111,7 +111,7 @@ export function CheckoutForm({
 
             {data.referencia && (
               <div className="mt-4 text-xs text-muted-foreground">
-                Referencia: <span className="font-semibold text-foreground">{data.referencia}</span>
+                Referencia: <span className="font-medium text-foreground">{data.referencia}</span>
               </div>
             )}
             {data.notas && <div className="mt-2 text-xs text-muted-foreground">{data.notas}</div>}
@@ -135,10 +135,10 @@ export function CheckoutForm({
           {/* Pago */}
           <Card className="p-6 shadow-xl border-0">
             <div>
-              <Label>Metodo de pago</Label>
+              <Label>Método de pago</Label>
               {methodsAvailables.length === 0 ? (
                 <p className="mt-1.5 rounded-lg border border-black-100 bg-muted/30 px-3 py-2.5 text-xs text-muted-foreground">
-                  No hay metodos de pago habilitados para este link. Contacta al comercio.
+                  No hay métodos de pago habilitados para este link. Contacta al comercio.
                 </p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-1.5">
@@ -146,7 +146,7 @@ export function CheckoutForm({
                     <button
                       key={m.id}
                       onClick={() => chooseMethod(m.id)}
-                      className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-semibold transition ${
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-xs font-medium transition ${
                         method === m.id
                           ? "border-[color:var(--brand-dark)] bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)]"
                           : "bg-card hover:bg-muted"
@@ -165,7 +165,7 @@ export function CheckoutForm({
                 className="mt-6 rounded-lg border border-black-100 bg-[color:var(--brand-soft)] p-4"
                 onSubmit={(e) => e.preventDefault()}
               >
-                <div className="flex items-center gap-2 text-sm font-bold mb-3">
+                <div className="flex items-center gap-2 text-sm font-medium mb-3">
                   <CreditCard size={17} className="text-[color:var(--brand-dark)]" />
                   Datos de la tarjeta
                 </div>
@@ -176,7 +176,7 @@ export function CheckoutForm({
                       alguien pulse "pagar" creyendo que esta cobrando de verdad.
                     */}
                 {isDevWithTestCard() && testCardFitsMethod(method) && (
-                  <p className="mb-3 rounded-md bg-amber-50 border border-amber-200 px-2 py-1 text-[11px] font-semibold text-amber-800">
+                  <p className="mb-3 rounded-md bg-amber-50 border border-amber-200 px-2 py-1 text-[11px] font-medium text-amber-800">
                     Datos de prueba de sandbox, no usar con clientes reales.
                     {!isPaywayTestCardApproved(method) &&
                       " Esta tarjeta es Visa: solo aprueba en Visa, porque Payway exige que el medio de pago coincida con la marca."}
@@ -196,7 +196,7 @@ export function CheckoutForm({
                     />
                   </div>
                   <div>
-                    <Label>Numero de tarjeta</Label>
+                    <Label>Número de tarjeta</Label>
                     <Input
                       className="mt-1 bg-card font-mono tracking-wider"
                       inputMode="numeric"
@@ -261,12 +261,12 @@ export function CheckoutForm({
                     </div>
                   </div>
                   <div>
-                    <Label>Numero de documento del titular</Label>
+                    <Label>Número de documento del titular</Label>
                     {/*
                           La API de Payway exige `card_holder_identification`.
                           El SDK la arma a partir de estos dos campos: si estan
                           presentes produce el objeto, y si no, no lo manda. Por
-                          eso el tipo va fijo en hidden y solo el numero es
+                          eso el tipo va fijo en hidden y solo el número es
                           editable.
                         */}
                     <input type="hidden" readOnly data-decidir="card_holder_doc_type" value="dni" />
@@ -285,7 +285,7 @@ export function CheckoutForm({
               </form>
             ) : (
               <div className="mt-6 rounded-lg border border-black-100 bg-[color:var(--brand-soft)] p-4">
-                <div className="flex items-center gap-2 text-sm font-bold mb-3">
+                <div className="flex items-center gap-2 text-sm font-medium mb-3">
                   <CreditCard size={17} className="text-[color:var(--brand-dark)]" />
                   {method === "qr" ? "Codigo QR" : "Datos de transferencia"}
                 </div>
@@ -334,7 +334,7 @@ export function CheckoutForm({
               type="button"
               onClick={simulate}
               disabled={processing}
-              className="w-full mt-3 h-11 text-sm rounded-lg border-2 border-dashed border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 font-semibold transition disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full mt-3 h-11 text-sm rounded-lg border-2 border-dashed border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100 font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {processing ? (
                 <>

@@ -1,20 +1,20 @@
 import { SingleTransferFields } from "./single-transfer-fields";
 import { useSingleTransferForm } from "./use-single-transfer-form";
 import {
-type Draft,
-type FrequentRecipient,
-type Template,
+  type Draft,
+  type FrequentRecipient,
+  type Template,
 } from "@/features/transfers/transfer-store";
 import { toast } from "sonner";
-import { detailTax,fmtCargo } from "@/features/transfers/transfer-ui.rules";
+import { detailTax, fmtCargo } from "@/features/transfers/transfer-ui.rules";
 import { formatMoney } from "@/shared/lib/format";
 import { ShieldCheck } from "lucide-react";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 import { FormDialog } from "@/shared/ui/form-dialog";
 import {
-type CoelsaResult,
-type Subaccount,
-type TransferPayload,
+  type CoelsaResult,
+  type Subaccount,
+  type TransferPayload,
 } from "@/features/transfers/transfers.types";
 import { OTP_ENABLED } from "@/features/transfers/transfers.rules";
 
@@ -92,13 +92,13 @@ export function SingleTransferForm(props: {
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between py-2.5 px-3 text-sm">
               <span className="text-muted-foreground">{k}</span>
-              <span className="font-mono tabular-nums font-semibold">{v}</span>
+              <span className="font-mono tabular-nums font-medium">{v}</span>
             </div>
           ))}
         </div>
         {cot.insuficiente && (
           <div
-            className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"
+            className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-xs font-medium text-red-700"
             role="alert"
           >
             Saldo insuficiente: te faltan {formatMoney(cot.faltante)}. Volvé y ajustá el monto o el
@@ -164,7 +164,7 @@ export function SingleTransferForm(props: {
         open={frequentsOpen}
         onClose={() => setFrequentsOpen(false)}
         title="Destinatarios frecuentes"
-        description="Selecciona un destinatario de tu lista."
+        description="Selecciona un destinatario de tu lista"
         submitLabel="Cerrar"
         onSubmit={() => setFrequentsOpen(false)}
         size="md"
@@ -196,7 +196,7 @@ export function SingleTransferForm(props: {
                 className="w-full flex items-center justify-between gap-3 p-3 text-left hover:bg-muted/50"
               >
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold truncate">{f.nombre}</div>
+                  <div className="text-sm font-medium truncate">{f.nombre}</div>
                   <div className="text-xs text-muted-foreground truncate">
                     {f.alias ? `@${f.alias} · ` : ""}
                     <span className="font-mono">{f.cbu}</span>

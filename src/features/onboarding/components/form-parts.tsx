@@ -35,9 +35,7 @@ export function SelectInput<T extends FieldValues>({
 export function FieldGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
     <fieldset className="space-y-4">
-      <legend className="mb-1 text-xs font-semibold uppercase tracking-[0.15em] text-black-500">
-        {title}
-      </legend>
+      <legend className="mb-1 text-xs font-medium text-muted-foreground">{title}</legend>
       {children}
     </fieldset>
   );

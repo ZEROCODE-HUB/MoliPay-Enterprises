@@ -1,24 +1,40 @@
 import { useDashboardPage } from "@/features/dashboard/components/use-dashboard-page";
 import { PageHeader } from "@/shared/ui/page-header";
-import { Clock,Link2,QrCode,Smartphone } from "lucide-react";
+import { FileSpreadsheet, FileText } from "lucide-react";
 import { DashboardPeriodFilter } from "@/features/dashboard/components/dashboard-period-filter";
 import { DashboardKpis } from "@/features/dashboard/components/dashboard-kpis";
 import { Card } from "@/shared/ui/card";
+import { BtnOutline } from "@/shared/ui/button";
 import { formatMoneyAmount } from "@/shared/lib/money";
 import { DashboardDailyChart } from "@/features/dashboard/components/dashboard-daily-chart";
 
 export function DashboardPage() {
   const vm = useDashboardPage();
-  const { kpis } = vm;
+  const { kpis, doExport } = vm;
+
+  const channels = [
+    { label: "Depósitos", amount: kpis.depositos, ops: kpis.opsDep, bar: "bg-navy-500" },
+    { label: "Link de pago", amount: kpis.cobrosLink, ops: kpis.opsLink, bar: "bg-red-500" },
+    { label: "Retiros", amount: kpis.retiros, ops: kpis.opsRet, bar: "bg-black-300" },
+  ];
+  const max = Math.max(1, ...channels.map((c) => c.amount.cents));
 
   return (
     <>
       <PageHeader
         title="Dashboard"
-        description="Panel ejecutivo — estado de tu operación financiera."
+        description="Estado de tu operación financiera"
         action={
-          <div className="hidden md:flex items-center gap-2 text-xs text-black-400">
-            <Clock size={14} /> Datos en vivo
+          <div className="flex items-center gap-2">
+            <span className="hidden items-center gap-2 pr-2 text-xs text-muted-foreground md:inline-flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Datos en vivo
+            </span>
+            <BtnOutline onClick={() => doExport("xlsx")}>
+              <FileSpreadsheet size={14} /> Excel
+            </BtnOutline>
+            <BtnOutline onClick={() => doExport("pdf")}>
+              <FileText size={14} /> PDF
+            </BtnOutline>
           </div>
         }
       />
@@ -26,52 +42,37 @@ export function DashboardPage() {
       <DashboardPeriodFilter {...vm} />
 
       <DashboardKpis {...vm} />
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-xs text-black-400 mb-1">Cobros mediante Link de Pago</div>
-              <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">
-                {formatMoneyAmount(kpis.cobrosLink)}
-              </div>
-              <div className="text-xs text-black-400 mt-0.5">{kpis.opsLink} transacciones</div>
-            </div>
-            <div className="w-9 h-9 rounded-sm bg-navy-50 flex items-center justify-center text-navy-500 shrink-0">
-              <Link2 size={18} />
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-xs text-black-400 mb-1">Cobros mediante Código QR</div>
-              <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">
-                {formatMoneyAmount(kpis.cobrosQR)}
-              </div>
-              <div className="text-xs text-black-400 mt-0.5">{kpis.opsCobrosQR} transacciones</div>
-            </div>
-            <div className="w-9 h-9 rounded-sm bg-warning-bg flex items-center justify-center text-warning shrink-0">
-              <QrCode size={18} />
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-xs text-black-400 mb-1">Pagos realizados mediante QR</div>
-              <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-black-800">
-                {formatMoneyAmount(kpis.pagosQR)}
-              </div>
-              <div className="text-xs text-black-400 mt-0.5">{kpis.opsPagosQR} transacciones</div>
-            </div>
-            <div className="w-9 h-9 rounded-sm bg-plata-200 flex items-center justify-center text-black-600 shrink-0">
-              <Smartphone size={18} />
-            </div>
-          </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <DashboardDailyChart {...vm} />
+        </div>
+        <Card className="p-5">
+          <h3 className="font-display text-sm font-medium text-foreground">Ingresos y retiros</h3>
+          <p className="text-xs text-muted-foreground">{vm.periodLabel}</p>
+          <ul className="mt-4 space-y-4">
+            {channels.map((c) => (
+              <li key={c.label}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm text-foreground">{c.label}</span>
+                  <span className="font-mono text-sm tabular-nums text-foreground">
+                    {formatMoneyAmount(c.amount)}
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={`h-full rounded-full ${c.bar}`}
+                    style={{ width: `${(c.amount.cents / max) * 100}%` }}
+                  />
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  {c.ops} {c.ops === 1 ? "transacción" : "transacciones"}
+                </div>
+              </li>
+            ))}
+          </ul>
         </Card>
       </div>
-
-      <DashboardDailyChart {...vm} />
     </>
   );
 }

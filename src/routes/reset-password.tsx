@@ -3,7 +3,7 @@ import { ResetPasswordPage } from "@/features/auth/components/reset-password-pag
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
-    meta: [{ title: "Restablecer contraseña — MoliPay" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "Restablecer contrasena — MoliPay" }, { name: "robots", content: "noindex" }],
   }),
   component: ResetPasswordPage,
 });

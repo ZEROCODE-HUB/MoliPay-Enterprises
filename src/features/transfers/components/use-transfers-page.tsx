@@ -1,38 +1,38 @@
-import { useSentThisMonth,useTransferSubaccounts } from "../transfers.hooks";
-import { sendTransferOtp,verifyTransferOtp } from "../transfers.supabase";
+import { useSentThisMonth, useTransferSubaccounts } from "../transfers.hooks";
+import { sendTransferOtp, verifyTransferOtp } from "../transfers.supabase";
 import { useCurrentCustomer } from "@/features/session/session.hooks";
 import { userMessage } from "@/shared/lib/errors";
-import { useCallback,useEffect,useRef,useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { type StepTransfer } from "@/features/transfers/transfer-ui.types";
 import {
-cancelBdcTransfer,
-confirmBdcTransfer,
-createTemplate,
-deleteTemplate,
-listDrafts,
-listFrequentRecipients,
-listScheduledTransfers,
-listTemplates,
-parseTaxes,
-reserveBdcTransfer,
-type Draft,
-type FrequentRecipient,
-type Scheduled,
-type Template,
-updateTemplate,
+  cancelBdcTransfer,
+  confirmBdcTransfer,
+  createTemplate,
+  deleteTemplate,
+  listDrafts,
+  listFrequentRecipients,
+  listScheduledTransfers,
+  listTemplates,
+  parseTaxes,
+  reserveBdcTransfer,
+  type Draft,
+  type FrequentRecipient,
+  type Scheduled,
+  type Template,
+  updateTemplate,
 } from "@/features/transfers/transfer-store";
 import { onlyDigits } from "@/shared/lib/text";
-import { isPermissionError,toDataError } from "@/infrastructure/supabase/errors";
+import { isPermissionError, toDataError } from "@/infrastructure/supabase/errors";
 import { toast } from "sonner";
 import { formatMoney } from "@/shared/lib/format";
-import { canTransferBdc,createBdcClient,type BdcAccount } from "@/features/transfers/bdc";
+import { canTransferBdc, createBdcClient, type BdcAccount } from "@/features/transfers/bdc";
 import { detectIdentifierKind } from "@/features/transfers/recipient-validation";
 import { executeTransfer } from "@/features/transfers/transfer-orchestrator";
 import {
-type CoelsaResult,
-type Tab,
-type TransferPayload,
-type TransferSuccess,
+  type CoelsaResult,
+  type Tab,
+  type TransferPayload,
+  type TransferSuccess,
 } from "@/features/transfers/transfers.types";
 
 /** Estado y acciones de TransfersPage: el componente solo dibuja. */

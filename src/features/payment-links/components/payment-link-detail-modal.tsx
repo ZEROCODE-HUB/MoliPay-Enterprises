@@ -33,7 +33,7 @@ export function PaymentLinkDetailModal({
         >
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-center z-10">
-              <div className="font-semibold">Detalle del link de pago</div>
+              <div className="font-medium">Detalle del link de pago</div>
               <button
                 onClick={() => {
                   setDetailLink(null);
@@ -108,7 +108,7 @@ export function PaymentLinkDetailModal({
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground">Monto total</span>
-                  <div className="font-semibold">
+                  <div className="font-medium">
                     {formatARS(detailLink.products.reduce((s, p) => s + p.price * p.qty, 0))}
                   </div>
                 </div>
@@ -126,10 +126,10 @@ export function PaymentLinkDetailModal({
                 </div>
                 <div>
                   <span className="text-xs text-muted-foreground">Comercio</span>
-                  <div className="font-semibold">{detailLink.comercioNombre || "-"}</div>
+                  <div className="font-medium">{detailLink.comercioNombre || "-"}</div>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-xs text-muted-foreground">Metodos de pago</span>
+                  <span className="text-xs text-muted-foreground">Métodos de pago</span>
                   <div className="flex flex-wrap gap-1 mt-1">
                     {detailLinkBrands.length > 0 ? (
                       detailLinkBrands.map((b, i) => (
@@ -144,13 +144,13 @@ export function PaymentLinkDetailModal({
                         </Badge>
                       ))
                     ) : (
-                      <span className="text-muted-foreground text-xs">Sin metodos de pago</span>
+                      <span className="text-muted-foreground text-xs">Sin métodos de pago</span>
                     )}
                   </div>
                 </div>
                 <div className="col-span-2">
                   <span className="text-xs text-muted-foreground">Productos</span>
-                  <div className="font-semibold">
+                  <div className="font-medium">
                     {detailLink.products.map((p) => p.name).join(", ")}
                   </div>
                 </div>

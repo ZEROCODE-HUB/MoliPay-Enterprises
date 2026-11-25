@@ -1,5 +1,5 @@
 import { requireSupabase } from "@/infrastructure/supabase/client";
-import { AppError,type AppErrorContext,type AppErrorKind } from "@/shared/lib/errors";
+import { AppError, type AppErrorContext, type AppErrorKind } from "@/shared/lib/errors";
 import { paymentsApiUrl } from "./backend-url";
 
 /*

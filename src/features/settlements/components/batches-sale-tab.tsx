@@ -1,14 +1,15 @@
 import { Modal } from "@/shared/ui/modal";
-import { useSaleDetail,useSalesByDay } from "../settlements.hooks";
+import { useSaleDetail, useSalesByDay } from "../settlements.hooks";
 import { useState } from "react";
-import { Input,Label,Select } from "@/shared/ui/form-controls";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
 import { formatARS } from "@/features/collections/collections.data";
 import { Badge } from "@/shared/ui/badge";
 import { BtnOutline } from "@/shared/ui/button";
-import { Eye,X } from "lucide-react";
-import { fmtDateFull,isoLocal,statusCompany } from "@/features/settlements/settlements.rules";
+import { Eye, X } from "lucide-react";
+import { fmtDateFull, isoLocal, statusCompany } from "@/features/settlements/settlements.rules";
 import { type SaleDayCompany } from "@/features/settlements/settlements.types";
 import { Pagination } from "@/shared/ui/pagination";
+import { SkeletonRows, LoadingLines } from "@/shared/ui/table-skeleton";
 
 /** 9.3 Lotes de venta por dia: cuanto vendio, sin importar cuando cobra. */
 export function BatchesSaleCompanyTab() {
@@ -75,30 +76,26 @@ export function BatchesSaleCompanyTab() {
         </div>
         <div className="text-xs text-muted-foreground">
           Vendido en el período:{" "}
-          <span className="font-mono font-semibold">{formatARS(totalGross)}</span>
+          <span className="font-mono font-medium">{formatARS(totalGross)}</span>
         </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-              <th className="text-left px-5 py-3">Fecha</th>
-              <th className="text-right px-5 py-3">Ventas</th>
-              <th className="text-right px-5 py-3">Rechazos</th>
-              <th className="text-right px-5 py-3">Bruto vendido</th>
-              <th className="text-left px-5 py-3">Por bandera</th>
-              <th className="text-left px-5 py-3">Cobro estimado</th>
-              <th className="text-center px-5 py-3">Estado</th>
-              <th className="text-center px-5 py-3">Acción</th>
+            <tr className="border-b bg-muted/50">
+              <th className="text-left px-4 py-2.5">Fecha</th>
+              <th className="text-right px-4 py-2.5">Ventas</th>
+              <th className="text-right px-4 py-2.5">Rechazos</th>
+              <th className="text-right px-4 py-2.5">Bruto vendido</th>
+              <th className="text-left px-4 py-2.5">Por bandera</th>
+              <th className="text-left px-4 py-2.5">Cobro estimado</th>
+              <th className="text-center px-4 py-2.5">Estado</th>
+              <th className="text-center px-4 py-2.5">Acción</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {q.isLoading ? (
-              <tr>
-                <td colSpan={8} className="px-5 py-10 text-center text-sm text-muted-foreground">
-                  Cargando…
-                </td>
-              </tr>
+              <SkeletonRows columns={8} rows={6} />
             ) : q.isError ? (
               <tr>
                 <td colSpan={8} className="px-5 py-10 text-center text-sm text-red-700">
@@ -119,7 +116,7 @@ export function BatchesSaleCompanyTab() {
                   <td className="px-5 py-3 text-right font-mono tabular-nums text-muted-foreground">
                     {r.rechazos}
                   </td>
-                  <td className="px-5 py-3 text-right font-mono tabular-nums font-semibold">
+                  <td className="px-5 py-3 text-right font-mono tabular-nums font-medium">
                     {formatARS(r.bruto)}
                   </td>
                   <td className="px-5 py-3 text-xs">
@@ -163,7 +160,7 @@ export function BatchesSaleCompanyTab() {
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="sticky top-0 bg-card px-6 py-4 border-b flex items-center justify-between">
               <div>
-                <div className="font-semibold">Ventas del {fmtDateFull(detail.fecha)}</div>
+                <div className="font-medium">Ventas del {fmtDateFull(detail.fecha)}</div>
                 <div className="text-xs text-muted-foreground">
                   {detail.ventas} ventas · {formatARS(detail.bruto)} · {detail.estado}
                 </div>
@@ -174,11 +171,11 @@ export function BatchesSaleCompanyTab() {
             </div>
             <div className="p-6">
               {det.isLoading ? (
-                <p className="text-sm text-muted-foreground">Cargando…</p>
+                <LoadingLines label="Cargando…" />
               ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-xs uppercase tracking-wider text-muted-foreground">
+                    <tr className="border-b">
                       <th className="text-left py-2 pr-3">Hora</th>
                       <th className="text-left py-2 pr-3">Operación</th>
                       <th className="text-left py-2 pr-3">Bandera</th>

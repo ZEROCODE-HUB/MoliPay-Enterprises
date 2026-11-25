@@ -1,6 +1,6 @@
 import { type Quote } from "@/features/transfers/transfer-store";
 import { formatMoney } from "@/shared/lib/format";
-import { detailFee,fmtCargo,fmtPct } from "@/features/transfers/transfer-ui.rules";
+import { detailFee, fmtCargo, fmtPct } from "@/features/transfers/transfer-ui.rules";
 import { TaxRow } from "./transfer-ui-parts";
 
 /**
@@ -61,8 +61,8 @@ export function SummaryQuote({
         {quote?.impuestos.map((t) => (
           <TaxRow key={t.impuestoId} t={t} />
         ))}
-        <span className="font-semibold border-t pt-1 mt-1">Total a debitar de tu saldo</span>
-        <span className="text-right font-mono tabular-nums font-semibold border-t pt-1 mt-1">
+        <span className="font-medium border-t pt-1 mt-1">Total a debitar de tu saldo</span>
+        <span className="text-right font-mono tabular-nums font-medium border-t pt-1 mt-1">
           {quote ? formatMoney(quote.total) : loading ? "…" : "—"}
         </span>
         <span className="text-muted-foreground">Disponible</span>
@@ -90,7 +90,7 @@ export function SummaryQuote({
       )}
       {insuficiente && (
         <div
-          className="mt-2 border-t border-red-200 pt-2 text-xs font-semibold text-red-700"
+          className="mt-2 border-t border-red-200 pt-2 text-xs font-medium text-red-700"
           role="alert"
         >
           Saldo insuficiente: te faltan {formatMoney(faltante)} para cubrir el total a debitar.

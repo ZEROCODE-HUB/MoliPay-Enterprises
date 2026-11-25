@@ -19,11 +19,11 @@ export function SettlementFeesTab({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="text-left px-5 py-3">Bandera</th>
-                  <th className="text-right px-5 py-3">Cuotas</th>
-                  <th className="text-right px-5 py-3">Tasa mensual (TEM)</th>
-                  <th className="text-center px-5 py-3">Estado</th>
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left px-4 py-2.5">Bandera</th>
+                  <th className="text-right px-4 py-2.5">Cuotas</th>
+                  <th className="text-right px-4 py-2.5">Tasa mensual (TEM)</th>
+                  <th className="text-center px-4 py-2.5">Estado</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -44,7 +44,7 @@ export function SettlementFeesTab({
                         <Badge tone="neutral">{c.bandera}</Badge>
                       </td>
                       <td className="px-5 py-3 text-right font-mono tabular-nums">{c.cuotas}x</td>
-                      <td className="px-5 py-3 text-right font-mono tabular-nums font-semibold">
+                      <td className="px-5 py-3 text-right font-mono tabular-nums font-medium">
                         {c.tasaMensual}%
                       </td>
                       <td className="px-5 py-3 text-center">

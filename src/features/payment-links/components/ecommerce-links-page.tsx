@@ -1,31 +1,31 @@
 import {
-getEcommerceKeys,
-listEcommerceIntegrations,
-upsertEcommerceIntegration,
+  getEcommerceKeys,
+  listEcommerceIntegrations,
+  upsertEcommerceIntegration,
 } from "@/features/payment-links/payment-links.supabase";
 import { userMessage } from "@/shared/lib/errors";
 import { useCurrentCustomer } from "@/features/session/session.hooks";
 import { Modal } from "@/shared/ui/modal";
-import { useState,useMemo,useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
-RefreshCw,
-Pause,
-Play,
-Key,
-ChevronLeft,
-ChevronRight,
-ChevronsLeft,
-ChevronsRight,
-Server,
-Webhook,
-ShieldCheck,
-Globe,
-X,
+  RefreshCw,
+  Pause,
+  Play,
+  Key,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Server,
+  Webhook,
+  ShieldCheck,
+  Globe,
+  X,
 } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import { BtnOutline } from "@/shared/ui/button";
-import { Input,Label } from "@/shared/ui/form-controls";
+import { Input, Label } from "@/shared/ui/form-controls";
 import { PageHeader } from "@/shared/ui/page-header";
 import { toast } from "sonner";
 
@@ -82,7 +82,6 @@ export function EcommerceLinksPage() {
     void refreshFromDB(lg).catch((e) =>
       toast.error(userMessage(e, "No se pudieron cargar las integraciones.")),
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customer.data?.legajo]);
 
   const refreshFromDB = async (lg: string) => {
@@ -159,17 +158,17 @@ export function EcommerceLinksPage() {
     <>
       <PageHeader
         title="E-commerce"
-        description="Gestiona las integraciones de pago para tu tienda online."
+        description="Gestiona las integraciones de pago para tu tienda online"
       />
 
       {/* Resumen de capacidades */}
-      <Card className="mb-6">
-        <h2 className="text-sm font-semibold mb-4">Capacidades de integracion</h2>
+      <Card className="mb-4">
+        <h2 className="text-sm font-medium mb-4">Capacidades de integracion</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
             <Server size={18} className="text-muted-foreground shrink-0 mt-0.5" />
             <div>
-              <div className="text-xs font-semibold">API RESTful</div>
+              <div className="text-xs font-medium">API RESTful</div>
               <div className="text-[11px] text-muted-foreground mt-0.5">
                 Documentada y facil de implementar.
               </div>
@@ -178,7 +177,7 @@ export function EcommerceLinksPage() {
           <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
             <Webhook size={18} className="text-muted-foreground shrink-0 mt-0.5" />
             <div>
-              <div className="text-xs font-semibold">Webhooks</div>
+              <div className="text-xs font-medium">Webhooks</div>
               <div className="text-[11px] text-muted-foreground mt-0.5">
                 Notificaciones instantaneas de eventos.
               </div>
@@ -187,7 +186,7 @@ export function EcommerceLinksPage() {
           <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
             <ShieldCheck size={18} className="text-muted-foreground shrink-0 mt-0.5" />
             <div>
-              <div className="text-xs font-semibold">Seguridad</div>
+              <div className="text-xs font-medium">Seguridad</div>
               <div className="text-[11px] text-muted-foreground mt-0.5">
                 Claves (API keys) y validacion por IP.
               </div>
@@ -196,7 +195,7 @@ export function EcommerceLinksPage() {
           <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
             <Globe size={18} className="text-muted-foreground shrink-0 mt-0.5" />
             <div>
-              <div className="text-xs font-semibold">Compatibilidad</div>
+              <div className="text-xs font-medium">Compatibilidad</div>
               <div className="text-[11px] text-muted-foreground mt-0.5">
                 Marketplaces, carritos externos y plataformas propias.
               </div>
@@ -208,7 +207,7 @@ export function EcommerceLinksPage() {
       {/* Lista de integraciones */}
       <Card className="p-0 overflow-hidden">
         <div className="px-5 py-4 border-b flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold">Integraciones de E-commerce</h2>
+          <h2 className="text-sm font-medium">Integraciones de E-commerce</h2>
           <BtnOutline className="h-8 px-3 text-[11px]" onClick={refreshList} disabled={refreshing}>
             <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} /> ACTUALIZAR
           </BtnOutline>
@@ -217,7 +216,7 @@ export function EcommerceLinksPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
+              <tr className="text-[11px] border-b bg-muted/30">
                 <th className="text-left px-5 py-2.5">E-commerce</th>
                 <th className="text-left px-5 py-2.5">Estado</th>
                 <th className="text-left px-5 py-2.5">Fecha de Creacion</th>
@@ -227,7 +226,7 @@ export function EcommerceLinksPage() {
             <tbody>
               {paginated.map((e) => (
                 <tr key={e.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-5 py-3 font-semibold">{e.name}</td>
+                  <td className="px-5 py-3 font-medium">{e.name}</td>
                   <td className="px-5 py-3">
                     <Badge tone={e.estado === "Habilitado" ? "success" : "neutral"}>
                       {e.estado}
@@ -238,7 +237,7 @@ export function EcommerceLinksPage() {
                     <div className="flex gap-1 justify-end">
                       <button
                         onClick={() => toggleStatus(e.id)}
-                        className={`h-8 px-2.5 inline-flex items-center gap-1.5 rounded-md border bg-card transition text-xs font-semibold text-muted-foreground ${
+                        className={`h-8 px-2.5 inline-flex items-center gap-1.5 rounded-md border bg-card transition text-xs font-medium text-muted-foreground ${
                           e.estado === "Habilitado"
                             ? "hover:bg-red-50 hover:text-red-600"
                             : "hover:bg-emerald-50 hover:text-emerald-600"
@@ -249,7 +248,7 @@ export function EcommerceLinksPage() {
                       </button>
                       <button
                         onClick={() => openKeyModal(e.id, e.name)}
-                        className="h-8 px-2.5 inline-flex items-center gap-1.5 rounded-md border bg-card hover:bg-orange-50 hover:text-orange-600 transition text-xs font-semibold text-muted-foreground"
+                        className="h-8 px-2.5 inline-flex items-center gap-1.5 rounded-md border bg-card hover:bg-orange-50 hover:text-orange-600 transition text-xs font-medium text-muted-foreground"
                       >
                         <Key size={12} /> ACTUALIZAR CLAVE
                       </button>
@@ -322,7 +321,7 @@ export function EcommerceLinksPage() {
         <Modal open onClose={() => setKeyModal(null)} size="custom" className="max-w-md">
           <div className="min-h-0 flex-1 overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold">Conectar {keyModal.name}</h3>
+              <h3 className="text-sm font-medium">Conectar {keyModal.name}</h3>
               <button
                 onClick={() => setKeyModal(null)}
                 className="text-muted-foreground hover:text-foreground"
@@ -345,7 +344,7 @@ export function EcommerceLinksPage() {
                 <Input
                   value={webhookUrl}
                   onChange={(e) => setWebhookUrl(e.target.value)}
-                  placeholder="https://..."
+                  placeholder="https://"
                   className="mt-1"
                 />
               </div>

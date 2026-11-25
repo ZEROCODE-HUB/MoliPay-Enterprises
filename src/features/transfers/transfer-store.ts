@@ -11,8 +11,8 @@
 import { requireSupabase } from "@/infrastructure/supabase/client";
 import { toDataError } from "@/infrastructure/supabase/errors";
 import {
-detectIdentifierKind,
-type IdentifierKind,
+  detectIdentifierKind,
+  type IdentifierKind,
 } from "@/features/transfers/recipient-validation";
 
 /** UI row for a draft. */

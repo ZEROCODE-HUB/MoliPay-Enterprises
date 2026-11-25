@@ -1,9 +1,9 @@
 import type {
-InternalTransferInput,
-Subaccount,
-SubaccountInput,
-SubaccountMovement,
-SubaccountStatus,
+  InternalTransferInput,
+  Subaccount,
+  SubaccountInput,
+  SubaccountMovement,
+  SubaccountStatus,
 } from "./accounts.types";
 
 type ReadOptions = { signal?: AbortSignal };

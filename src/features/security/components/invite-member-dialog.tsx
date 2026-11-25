@@ -45,7 +45,7 @@ export function InviteMemberDialog({
       open={open}
       onClose={close}
       title="Invitar usuario"
-      description="Le enviamos un correo para que cree su contraseña y entre a la cuenta de la empresa."
+      description="Le enviamos un correo para que cree su contraseña y entre a la cuenta de la empresa"
       submitLabel="Enviar invitación"
       onSubmit={submit}
       isSubmitting={isSubmitting}

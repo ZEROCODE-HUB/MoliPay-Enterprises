@@ -8,10 +8,7 @@ export function Eyebrow({
   const color =
     tone === "accent" ? "#D3001F" : tone === "light" ? "rgba(255,255,255,0.7)" : "#909090";
   return (
-    <div
-      className="font-sans text-[0.72rem] tracking-[0.14em] uppercase font-medium"
-      style={{ color }}
-    >
+    <div className="font-sans text-xs font-medium" style={{ color }}>
       {children}
     </div>
   );
@@ -26,7 +23,7 @@ export function GlassCard({
 }) {
   return (
     <div
-      className={`transition-all duration-300 hover:-translate-y-0.5 bg-white border border-black-100 rounded-md shadow-sm ${className}`}
+      className={`transition-colors duration-300 bg-white border border-black-100 rounded-md shadow-sm ${className}`}
     >
       {children}
     </div>

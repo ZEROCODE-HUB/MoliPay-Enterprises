@@ -1,7 +1,7 @@
 import { useHistoryPage } from "@/features/history/components/use-history-page";
 import { PageHeader } from "@/shared/ui/page-header";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
-import { Download,FileSpreadsheet,Wallet } from "lucide-react";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
+import { Download, FileSpreadsheet, Wallet } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { formatMoneyAmount } from "@/shared/lib/money";
 import { formatSignedMoney } from "@/features/history/history.rules";
@@ -30,7 +30,7 @@ export function HistoryPage() {
     <>
       <PageHeader
         title="Historial"
-        description="Auditoria completa de movimientos con filtros, exportacion y detalle de transacciones."
+        description="Auditoria completa de movimientos con filtros, exportacion y detalle de transacciones"
         action={
           <div className="flex gap-2">
             <BtnOutline onClick={exportExcel}>
@@ -44,13 +44,13 @@ export function HistoryPage() {
       />
 
       {/* Vista tabs */}
-      <Card className="mb-6">
+      <Card className="mb-4 p-4">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2 text-sm">
             <Wallet size={14} className="text-muted-foreground" />
-            <span className="font-semibold">Vista:</span>
+            <span className="font-medium">Vista:</span>
           </div>
-          <div className="flex gap-1.5">
+          <div className="inline-flex rounded-md border border-border bg-muted/50 p-0.5">
             {(
               [
                 ["principal", "Cuenta principal"],
@@ -60,10 +60,11 @@ export function HistoryPage() {
               <button
                 key={k}
                 onClick={() => setView(k)}
-                className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition ${
+                aria-pressed={view === k}
+                className={`h-8 rounded-[5px] px-3 text-xs font-medium transition-colors ${
                   view === k
-                    ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] border-transparent"
-                    : "bg-card hover:bg-muted"
+                    ? "bg-card text-foreground shadow-[0_0_0_1px_var(--color-border)]"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {l}
@@ -95,17 +96,17 @@ export function HistoryPage() {
       </Card>
 
       {/* KPIs resumen */}
-      <div className="grid md:grid-cols-4 gap-5 mb-6">
+      <div className="grid md:grid-cols-4 gap-4 mb-4">
         <Card className="p-5">
-          <div className="text-xs text-muted-foreground mb-1">Ingresos del periodo</div>
-          <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-emerald-700">
+          <div className="text-xs text-muted-foreground mb-1">Ingresos del período</div>
+          <div className="font-display tabular-nums text-xl md:text-2xl font-medium text-emerald-700">
             {formatMoneyAmount(totals.income)}
           </div>
           <div className="text-xs text-muted-foreground mt-1">{totals.incomeCount} líneas</div>
         </Card>
         <Card className="p-5">
-          <div className="text-xs text-muted-foreground mb-1">Egresos del periodo</div>
-          <div className="text-xl md:text-2xl font-bold text-foreground">
+          <div className="text-xs text-muted-foreground mb-1">Egresos del período</div>
+          <div className="text-xl md:text-2xl font-medium text-foreground">
             {formatMoneyAmount(totals.expense)}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
@@ -115,14 +116,14 @@ export function HistoryPage() {
         <Card className="p-5">
           <div className="text-xs text-muted-foreground mb-1">Neto</div>
           <div
-            className={`font-display tabular-nums text-xl md:text-2xl font-bold ${totals.net.cents >= 0 ? "text-emerald-700" : "text-red-600"}`}
+            className={`font-display tabular-nums text-xl md:text-2xl font-medium ${totals.net.cents >= 0 ? "text-emerald-700" : "text-red-600"}`}
           >
             {formatSignedMoney(totals.net)}
           </div>
         </Card>
         <Card className="p-5">
           <div className="text-xs text-muted-foreground mb-1">Pendientes / Rechazados</div>
-          <div className="font-display tabular-nums text-xl md:text-2xl font-bold text-foreground">
+          <div className="font-display tabular-nums text-xl md:text-2xl font-medium text-foreground">
             {totals.pendingCount + totals.rejectedCount}
           </div>
           <div className="text-xs text-muted-foreground mt-1">

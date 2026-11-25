@@ -87,7 +87,7 @@ export function KycPage() {
     const email = draft.registration.email || sessionEmail;
     if (!accountType || !email) {
       form.setError("root.server", {
-        message: "No pudimos identificar tu cuenta. Volvé a iniciar sesión y retomá el alta.",
+        message: "No pudimos identificar tu cuenta. Volvé a iniciar sesion y retomá el alta.",
       });
       return;
     }
@@ -176,7 +176,7 @@ export function KycPage() {
       {cuitTaken && (
         <button
           type="button"
-          className="text-sm font-semibold text-red-500 underline"
+          className="text-sm font-medium text-red-500 underline"
           onClick={() =>
             void navigate({
               to: isCompanyAccount ? "/onboarding/datos-empresa" : "/onboarding/datos-personales",
@@ -209,7 +209,7 @@ export function KycPage() {
 
       {step === 0 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-black-800">Cargá el DNI frente y dorso</h2>
+          <h2 className="text-lg font-medium text-foreground">Cargá el DNI frente y dorso</h2>
           <FileUpload label="DNI frente" value={files.idFront} onChange={setFile("idFront")} />
           <FileUpload label="DNI dorso" value={files.idBack} onChange={setFile("idBack")} />
           <WizardNav onNext={() => setStep(1)} nextDisabled={!stepComplete} nextLabel="Siguiente" />
@@ -218,7 +218,7 @@ export function KycPage() {
 
       {step === 1 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-black-800">
+          <h2 className="text-lg font-medium text-foreground">
             {isCompanyAccount ? "Comprobante de tu domicilio" : "Cargá un servicio a tu nombre"}
           </h2>
           <FileUpload
@@ -238,7 +238,7 @@ export function KycPage() {
 
       {step === 2 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-black-800">Cargá una selfie</h2>
+          <h2 className="text-lg font-medium text-foreground">Cargá una selfie</h2>
           <FileUpload
             label="Selfie"
             hint="De frente, en un lugar bien iluminado, sin anteojos ni sombreros."
@@ -260,7 +260,7 @@ export function KycPage() {
 
       {step === 3 && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-black-800">Domicilio de residencia</h2>
+          <h2 className="text-lg font-medium text-foreground">Domicilio de residencia</h2>
           <Field label="Dirección" error={errors.line1?.message} {...form.register("line1")} />
           <Field
             label="Dirección (opcional)"

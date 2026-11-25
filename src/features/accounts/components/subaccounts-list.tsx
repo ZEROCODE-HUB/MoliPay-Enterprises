@@ -1,22 +1,23 @@
 import { Pagination } from "@/shared/ui/pagination";
 import {
-Eye,
-Pencil,
-Trash2,
-ArrowLeftRight,
-Pause,
-Play,
-Copy,
-History,
-SlidersHorizontal,
+  Eye,
+  Pencil,
+  Trash2,
+  ArrowLeftRight,
+  Pause,
+  Play,
+  Copy,
+  History,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import { formatMoneyAmount } from "@/shared/lib/money";
 import { RowMenu } from "./row-menu";
-import { KIND_LABEL,copiarCvu,esPool,fmtLimit } from "./subaccount-view";
+import { KIND_LABEL, copiarCvu, esPool, fmtLimit } from "./subaccount-view";
 
 import type { SubaccountsPageVm } from "./use-subaccounts-page";
+import { TableSkeleton } from "@/shared/ui/table-skeleton";
 
 export function SubaccountsList({
   loading,
@@ -55,13 +56,13 @@ export function SubaccountsList({
   return (
     <>
       {loading ? (
-        <Card className="p-6 text-sm text-muted-foreground">Cargando subcuentas…</Card>
+        <TableSkeleton label="Cargando subcuentas…" rows={5} />
       ) : (
         <Card className="p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
+                <tr className="text-[11px] border-b bg-muted/30">
                   <th className="text-left px-4 py-2.5">Tipo</th>
                   <th className="text-left px-4 py-2.5">Nombre / Identificador</th>
                   <th className="text-left px-4 py-2.5">CVU</th>
@@ -76,7 +77,7 @@ export function SubaccountsList({
                   const holder = [s.n, s.apellido].filter(Boolean).join(" ");
                   return (
                     <tr key={s.id ?? s.n} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-4 py-2.5 whitespace-nowrap">
                         <div className="flex flex-col items-start gap-0.5">
                           <Badge tone={esPool(s) ? "warn" : "neutral"}>
                             {esPool(s) ? "Pool" : "Individual"}
@@ -86,8 +87,8 @@ export function SubaccountsList({
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 min-w-[160px]">
-                        <div className="font-semibold">{holder || "Sin nombre"}</div>
+                      <td className="px-4 py-2.5 min-w-[160px]">
+                        <div className="font-medium">{holder || "Sin nombre"}</div>
                         {s.email && (
                           <div className="text-xs text-muted-foreground truncate max-w-[220px]">
                             {s.email}
@@ -97,7 +98,7 @@ export function SubaccountsList({
                           <div className="text-xs text-muted-foreground">Subcuenta del sistema</div>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2.5">
                         {s.cbu ? (
                           <div className="flex items-center gap-1.5">
                             <span className="font-mono text-xs" title={s.cbu}>
@@ -115,8 +116,8 @@ export function SubaccountsList({
                           <span className="text-xs text-muted-foreground">Sin CVU</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <div className="font-display tabular-nums font-semibold">
+                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                        <div className="font-display tabular-nums font-medium">
                           {formatMoneyAmount(s.disp)}
                         </div>
                         {s.ret.cents > 0 && (
@@ -130,10 +131,10 @@ export function SubaccountsList({
                       >
                         {fmtLimit(s.lim)}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-2.5">
                         <Badge tone={s.e === "Activa" ? "success" : "warn"}>{s.e}</Badge>
                       </td>
-                      <td className="px-4 py-3 text-right">
+                      <td className="px-4 py-2.5 text-right">
                         <RowMenu
                           open={menuId === s.id}
                           onToggle={() =>

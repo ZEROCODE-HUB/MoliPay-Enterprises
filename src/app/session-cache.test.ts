@@ -1,4 +1,4 @@
-import { afterEach,beforeEach,describe,expect,it,vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 
 type AuthCallback = (event: string, session: { user: { id: string } } | null) => void;

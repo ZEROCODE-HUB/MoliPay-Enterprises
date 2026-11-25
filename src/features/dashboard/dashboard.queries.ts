@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { STALE } from "@/app/query-client";
 import { privateScope } from "@/shared/lib/query-scope";
 import { listTransactionsInRange } from "./dashboard.supabase";
@@ -19,6 +19,7 @@ export const dashboardKeys = {
 export const dashboardQueries = {
   transactions: (userId: string, legajo: string, range: DateRange) =>
     queryOptions({
+      placeholderData: keepPreviousData,
       queryKey: dashboardKeys.transactions(userId, legajo, range),
       queryFn: ({ signal }) => listTransactionsInRange(legajo, range, { signal }),
       staleTime: STALE.short,

@@ -1,4 +1,4 @@
-import { createContext,useContext,useEffect,useState,type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { createKeyValueStore } from "@/infrastructure/browser-storage/key-value-store";
 
 export type DemoRole = "empresa";

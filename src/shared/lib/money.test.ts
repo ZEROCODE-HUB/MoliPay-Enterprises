@@ -1,15 +1,15 @@
-import { describe,expect,it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-addMoney,
-compareMoney,
-formatMoneyAmount,
-moneyFromCents,
-moneyFromDecimal,
-moneyInputToNumber,
-parseMoneyInput,
-sumDecimals,
-sumMoney,
-toDecimalString,
+  addMoney,
+  compareMoney,
+  formatMoneyAmount,
+  moneyFromCents,
+  moneyFromDecimal,
+  moneyInputToNumber,
+  parseMoneyInput,
+  sumDecimals,
+  sumMoney,
+  toDecimalString,
 } from "./money";
 
 describe("moneyFromDecimal", () => {

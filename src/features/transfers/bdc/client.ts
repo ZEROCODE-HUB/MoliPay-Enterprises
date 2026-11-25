@@ -5,7 +5,7 @@
  * `Molipay-backend` (`VITE_BDC_BACKEND_URL`), where the credentials, the token
  * and the X-SIGNATURE live.
  */
-import { getBdcConfig,type BdcConfig,type BdcAccount } from "@/features/transfers/bdc/config";
+import { getBdcConfig, type BdcConfig, type BdcAccount } from "@/features/transfers/bdc/config";
 
 export class BdcError extends Error {
   readonly statusCode: number | null;

@@ -13,6 +13,8 @@ import { REGISTRY_BODIES, REGISTRY_PLACE, suggestRegistry } from "../company-onb
 import { onlyDigits } from "@/shared/lib/text";
 import {
   COMPANY_DATA_STEP_FIELDS,
+  companyDataIssues,
+  fieldsUpTo,
   companyDataSchema,
   type CompanyDataValues,
 } from "../onboarding.schema";
@@ -121,7 +123,12 @@ export function useCompanyDataPage() {
 
   const next = async () => {
     if (step < COMPANY_DATA_STEP_FIELDS.length) {
-      if (!(await form.trigger(COMPANY_DATA_STEP_FIELDS[step]))) return;
+      const ok = await form.trigger(COMPANY_DATA_STEP_FIELDS[step]);
+      // Reglas que cruzan campos (fechas, CUIT de empresa, CP/provincia): en el paso, no al final.
+      const allowed = fieldsUpTo(COMPANY_DATA_STEP_FIELDS, step) as string[];
+      const cross = companyDataIssues(form.getValues()).filter((i) => allowed.includes(i.path));
+      for (const i of cross) form.setError(i.path as never, { type: "custom", message: i.message });
+      if (!ok || cross.length > 0) return;
       if (step === 0 && !(await checkCuit(form.getValues("cuit")))) return;
       if (step === 1) prefillRegistry();
       // Se guarda en cada paso: si se corta, retoma donde quedo.
@@ -129,14 +136,22 @@ export function useCompanyDataPage() {
       setStep(step + 1);
       return;
     }
-    await form.handleSubmit(async (values) => {
-      if (!(await checkCuit(values.cuit))) {
-        setStep(0);
-        return;
-      }
-      setCompanyData(values);
-      void navigate({ to: "/onboarding/datos-personales" });
-    })();
+    await form.handleSubmit(
+      async (values) => {
+        if (!(await checkCuit(values.cuit))) {
+          setStep(0);
+          return;
+        }
+        setCompanyData(values);
+        void navigate({ to: "/onboarding/datos-personales" });
+      },
+      // Si quedo algo mal en un paso anterior, se vuelve a ese paso para mostrarlo.
+      (errors) => {
+        const first = Object.keys(errors)[0];
+        const target = COMPANY_DATA_STEP_FIELDS.findIndex((f) => (f as string[]).includes(first));
+        if (target >= 0) setStep(target);
+      },
+    )();
   };
 
   const back = () => setStep((s) => Math.max(0, s - 1));

@@ -1,7 +1,7 @@
-import { Send,Search,Star,Trash2,Tag } from "lucide-react";
+import { Send, Search, Star, Trash2, Tag } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { BtnOutline } from "@/shared/ui/button";
-import { Input,Select } from "@/shared/ui/form-controls";
+import { Input, Select } from "@/shared/ui/form-controls";
 import { Badge } from "@/shared/ui/badge";
 import { categories } from "@/features/transfers/recipients.rules";
 import type { RecipientsPageVm } from "./use-recipients-page";
@@ -18,16 +18,16 @@ export function RecipientsTable({
   "items" | "loading" | "setTransfer" | "setAmount" | "setConcept" | "setRemove"
 >) {
   return (
-    <div className="grid lg:grid-cols-[220px_1fr] gap-6">
+    <div className="grid lg:grid-cols-[220px_1fr] gap-4">
       <Card className="h-fit">
-        <div className="text-xs uppercase tracking-wide text-muted-foreground mb-3">Categorias</div>
+        <div className="text-xs text-muted-foreground mb-3">Categorias</div>
         <div className="space-y-1">
           {categories.map((c) => (
             <button
               key={c.n}
               className={`w-full flex justify-between px-3 py-2 rounded-md text-sm ${
                 c.active
-                  ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] font-semibold"
+                  ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] font-medium"
                   : "hover:bg-muted"
               }`}
             >
@@ -40,28 +40,27 @@ export function RecipientsTable({
         </div>
       </Card>
 
-      <Card className="p-0 overflow-hidden">
-        <div className="p-4 border-b flex flex-wrap gap-2 items-center">
-          <div className="relative w-full sm:flex-1 sm:min-w-[240px]">
-            <Search
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input placeholder="Buscar por nombre, alias o CBU..." className="pl-9" />
-          </div>
-          <Select>
-            <option>Ordenar: mas usados</option>
-            <option>Alfabetico</option>
-            <option>Recientes</option>
-          </Select>
+      <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3">
+        <div className="relative w-full sm:flex-1 sm:min-w-[240px]">
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input placeholder="Buscar por nombre, alias o CBU" className="pl-9" />
         </div>
-
-        <div className="hidden md:grid grid-cols-[auto_1.2fr_1fr_1.4fr_0.8fr_0.8fr_auto] gap-4 px-5 py-3 border-b text-xs uppercase tracking-wide text-muted-foreground">
+        <Select>
+          <option>Ordenar: mas usados</option>
+          <option>Alfabetico</option>
+          <option>Recientes</option>
+        </Select>
+      </div>
+      <Card className="p-0 overflow-hidden">
+        <div className="hidden md:grid grid-cols-[auto_1.2fr_1fr_1.4fr_0.8fr_0.8fr_auto] gap-4 px-5 py-3 border-b text-xs text-muted-foreground">
           <div></div>
           <div>Nombre</div>
           <div>Alias</div>
           <div>CBU</div>
-          <div>Categoria</div>
+          <div>Categoría</div>
           <div>Ops</div>
           <div></div>
         </div>
@@ -85,7 +84,7 @@ export function RecipientsTable({
               className={d.fav ? "fill-amber-400 text-amber-400" : "text-muted-foreground"}
             />
             <div>
-              <div className="font-semibold">{d.n}</div>
+              <div className="font-medium">{d.n}</div>
               <div className="text-xs text-muted-foreground md:hidden">
                 @{d.a} · {d.b}
               </div>

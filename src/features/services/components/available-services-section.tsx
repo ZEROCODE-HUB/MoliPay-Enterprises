@@ -1,8 +1,8 @@
 import { ScanLine } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/shared/ui/card";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
-import { Input,Label,Select } from "@/shared/ui/form-controls";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
 import { PREVIEW_LIMIT } from "@/features/services/services.rules";
 
 import type { ServicesPageVm } from "./use-services-page";
@@ -39,8 +39,8 @@ export function AvailableServicesSection({
     <>
       {sectionTab === "disponibles" && (
         <>
-          <Card className="mb-6">
-            <h3 className="font-semibold text-sm mb-4">Suscribir un servicio</h3>
+          <Card className="mb-4">
+            <h3 className="font-medium text-sm mb-4">Suscribir un servicio</h3>
             <div className="grid md:grid-cols-2 gap-3 mb-3">
               <div>
                 <Label>Nombre del servicio</Label>
@@ -51,7 +51,7 @@ export function AvailableServicesSection({
                 />
               </div>
               <div>
-                <Label>Categoria</Label>
+                <Label>Categoría</Label>
                 <Select value={catNew} onChange={(e) => setCatNew(e.target.value)}>
                   {[
                     "Servicios publicos",
@@ -69,7 +69,7 @@ export function AvailableServicesSection({
             </div>
             <div className="flex flex-wrap gap-2 items-end">
               <div className="flex-1 min-w-[220px]">
-                <Label>Numero de cliente / codigo de barra</Label>
+                <Label>Número de cliente / código de barra</Label>
                 <Input
                   value={numberNew}
                   onChange={(e) => setNumberNew(e.target.value)}
@@ -85,8 +85,8 @@ export function AvailableServicesSection({
             </div>
           </Card>
 
-          <Card className="mb-6">
-            <h3 className="font-semibold text-sm mb-4">Servicios disponibles para suscribir</h3>
+          <Card className="mb-4">
+            <h3 className="font-medium text-sm mb-4">Servicios disponibles para suscribir</h3>
             <div className="divide-y">
               {(dispAll ? availables : availables.slice(0, PREVIEW_LIMIT)).map((s) => {
                 const Icon = s.icon;
@@ -97,7 +97,7 @@ export function AvailableServicesSection({
                         <Icon size={18} className="text-muted-foreground" />
                       </div>
                       <div className="min-w-0">
-                        <div className="font-semibold text-sm truncate">
+                        <div className="font-medium text-sm truncate">
                           {s.n} <span className="text-muted-foreground font-normal">· {s.cat}</span>
                         </div>
                         <div className="text-xs text-muted-foreground truncate">No suscrito</div>
@@ -118,7 +118,7 @@ export function AvailableServicesSection({
             {availables.length > PREVIEW_LIMIT && (
               <button
                 onClick={() => setDispAll(!dispAll)}
-                className="w-full text-center text-xs font-semibold text-primary pt-3 pb-1 hover:opacity-80 transition border-t border-border mt-1"
+                className="w-full text-center text-xs font-medium text-primary pt-3 pb-1 hover:opacity-80 transition border-t border-border mt-1"
               >
                 {dispAll ? "Mostrar menos" : `Ver todos (${availables.length})`}
               </button>

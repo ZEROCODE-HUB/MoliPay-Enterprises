@@ -31,7 +31,7 @@ export function CompanyInfoCard({
     <>
       {isPJ && (
         <Card>
-          <h3 className="font-semibold mb-4 flex items-center gap-2">
+          <h3 className="font-medium mb-4 flex items-center gap-2">
             <Building2 size={16} /> Informacion de la Empresa
           </h3>
           <div className="grid sm:grid-cols-2 gap-4">
@@ -82,7 +82,7 @@ export function CompanyInfoCard({
               />
             </div>
             <div>
-              <Label>Telefono</Label>
+              <Label>Teléfono</Label>
               <Input
                 value={form.telefono ?? ""}
                 onChange={(e) => setF("telefono", e.target.value)}

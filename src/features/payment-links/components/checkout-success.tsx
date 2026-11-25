@@ -1,6 +1,6 @@
-import { CheckCircle2,ShieldCheck } from "lucide-react";
-import { formatARS,formatDateHour } from "@/features/payment-links/checkout.rules";
-import { CenterCard,Row } from "./checkout-parts";
+import { CheckCircle2, ShieldCheck } from "lucide-react";
+import { formatARS, formatDateHour } from "@/features/payment-links/checkout.rules";
+import { CenterCard, Row } from "./checkout-parts";
 
 import type { CheckoutPageVm } from "./use-checkout-page";
 
@@ -16,14 +16,16 @@ export function CheckoutSuccess({
           <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mb-2">
             <CheckCircle2 className="text-emerald-600" size={32} />
           </div>
-          <p className="font-bold text-lg">{result.simulado ? "Pago simulado" : "Pago aprobado"}</p>
+          <p className="font-medium text-lg">
+            {result.simulado ? "Pago simulado" : "Pago aprobado"}
+          </p>
           <p className="text-sm text-muted-foreground mt-1">
             {result.simulado
               ? "Simulacion completada: no se realizo ningun cargo."
               : "Gracias, tu operacion fue completada."}
           </p>
           {result.simulado && (
-            <div className="w-full mt-3 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-[11px] font-semibold text-amber-800 text-left">
+            <div className="w-full mt-3 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-[11px] font-medium text-amber-800 text-left">
               Pago simulado — el cobro quedo registrado en la base como aprobado, pero no se realizo
               ningun cargo.
             </div>
@@ -32,11 +34,11 @@ export function CheckoutSuccess({
           {/* El comercio y el monto van arriba y en cuerpo grande: es lo
                   unico que el pagador necesita confirmar de un vistazo. */}
           {data?.comercio_nombre && (
-            <div className="flex items-center justify-center gap-2 text-[11px] font-semibold text-muted-foreground mt-3">
+            <div className="flex items-center justify-center gap-2 text-[11px] font-medium text-muted-foreground mt-3">
               <ShieldCheck size={14} className="text-emerald-600" /> {data.comercio_nombre}
             </div>
           )}
-          <div className="text-2xl font-black tracking-tight text-[color:var(--brand-dark)] mt-1">
+          <div className="text-2xl font-medium tracking-tight text-[color:var(--brand-dark)] mt-1">
             {formatARS(result.monto)}
           </div>
 
@@ -48,12 +50,12 @@ export function CheckoutSuccess({
               {data.detalle.map((p, i) => (
                 <div key={i} className="flex items-center justify-between px-3 py-2 text-xs">
                   <div className="min-w-0">
-                    <div className="font-semibold truncate">{p.producto_nombre}</div>
+                    <div className="font-medium truncate">{p.producto_nombre}</div>
                     <div className="text-muted-foreground">
                       {p.cantidad} × {formatARS(p.precio_unitario)}
                     </div>
                   </div>
-                  <div className="font-mono tabular-nums font-semibold">
+                  <div className="font-mono tabular-nums font-medium">
                     {formatARS(p.precio_unitario * p.cantidad)}
                   </div>
                 </div>
@@ -79,7 +81,7 @@ export function CheckoutSuccess({
           </div>
 
           <p className="text-[11px] text-muted-foreground mt-4 text-left">
-            Guardá el comprobante y el codigo de operacion. Con esos dos datos se puede rastrear el
+            Guardá el comprobante y el código de operación. Con esos dos datos se puede rastrear el
             pago.
           </p>
         </CenterCard>

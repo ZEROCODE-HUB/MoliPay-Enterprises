@@ -1,5 +1,5 @@
-import { useState,useRef,useEffect } from "react";
-import { Bot,Send,X,MessageCircle } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Bot, Send, X, MessageCircle } from "lucide-react";
 import { Input } from "@/shared/ui/form-controls";
 import { BtnPrimary } from "@/shared/ui/button";
 
@@ -72,15 +72,15 @@ export function SupportBot() {
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-2rem)] bg-card border rounded-xl shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-2rem)] bg-card border rounded-lg shadow-2xl flex flex-col overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b bg-[color:var(--brand-soft)]">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-[color:var(--brand-dark)] flex items-center justify-center">
                 <Bot size={16} className="text-white" />
               </div>
               <div>
-                <div className="text-sm font-semibold">Asistente Molly</div>
-                <div className="text-[10px] text-muted-foreground">Online</div>
+                <div className="text-sm font-medium">Asistente Molly</div>
+                <div className="text-[11px] text-muted-foreground">Online</div>
               </div>
             </div>
             <button onClick={() => setOpen(false)} className="p-1 hover:opacity-70">
@@ -93,7 +93,7 @@ export function SupportBot() {
               <button
                 key={q}
                 onClick={() => send(q)}
-                className="shrink-0 text-[11px] font-semibold px-2.5 py-1.5 rounded-full border bg-card hover:bg-muted transition whitespace-nowrap"
+                className="shrink-0 text-[11px] font-medium px-2.5 py-1.5 rounded-full border bg-card hover:bg-muted transition whitespace-nowrap"
               >
                 {q}
               </button>
@@ -125,7 +125,7 @@ export function SupportBot() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && send(input)}
-              placeholder="Escribí tu consulta..."
+              placeholder="Escribí tu consulta"
               className="h-9 text-sm"
             />
             <BtnPrimary className="h-9 w-9 px-0 shrink-0" onClick={() => send(input)}>
@@ -133,8 +133,8 @@ export function SupportBot() {
             </BtnPrimary>
           </div>
 
-          <div className="px-3 pb-2 text-[10px] text-muted-foreground">
-            También podés escribir a <span className="font-semibold">soporte@molipay.com.ar</span>
+          <div className="px-3 pb-2 text-[11px] text-muted-foreground">
+            También podés escribir a <span className="font-medium">soporte@molipay.com.ar</span>
           </div>
         </div>
       )}

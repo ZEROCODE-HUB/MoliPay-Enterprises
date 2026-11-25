@@ -1,5 +1,5 @@
-import { createContext,useCallback,useContext,useRef,useState,type ReactNode } from "react";
-import { ConfirmDialog,type ConfirmOptions } from "./confirm-dialog";
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { ConfirmDialog, type ConfirmOptions } from "./confirm-dialog";
 
 /**
  * Confirmaciones con el dialogo de la app en lugar de window.confirm():

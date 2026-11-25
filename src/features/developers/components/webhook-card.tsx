@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Controller } from "react-hook-form";
-import { RefreshCw,Send,Webhook } from "lucide-react";
+import { RefreshCw, Send, Webhook } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { applyServerErrors } from "@/shared/forms/apply-server-errors";
@@ -8,18 +8,18 @@ import { FieldError } from "@/shared/forms/field-error";
 import { useZodForm } from "@/shared/forms/use-zod-form";
 import { userMessage } from "@/shared/lib/errors";
 import { Badge } from "@/shared/ui/badge";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
-import { Input,Label } from "@/shared/ui/form-controls";
+import { Input, Label } from "@/shared/ui/form-controls";
 import { useDeveloperActions } from "../developers.hooks";
 import {
-DEFAULT_WEBHOOK_EVENTS,
-DELIVERY_STATUS_LABEL,
-WEBHOOK_EVENT_LABEL,
-deliveryTone,
-formatShortDateTime,
+  DEFAULT_WEBHOOK_EVENTS,
+  DELIVERY_STATUS_LABEL,
+  WEBHOOK_EVENT_LABEL,
+  deliveryTone,
+  formatShortDateTime,
 } from "../developers.rules";
-import type { ApiEnvironment,DeveloperWebhook,WebhookDelivery } from "../developers.types";
+import type { ApiEnvironment, DeveloperWebhook, WebhookDelivery } from "../developers.types";
 
 const webhookSchema = z.object({
   url: z
@@ -94,7 +94,7 @@ export function WebhookCard({
   return (
     <Card>
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 font-semibold">
+        <h3 className="flex items-center gap-2 font-medium">
           <Webhook size={16} /> Webhooks
         </h3>
         {webhook && (

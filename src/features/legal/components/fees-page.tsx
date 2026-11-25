@@ -29,24 +29,24 @@ export function LegalFeesPage() {
         </div>
       </header>
       <article className="max-w-3xl mx-auto px-6 py-16">
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Tabla de Comisiones</h1>
+        <h1 className="text-3xl md:text-4xl font-medium tracking-tight">Tabla de Comisiones</h1>
         <p className="text-sm text-muted-foreground mt-2">
           Vigente desde 01/06/2026 · Aplicable al Plan Empresa.
         </p>
 
         <div className="mt-8 border rounded-lg overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="bg-muted/40 text-xs text-muted-foreground">
               <tr>
-                <th className="text-left px-4 py-3">Operacion</th>
-                <th className="text-right px-4 py-3">Comision</th>
+                <th className="text-left px-4 py-2.5">Operación</th>
+                <th className="text-right px-4 py-2.5">Comisión</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((f) => (
                 <tr key={f.op} className="border-t">
-                  <td className="px-4 py-3">{f.op}</td>
-                  <td className="px-4 py-3 font-mono tabular-nums text-right font-semibold whitespace-nowrap">
+                  <td className="px-4 py-2.5">{f.op}</td>
+                  <td className="px-4 py-2.5 font-mono tabular-nums text-right font-medium whitespace-nowrap">
                     {f.com}
                   </td>
                 </tr>
@@ -57,7 +57,7 @@ export function LegalFeesPage() {
 
         <p className="mt-6 text-xs text-muted-foreground">
           Todas las comisiones estan expresadas en pesos argentinos. IVA no incluido salvo
-          indicacion contraria. Los aranceles pueden modificarse con un preaviso minimo de 60 dias
+          indicacion contraria. Los aranceles pueden modificarse con un preaviso mínimo de 60 días
           conforme normativa BCRA.
         </p>
       </article>

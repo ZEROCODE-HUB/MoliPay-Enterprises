@@ -1,5 +1,5 @@
-import { describe,expect,it } from "vitest";
-import { environmentAccess,integrationChecklist,parseIpList } from "./developers.rules";
+import { describe, expect, it } from "vitest";
+import { environmentAccess, integrationChecklist, parseIpList } from "./developers.rules";
 import { toDeveloperPortal } from "./developers.supabase";
 
 const emptyPortal = {

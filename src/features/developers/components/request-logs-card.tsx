@@ -6,7 +6,7 @@ export function RequestLogsCard({ logs }: { logs: RequestLog[] }) {
   const succeeded = logs.filter((l) => l.status < 400).length;
   return (
     <Card>
-      <h3 className="mb-3 text-sm font-semibold">Últimas requests</h3>
+      <h3 className="mb-3 text-sm font-medium">Últimas requests</h3>
       {logs.length === 0 ? (
         <p className="text-xs text-muted-foreground">Todavía no hay peticiones en este ambiente.</p>
       ) : (
@@ -19,13 +19,13 @@ export function RequestLogsCard({ logs }: { logs: RequestLog[] }) {
                 title={r.errorCode ?? r.requestId ?? ""}
               >
                 <span
-                  className={`w-12 text-center font-bold ${r.method === "GET" ? "text-blue-700" : "text-emerald-700"}`}
+                  className={`w-12 text-center font-medium ${r.method === "GET" ? "text-blue-700" : "text-emerald-700"}`}
                 >
                   {r.method}
                 </span>
                 <span className="flex-1 truncate font-mono">{r.path}</span>
                 <span
-                  className={`font-mono font-semibold ${r.status < 400 ? "text-emerald-700" : "text-red-700"}`}
+                  className={`font-mono font-medium ${r.status < 400 ? "text-emerald-700" : "text-red-700"}`}
                 >
                   {r.status}
                 </span>

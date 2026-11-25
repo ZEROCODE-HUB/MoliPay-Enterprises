@@ -1,5 +1,5 @@
 import { type Draft } from "@/features/transfers/transfer-store";
-import { Edit3,FileText,Play,Trash2 } from "lucide-react";
+import { Edit3, FileText, Play, Trash2 } from "lucide-react";
 
 /* ===== Borradores ===== */
 export function Borradores({
@@ -17,7 +17,7 @@ export function Borradores({
     return (
       <div className="text-center py-12 text-muted-foreground">
         <FileText size={32} className="mx-auto mb-3 opacity-50" />
-        <p className="font-semibold">No tenes borradores</p>
+        <p className="font-medium">No tenes borradores</p>
         <p className="text-sm mt-1">Las transferencias que guardes como borrador apareceran aca.</p>
       </div>
     );
@@ -28,7 +28,7 @@ export function Borradores({
       {drafts.map((d) => (
         <div key={d.id} className="flex items-center justify-between py-3">
           <div className="min-w-0">
-            <div className="text-sm font-semibold">{d.destinatario}</div>
+            <div className="text-sm font-medium">{d.destinatario}</div>
             <div className="text-xs text-muted-foreground">
               @{d.alias} · <span className="font-mono">{d.monto}</span> · {d.concepto}
             </div>

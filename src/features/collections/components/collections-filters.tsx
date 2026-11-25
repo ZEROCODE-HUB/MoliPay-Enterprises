@@ -1,6 +1,6 @@
-import { FileSpreadsheet,Download } from "lucide-react";
+import { FileSpreadsheet, Download } from "lucide-react";
 import { BtnOutline } from "@/shared/ui/button";
-import { Input,Label } from "@/shared/ui/form-controls";
+import { Input, Label } from "@/shared/ui/form-controls";
 import { periodFilter } from "@/features/collections/collections.data";
 import { presets } from "@/features/collections/collections.rules";
 import type { CollectionsPageVm } from "./use-collections-page";
@@ -32,7 +32,7 @@ export function CollectionsFilters({
           key={p.days}
           onClick={() => setFilter(periodFilter(p.label, p.days))}
           className={
-            "px-4 py-2 rounded-lg text-xs font-semibold border transition " +
+            "px-4 py-2 rounded-lg text-xs font-medium border transition " +
             (filter.label === p.label
               ? "bg-navy-50 text-navy-600 border-transparent"
               : "bg-card hover:bg-muted")

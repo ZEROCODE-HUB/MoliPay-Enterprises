@@ -1,4 +1,4 @@
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 
 /** Debounce de un valor (p. ej. texto libre de búsqueda) para no disparar una query por tecla. */
 export function useDebouncedValue<T>(value: T, delayMs = 350): T {

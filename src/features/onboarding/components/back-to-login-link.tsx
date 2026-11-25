@@ -6,7 +6,7 @@ export function BackToLoginLink() {
       <Link
         to="/login"
         search={{ register: undefined }}
-        className="text-xs text-black-400 underline underline-offset-2 hover:text-red-500"
+        className="text-xs text-muted-foreground underline underline-offset-2 hover:text-red-500"
       >
         Volver a inicio de sesión
       </Link>

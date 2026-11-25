@@ -1,7 +1,7 @@
-import { keepPreviousData,queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { STALE } from "@/app/query-client";
 import { privateScope } from "@/shared/lib/query-scope";
-import { getTransactionDetail,listTransactionLines } from "./history.supabase";
+import { getTransactionDetail, listTransactionLines } from "./history.supabase";
 import type { HistoryFilters } from "./history.types";
 
 export const historyKeys = {

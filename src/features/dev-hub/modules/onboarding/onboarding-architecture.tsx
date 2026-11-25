@@ -11,7 +11,7 @@ function RichText({ text }: { text: string }) {
         let node: ReactNode = part;
         if (part.startsWith("**")) {
           node = (
-            <strong className="font-semibold text-foreground">
+            <strong className="font-medium text-foreground">
               <RichText text={part.slice(2, -2)} />
             </strong>
           );
@@ -38,7 +38,7 @@ function Block({ block }: { block: ProposalBlock }) {
       );
     case "h3":
       return (
-        <h3 className="mt-6 mb-2 font-display text-base font-semibold">
+        <h3 className="mt-6 mb-2 font-display text-base font-medium">
           <RichText text={block.text} />
         </h3>
       );
@@ -63,7 +63,7 @@ function Block({ block }: { block: ProposalBlock }) {
             <thead className="bg-muted/60">
               <tr>
                 {block.head.map((cell) => (
-                  <th key={cell} className="border-b px-3 py-2 font-semibold">
+                  <th key={cell} className="border-b px-3 py-2">
                     {cell}
                   </th>
                 ))}
@@ -92,7 +92,7 @@ function Block({ block }: { block: ProposalBlock }) {
     case "details":
       return (
         <details className="my-3 rounded-lg border bg-muted/40 p-3">
-          <summary className="cursor-pointer text-sm font-semibold">{block.summary}</summary>
+          <summary className="cursor-pointer text-sm font-medium">{block.summary}</summary>
           <pre className="mt-3 overflow-x-auto font-mono text-xs leading-relaxed">{block.text}</pre>
         </details>
       );
@@ -125,7 +125,7 @@ export default function OnboardingArchitecture() {
           id={section.id}
           className="mb-6 scroll-mt-20 rounded-lg border bg-card p-5"
         >
-          <h2 className="font-display text-lg font-semibold">{section.title}</h2>
+          <h2 className="font-display text-lg font-medium">{section.title}</h2>
           {section.blocks.map((block, i) => (
             <Block key={i} block={block} />
           ))}

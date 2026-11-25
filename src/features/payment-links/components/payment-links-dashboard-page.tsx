@@ -2,20 +2,20 @@ import { loadLinksDashboard } from "@/features/payment-links/payment-links.supab
 import { toast } from "sonner";
 import { userMessage } from "@/shared/lib/errors";
 import { useCurrentCustomer } from "@/features/session/session.hooks";
-import { useState,useMemo,useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
-PieChart,
-Pie,
-Cell,
-BarChart,
-Bar,
-XAxis,
-YAxis,
-CartesianGrid,
-Tooltip,
-ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
 } from "recharts";
-import { Download,FileSpreadsheet } from "lucide-react";
+import { Download, FileSpreadsheet } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { BtnOutline } from "@/shared/ui/button";
 import { PageHeader } from "@/shared/ui/page-header";
@@ -146,7 +146,7 @@ export function PaymentLinksDashboardPage() {
     <div>
       <PageHeader
         title="Links de Pago"
-        description="Genera y administra links de cobro, productos e integraciones con tu tienda."
+        description="Genera y administra links de cobro, productos e integraciones con tu tienda"
       />
       <div className="flex flex-wrap gap-2 mb-6">
         {presets.map((p) => (
@@ -154,7 +154,7 @@ export function PaymentLinksDashboardPage() {
             key={p.days}
             onClick={() => setDays(p.days)}
             className={
-              "px-4 py-2 rounded-lg text-xs font-semibold border transition " +
+              "px-4 py-2 rounded-lg text-xs font-medium border transition " +
               (days === p.days
                 ? "bg-[color:var(--brand-soft)] text-[color:var(--brand-dark)] border-transparent"
                 : "bg-card hover:bg-muted")
@@ -175,19 +175,17 @@ export function PaymentLinksDashboardPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-6">
         {kpis.map((k) => (
           <div key={k.label} className="bg-card border rounded-lg p-3">
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              {k.label}
-            </div>
-            <div className="font-display tabular-nums text-sm md:text-base font-semibold mt-0.5">
+            <div className="text-[11px] text-muted-foreground">{k.label}</div>
+            <div className="font-display tabular-nums text-sm md:text-base font-medium mt-0.5">
               {k.value}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mb-4">
         <Card>
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+          <h4 className="font-display text-sm font-medium text-foreground mb-3">
             Estado de transacciones
           </h4>
           <ResponsiveContainer width="100%" height={240}>
@@ -211,7 +209,7 @@ export function PaymentLinksDashboardPage() {
         </Card>
 
         <Card>
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+          <h4 className="font-display text-sm font-medium text-foreground mb-3">
             Montos por link de pago
           </h4>
           <ResponsiveContainer width="100%" height={240}>
@@ -235,7 +233,7 @@ export function PaymentLinksDashboardPage() {
         </Card>
 
         <Card className="md:col-span-2 xl:col-span-1">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+          <h4 className="font-display text-sm font-medium text-foreground mb-3">
             Volumen por link (millones ARS)
           </h4>
           <ResponsiveContainer width="100%" height={240}>

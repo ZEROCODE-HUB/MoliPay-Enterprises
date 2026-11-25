@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft,ShieldAlert } from "lucide-react";
+import { ArrowLeft, ShieldAlert } from "lucide-react";
 import { MollyLogo } from "@/shared/ui/molly-logo";
 import { toast } from "sonner";
 
@@ -23,12 +23,12 @@ export function WithdrawalPage() {
         <div className="w-12 h-12 rounded-lg bg-[color:var(--brand-soft)] text-primary grid place-items-center mb-4">
           <ShieldAlert size={22} />
         </div>
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
+        <h1 className="text-3xl md:text-4xl font-medium tracking-tight">
           Boton de Arrepentimiento
         </h1>
         <p className="text-sm text-muted-foreground mt-3">
           De acuerdo al articulo 34 de la Ley 24.240 de Defensa del Consumidor y a la Resolucion
-          424/2020, tenes derecho a revocar la contratacion dentro de los 10 dias corridos desde la
+          424/2020, tenes derecho a revocar la contratacion dentro de los 10 días corridos desde la
           aceptacion del servicio, sin necesidad de invocar causa y sin costo alguno.
         </p>
 
@@ -42,21 +42,21 @@ export function WithdrawalPage() {
             }}
           >
             <div>
-              <label className="block text-xs font-semibold mb-1">Razon social</label>
+              <label className="block text-xs font-medium mb-1">Razón social</label>
               <input
                 required
                 className="w-full h-10 px-3 rounded-md border bg-background text-sm"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1">CUIT</label>
+              <label className="block text-xs font-medium mb-1">CUIT</label>
               <input
                 required
                 className="w-full h-10 px-3 rounded-md border bg-background text-sm font-mono tabular-nums"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1">Email de contacto</label>
+              <label className="block text-xs font-medium mb-1">Email de contacto</label>
               <input
                 required
                 type="email"
@@ -64,7 +64,7 @@ export function WithdrawalPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold mb-1">Motivo (opcional)</label>
+              <label className="block text-xs font-medium mb-1">Motivo (opcional)</label>
               <textarea
                 rows={3}
                 className="w-full px-3 py-2 rounded-md border bg-background text-sm"
@@ -72,7 +72,7 @@ export function WithdrawalPage() {
             </div>
             <button
               type="submit"
-              className="w-full h-11 rounded-md bg-primary text-primary-foreground font-semibold text-sm"
+              className="w-full h-11 rounded-md bg-primary text-primary-foreground font-medium text-sm"
             >
               Enviar solicitud de arrepentimiento
             </button>

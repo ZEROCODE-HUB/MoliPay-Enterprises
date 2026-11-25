@@ -14,7 +14,7 @@ export function CollectionsRecentBatches({
     <Card className="p-0 overflow-hidden">
       <div className="px-5 py-4 border-b flex items-center justify-between">
         <div>
-          <div className="font-semibold">Lotes recientes</div>
+          <div className="font-medium">Lotes recientes</div>
           <div className="text-xs text-muted-foreground">
             {batchesRecents.length} lotes en el periodo seleccionado
           </div>
@@ -30,41 +30,27 @@ export function CollectionsRecentBatches({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Nombre / Monto
-              </th>
-              <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Estado
-              </th>
-              <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Progreso
-              </th>
-              <th className="text-right px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Monto total
-              </th>
-              <th className="text-right px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Cobrado
-              </th>
-              <th className="text-right px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Pendiente
-              </th>
-              <th className="text-center px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Accion
-              </th>
+              <th className="text-left px-4 py-2.5">Nombre / Monto</th>
+              <th className="text-left px-4 py-2.5">Estado</th>
+              <th className="text-left px-4 py-2.5">Progreso</th>
+              <th className="text-right px-4 py-2.5">Monto total</th>
+              <th className="text-right px-4 py-2.5">Cobrado</th>
+              <th className="text-right px-4 py-2.5">Pendiente</th>
+              <th className="text-center px-4 py-2.5">Acción</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {batchesRecents.slice(0, 10).map((l) => (
               <tr key={l.id} className="hover:bg-muted/30 transition-colors">
                 <td className="px-5 py-3">
-                  <div className="font-semibold">{l.nombre}</div>
+                  <div className="font-medium">{l.nombre}</div>
                   <div className="text-xs text-muted-foreground">
                     {l.cantidadPagos + l.cantidadParciales + l.cantidadPendientes} registros
                   </div>
                 </td>
                 <td className="px-5 py-3">
                   <span
-                    className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                    className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${
                       STATUS_BADGE[l.estado]
                     }`}
                   >
@@ -79,16 +65,16 @@ export function CollectionsRecentBatches({
                         style={{ width: `${l.progreso}%` }}
                       />
                     </div>
-                    <span className="text-xs font-semibold min-w-[3rem]">{l.progreso}%</span>
+                    <span className="text-xs font-medium min-w-[3rem]">{l.progreso}%</span>
                   </div>
                 </td>
-                <td className="px-5 py-3 font-mono tabular-nums text-right font-semibold">
+                <td className="px-5 py-3 font-mono tabular-nums text-right font-medium">
                   {formatARS(l.montoTotal)}
                 </td>
-                <td className="px-5 py-3 font-mono tabular-nums text-right text-emerald-600 font-semibold">
+                <td className="px-5 py-3 font-mono tabular-nums text-right text-emerald-600 font-medium">
                   {formatARS(l.montoCobrado)}
                 </td>
-                <td className="px-5 py-3 font-mono tabular-nums text-right text-amber-600 font-semibold">
+                <td className="px-5 py-3 font-mono tabular-nums text-right text-amber-600 font-medium">
                   {formatARS(l.montoTotal - l.montoCobrado)}
                 </td>
                 <td className="px-5 py-3 text-center">

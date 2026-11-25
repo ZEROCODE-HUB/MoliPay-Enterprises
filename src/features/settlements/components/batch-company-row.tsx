@@ -1,7 +1,8 @@
 import { formatARS } from "@/features/collections/collections.data";
 import { Badge } from "@/shared/ui/badge";
-import { type BatchCompany,type BreakdownBatch } from "@/features/settlements/settlements.types";
+import { type BatchCompany, type BreakdownBatch } from "@/features/settlements/settlements.types";
 import { statusCompany } from "@/features/settlements/settlements.rules";
+import { LoadingLines } from "@/shared/ui/table-skeleton";
 
 export function RowBatchCompany({
   l,
@@ -25,7 +26,7 @@ export function RowBatchCompany({
         <td className="py-2 pr-3 text-right font-mono">{l.cantidad_operaciones}</td>
         <td className="py-2 pr-3 text-right font-mono">{formatARS(l.bruto)}</td>
         <td
-          className={`py-2 pr-3 text-right font-mono font-semibold ${Number(l.neto) < 0 ? "text-red-600" : ""}`}
+          className={`py-2 pr-3 text-right font-mono font-medium ${Number(l.neto) < 0 ? "text-red-600" : ""}`}
         >
           {formatARS(l.neto)}
         </td>
@@ -60,7 +61,7 @@ export function RowBatchCompany({
         <tr className="bg-muted/20">
           <td colSpan={6} className="px-3 py-2">
             {loadingSales ? (
-              <p className="text-xs text-muted-foreground">Cargando ventas…</p>
+              <LoadingLines label="Cargando ventas…" />
             ) : !sales || sales.length === 0 ? (
               <p className="text-xs text-muted-foreground">Sin ventas vinculadas a este lote.</p>
             ) : (

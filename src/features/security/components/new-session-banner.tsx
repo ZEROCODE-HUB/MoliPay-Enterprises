@@ -26,7 +26,7 @@ export function NewSessionBanner() {
         duration: 8000,
       });
     },
-    onError: (e) => toast.error(userMessage(e, "No se pudo cerrar la sesión.")),
+    onError: (e) => toast.error(userMessage(e, "No se pudo cerrar la sesion.")),
   });
 
   if (!session) return null;
@@ -39,12 +39,12 @@ export function NewSessionBanner() {
     >
       <ShieldAlert size={20} className="shrink-0 text-amber-600" aria-hidden />
       <div className="min-w-0 flex-1">
-        <p className="font-semibold">Nuevo inicio de sesión en tu cuenta</p>
+        <p className="font-medium">Nuevo inicio de sesión en tu cuenta</p>
         <p className="text-xs text-amber-800">
           Desde {device}
           {session.ip ? ` · IP ${session.ip}` : ""} · {lastSeenLabel(session.createdAt)}
           {others > 0 ? ` · y ${others} más` : ""}. Si no fuiste vos, cerrá esa sesión y{" "}
-          <Link to="/app/seguridad" className="font-semibold underline">
+          <Link to="/app/seguridad" className="font-medium underline">
             cambiá tu contraseña
           </Link>
           .
@@ -54,7 +54,7 @@ export function NewSessionBanner() {
         <button
           type="button"
           onClick={() => acknowledge(session.id)}
-          className="h-9 rounded-md border border-amber-300 bg-white px-3 text-xs font-semibold hover:bg-amber-100"
+          className="h-9 rounded-md border border-amber-300 bg-card px-3 text-xs font-medium hover:bg-amber-100"
         >
           Fui yo
         </button>
@@ -62,7 +62,7 @@ export function NewSessionBanner() {
           type="button"
           disabled={revoke.isPending}
           onClick={() => revoke.mutate(session.id)}
-          className="h-9 rounded-md bg-amber-600 px-3 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-60"
+          className="h-9 rounded-md bg-amber-600 px-3 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-60"
         >
           {revoke.isPending ? "Cerrando…" : "No fui yo"}
         </button>

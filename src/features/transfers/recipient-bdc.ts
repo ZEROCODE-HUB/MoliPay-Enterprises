@@ -12,13 +12,13 @@
 // ============================================================================
 
 import {
-recipientValidator,
-detectIdentifierKind,
-isValidFormat,
-type IdentifierKind,
-type RecipientValidationResult,
+  recipientValidator,
+  detectIdentifierKind,
+  isValidFormat,
+  type IdentifierKind,
+  type RecipientValidationResult,
 } from "@/features/transfers/recipient-validation";
-import { createBdcClient,canQueryBdc,type BdcAccountInfoData } from "@/features/transfers/bdc";
+import { createBdcClient, canQueryBdc, type BdcAccountInfoData } from "@/features/transfers/bdc";
 
 /** 11 digits → `20-00000000-01`. Anything else is returned unchanged. */
 export function formatCuit(cuit: string): string {

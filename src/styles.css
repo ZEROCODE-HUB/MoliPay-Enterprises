@@ -334,3 +334,50 @@
     animation: none;
   }
 }
+
+/* Estandar de tablas: encabezado, filas y celdas iguales en todo el producto.
+   Las clases de cada tabla pueden ajustar densidad (padding) pero no el estilo. */
+@layer base {
+  thead th {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    color: var(--color-muted-foreground);
+    text-align: left;
+    white-space: nowrap;
+  }
+  thead tr {
+    background-color: color-mix(in oklab, var(--color-muted) 45%, transparent);
+  }
+  tbody tr {
+    transition: background-color 150ms ease;
+  }
+  tbody td {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Modo oscuro: tintes de estado. Los fondos claros (avisos, badges) pasan a
+   traslucidos y los textos de estado a tonos legibles sobre superficie oscura. */
+.dark {
+  --color-emerald-50: rgb(16 185 129 / 0.12);
+  --color-emerald-100: rgb(16 185 129 / 0.18);
+  --color-emerald-200: rgb(16 185 129 / 0.28);
+  --color-emerald-700: #6ee7b7;
+  --color-emerald-800: #a7f3d0;
+  --color-emerald-900: #d1fae5;
+  --color-amber-50: rgb(245 158 11 / 0.12);
+  --color-amber-100: rgb(245 158 11 / 0.18);
+  --color-amber-200: rgb(245 158 11 / 0.28);
+  --color-amber-300: rgb(245 158 11 / 0.4);
+  --color-amber-700: #fcd34d;
+  --color-amber-800: #fde68a;
+  --color-amber-900: #fef3c7;
+  --red-50: rgb(230 57 79 / 0.12);
+  --red-100: rgb(230 57 79 / 0.18);
+  --red-200: rgb(230 57 79 / 0.28);
+  --color-red-50: rgb(230 57 79 / 0.12);
+  --color-red-100: rgb(230 57 79 / 0.18);
+  --color-red-200: rgb(230 57 79 / 0.28);
+  --moli-red-light: rgb(230 57 79 / 0.14);
+}

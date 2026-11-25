@@ -37,7 +37,7 @@ export function RecoverPasswordPage() {
           body={
             <p>
               Enviamos un enlace de recuperación a{" "}
-              <span className="font-semibold text-black-700">{sentTo}</span>. Hacé clic en él para
+              <span className="font-medium text-foreground">{sentTo}</span>. Hacé clic en él para
               crear una nueva contraseña. Si no lo encontrás, revisá la carpeta de spam.
             </p>
           }
@@ -72,7 +72,7 @@ export function RecoverPasswordPage() {
                 {isSubmitting ? "Enviando…" : "Enviar enlace de recuperación"}
               </PrimaryButton>
             </div>
-            <div className="pt-2 text-center text-xs text-black-400">
+            <div className="pt-2 text-center text-xs text-muted-foreground">
               <Link
                 to="/login"
                 search={{ register: undefined }}

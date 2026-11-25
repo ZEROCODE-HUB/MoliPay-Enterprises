@@ -1,4 +1,4 @@
-import { getPaywayConfig,tokenizeCard } from "@/features/payment-links/payway";
+import { getPaywayConfig, tokenizeCard } from "@/features/payment-links/payway";
 import { paymentsApiUrl } from "@/infrastructure/http/backend-url";
 
 /**

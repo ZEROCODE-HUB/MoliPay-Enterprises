@@ -1,4 +1,4 @@
-import { requireSupabase,supabaseAnonKey,supabaseUrl } from "@/infrastructure/supabase/client";
+import { requireSupabase, supabaseAnonKey, supabaseUrl } from "@/infrastructure/supabase/client";
 
 /**
  * Genera URLs firmadas para documentos del bucket `kyc` usando una Edge Function

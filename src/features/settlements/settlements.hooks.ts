@@ -1,8 +1,8 @@
 import { useMemo } from "react";
-import { useQuery,useQueryClient } from "@tanstack/react-query";
-import { useCurrentCustomer,useSessionUser } from "@/features/session/session.hooks";
-import { settlementKeys,settlementQueries } from "./settlements.queries";
-import { acceptAdvance,cancelAdvance,requestAdvance } from "./settlements.supabase";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCurrentCustomer, useSessionUser } from "@/features/session/session.hooks";
+import { settlementKeys, settlementQueries } from "./settlements.queries";
+import { acceptAdvance, cancelAdvance, requestAdvance } from "./settlements.supabase";
 import type { SettlementsOverview } from "./settlements.types";
 
 const EMPTY_OVERVIEW: SettlementsOverview = {

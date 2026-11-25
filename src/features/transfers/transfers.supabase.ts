@@ -1,4 +1,4 @@
-import { BALANCES_EMBED,withBalances } from "@/infrastructure/supabase/subaccount-balances";
+import { BALANCES_EMBED, withBalances } from "@/infrastructure/supabase/subaccount-balances";
 import { requireSupabase } from "@/infrastructure/supabase/client";
 import { invokeEdgeFunction } from "@/infrastructure/supabase/edge-functions";
 import { toAppError } from "@/infrastructure/supabase/errors";

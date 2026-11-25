@@ -1,10 +1,10 @@
 import { useTransferUi } from "@/features/transfers/components/use-transfer-ui";
 import { Modal } from "@/shared/ui/modal";
-import { CheckCircle2,Download,Share2,Star,X } from "lucide-react";
+import { CheckCircle2, Download, Share2, Star, X } from "lucide-react";
 import { formatMoney } from "@/shared/lib/format";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 import { type ReceiptTransfer } from "@/features/transfers/transfer-ui.types";
-import { Row,Section } from "./transfer-ui-parts";
+import { Row, Section } from "./transfer-ui-parts";
 import { detailTax } from "@/features/transfers/transfer-ui.rules";
 
 export function TransferReceiptModal(props: {
@@ -46,7 +46,7 @@ export function TransferReceiptModal(props: {
             <CheckCircle2 size={28} className="text-emerald-600" />
           </div>
           <div className="text-sm font-medium text-muted-foreground">Enviaste</div>
-          <div className="mt-1 font-display tabular-nums text-4xl font-bold tracking-tight">
+          <div className="mt-1 font-display tabular-nums text-4xl font-semibold tracking-tight">
             {formatMoney(receipt.monto)}
           </div>
           <div className="mt-2 text-xs text-muted-foreground">{dateTxt}</div>
@@ -90,7 +90,7 @@ export function TransferReceiptModal(props: {
                 mono
               />
             ))}
-            <div className="flex justify-between gap-4 pt-2 mt-1 border-t text-sm font-semibold">
+            <div className="flex justify-between gap-4 pt-2 mt-1 border-t text-sm font-medium">
               <span>Total debitado</span>
               <span className="font-mono tabular-nums">{formatMoney(total)}</span>
             </div>

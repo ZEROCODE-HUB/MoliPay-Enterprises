@@ -29,7 +29,7 @@ export function PasswordChangeCard() {
 
   return (
     <Card>
-      <h3 className="mb-4 flex items-center gap-2 font-semibold">
+      <h3 className="mb-4 flex items-center gap-2 font-medium">
         <Key size={16} /> Cambiar contraseña
       </h3>
       <form className="space-y-3" noValidate onSubmit={submit}>

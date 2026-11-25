@@ -1,6 +1,6 @@
-import { describe,expect,it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { moneyFromDecimal } from "@/shared/lib/money";
-import { dailySeries,eachDay,summarize } from "./dashboard.rules";
+import { dailySeries, eachDay, summarize } from "./dashboard.rules";
 import type { DashboardTransaction } from "./dashboard.types";
 
 const tx = (kind: string, amount: string, occurredAt: string): DashboardTransaction => ({

@@ -1,24 +1,24 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useMemo,useState,useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { toast } from "sonner";
-import { isAppError,userMessage } from "@/shared/lib/errors";
+import { isAppError, userMessage } from "@/shared/lib/errors";
 import {
-addMoney,
-compareMoney,
-formatMoneyAmount,
-isPositiveMoney,
-parseMoneyInput,
-sumMoney,
-toDecimalString,
+  addMoney,
+  compareMoney,
+  formatMoneyAmount,
+  isPositiveMoney,
+  parseMoneyInput,
+  sumMoney,
+  toDecimalString,
 } from "@/shared/lib/money";
-import { useSubaccountActions,useSubaccounts } from "../accounts.hooks";
+import { useSubaccountActions, useSubaccounts } from "../accounts.hooks";
 import {
-STATUS_FROM_CODE,
-esPool,
-toSubView,
-toSubaccountInput,
-type Sub,
-type SubStatusCode,
+  STATUS_FROM_CODE,
+  esPool,
+  toSubView,
+  toSubaccountInput,
+  type Sub,
+  type SubStatusCode,
 } from "./subaccount-view";
 
 /** Estado y acciones de SubaccountsPage: el componente solo dibuja. */

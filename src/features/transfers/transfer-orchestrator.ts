@@ -6,12 +6,12 @@
 // ejecución exitosa, nunca al ingresar CBU.
 // ============================================================================
 import { requireSupabase } from "@/infrastructure/supabase/client";
-import { parseTaxes,type TaxAplicado } from "@/features/transfers/transfer-store";
+import { parseTaxes, type TaxAplicado } from "@/features/transfers/transfer-store";
 import {
-recipientValidator,
-type RecipientValidator,
-type RecipientValidationResult,
-detectIdentifierKind,
+  recipientValidator,
+  type RecipientValidator,
+  type RecipientValidationResult,
+  detectIdentifierKind,
 } from "@/features/transfers/recipient-validation";
 
 export type TransferKind = "unica" | "programada" | "borrador";

@@ -1,17 +1,17 @@
-import { keepPreviousData,queryOptions } from "@tanstack/react-query";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
 import { STALE } from "@/app/query-client";
 import { privateScope } from "@/shared/lib/query-scope";
 import {
-getSettlementsSummary,
-listAdvanceableOperations,
-listBatchesByRange,
-listCalendarDays,
-listChargebacks,
-listSaleDetail,
-listSalesByDay,
-loadBreakdown,
-loadSaleBreakdown,
-loadSettlementsOverview,
+  getSettlementsSummary,
+  listAdvanceableOperations,
+  listBatchesByRange,
+  listCalendarDays,
+  listChargebacks,
+  listSaleDetail,
+  listSalesByDay,
+  loadBreakdown,
+  loadSaleBreakdown,
+  loadSettlementsOverview,
 } from "./settlements.supabase";
 
 type Scope = { userId: string; legajo: string };
@@ -43,6 +43,7 @@ export const settlementQueries = {
     }),
   batches: (s: Scope, from: string, to: string) =>
     queryOptions({
+      placeholderData: keepPreviousData,
       queryKey: key(s, "batches", from, to),
       queryFn: () => listBatchesByRange(from, to),
       staleTime: STALE.short,
@@ -61,6 +62,7 @@ export const settlementQueries = {
     }),
   salesByDay: (s: Scope, from: string, to: string) =>
     queryOptions({
+      placeholderData: keepPreviousData,
       queryKey: key(s, "sales", from, to),
       queryFn: () => listSalesByDay(from, to),
       staleTime: STALE.short,

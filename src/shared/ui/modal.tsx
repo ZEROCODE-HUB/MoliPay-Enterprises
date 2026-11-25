@@ -1,4 +1,4 @@
-import { useEffect,useId,useRef,type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
@@ -137,7 +137,7 @@ export function ModalHeader({
   return (
     <div className="flex shrink-0 items-start justify-between gap-3 border-b bg-card px-6 py-4">
       <div className="min-w-0">
-        <h3 id={titleId} className="font-display text-lg font-semibold">
+        <h3 id={titleId} className="font-display text-lg font-medium">
           {title}
         </h3>
         {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}

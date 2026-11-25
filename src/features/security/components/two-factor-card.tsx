@@ -48,7 +48,7 @@ function TotpEnrollmentForm({
         <li>Ingresá el código de 6 dígitos que te muestra la app.</li>
       </ol>
       <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[auto_minmax(0,1fr)]">
-        <div className="grid h-36 w-36 shrink-0 place-items-center rounded-md border bg-white">
+        <div className="grid h-36 w-36 shrink-0 place-items-center rounded-md border bg-card">
           {/* qr_code de Supabase es una data URL SVG: como imagen, sin inyectar HTML. */}
           {enrollment.qrSvg ? (
             <img
@@ -122,7 +122,7 @@ export function TwoFactorCard() {
   const remove = async (factorId: string, name: string) => {
     const last = factors.length === 1;
     const ok = await confirm({
-      title: last ? "Desactivar la verificación en dos pasos" : "Quitar este dispositivo",
+      title: last ? "Desactivar la verificacion en dos pasos" : "Quitar este dispositivo",
       message: last
         ? "Tu cuenta va a quedar protegida solo con la contraseña. Te recomendamos mantenerla activa."
         : `${name} ya no va a poder generar códigos para tu cuenta.`,
@@ -145,7 +145,7 @@ export function TwoFactorCard() {
   return (
     <Card>
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="flex min-w-0 items-center gap-2 font-semibold">
+        <h3 className="flex min-w-0 items-center gap-2 font-medium">
           <Smartphone size={16} className="shrink-0" />{" "}
           <span className="truncate">Verificación en dos pasos (2FA)</span>
         </h3>

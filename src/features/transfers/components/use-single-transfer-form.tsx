@@ -1,18 +1,18 @@
 import {
-type Draft,
-type FrequentRecipient,
-type Template,
+  type Draft,
+  type FrequentRecipient,
+  type Template,
 } from "@/features/transfers/transfer-store";
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 import { moneyInputToNumber } from "@/shared/lib/money";
 import { toast } from "sonner";
 import { validateRecipient } from "@/features/transfers/recipient-bdc";
 import { detectIdentifierKind } from "@/features/transfers/recipient-validation";
 import { useQuote } from "@/features/transfers/transfer-ui.rules";
 import {
-type CoelsaResult,
-type Subaccount,
-type TransferPayload,
+  type CoelsaResult,
+  type Subaccount,
+  type TransferPayload,
 } from "@/features/transfers/transfers.types";
 
 /** Estado y acciones de Unica: el componente solo dibuja. */

@@ -1,8 +1,8 @@
 import { methodPaymentLabels } from "@/features/collections/collections.data";
 import { ArrowRight } from "lucide-react";
 import { Card } from "@/shared/ui/card";
-import { Input,Label } from "@/shared/ui/form-controls";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { Input, Label } from "@/shared/ui/form-controls";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 import { METHODS_AVAILABLES } from "@/features/collections/new-collection.rules";
 
 import type { NewCollectionPageVm } from "./use-new-collection-page";
@@ -64,7 +64,7 @@ export function BatchParametersStep({
       {step === 0 && (
         <div className="space-y-6">
           <Card>
-            <h3 className="font-semibold mb-4">Parametros generales</h3>
+            <h3 className="font-medium mb-4">Parametros generales</h3>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <Label>Nombre del lote</Label>
@@ -75,7 +75,7 @@ export function BatchParametersStep({
                 />
               </div>
               <div>
-                <Label>Periodo</Label>
+                <Label>Período</Label>
                 <Input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} />
               </div>
               <div>
@@ -108,7 +108,7 @@ export function BatchParametersStep({
           </Card>
 
           <Card>
-            <h3 className="font-semibold mb-4">Fechas de vencimiento</h3>
+            <h3 className="font-medium mb-4">Fechas de vencimiento</h3>
             <div className="grid md:grid-cols-3 gap-4">
               <div>
                 <Label>1er vencimiento *</Label>
@@ -142,7 +142,7 @@ export function BatchParametersStep({
           </Card>
 
           <Card>
-            <h3 className="font-semibold mb-4">Medios de pago y configuracion</h3>
+            <h3 className="font-medium mb-4">Medios de pago y configuración</h3>
             <div className="space-y-4">
               <div>
                 <Label>Medios de pago habilitados</Label>
@@ -151,7 +151,7 @@ export function BatchParametersStep({
                     <button
                       key={m}
                       onClick={() => toggleMethod(m)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition ${
                         methodsPayment.includes(m)
                           ? "bg-primary text-primary-foreground border-primary"
                           : "bg-card text-muted-foreground border-input hover:border-foreground/30"

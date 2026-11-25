@@ -1,7 +1,7 @@
 import { useMemo } from "react";
-import { useQuery,useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSessionUser } from "@/features/session/session.hooks";
-import { developerKeys,developerQueries } from "./developers.queries";
+import { developerKeys, developerQueries } from "./developers.queries";
 import * as api from "./developers.supabase";
 
 /** Estado del portal de desarrolladores. `live` lo refresca cada 30 s (logs y entregas). */

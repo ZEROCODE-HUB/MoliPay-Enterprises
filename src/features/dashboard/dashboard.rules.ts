@@ -1,10 +1,10 @@
 import { type PeriodKey } from "./dashboard.types";
-import { moneyFromCents,sumMoney } from "@/shared/lib/money";
+import { moneyFromCents, sumMoney } from "@/shared/lib/money";
 import type {
-DailyPoint,
-DashboardSummary,
-DashboardTransaction,
-DateRange,
+  DailyPoint,
+  DashboardSummary,
+  DashboardTransaction,
+  DateRange,
 } from "./dashboard.types";
 
 /*
@@ -56,17 +56,21 @@ export function eachDay(start: Date, end: Date): Date[] {
   return out;
 }
 
-/** Serie diaria para el grafico: depositos, cobros QR y link de pago. */
+/** Serie diaria para el grafico: depositos, cobros QR, link de pago y retiros. */
 export function dailySeries(transactions: DashboardTransaction[], range: DateRange): DailyPoint[] {
-  const cents = new Map<string, { label: string; deposits: number; qr: number; card: number }>();
+  const cents = new Map<
+    string,
+    { label: string; deposits: number; qr: number; card: number; out: number }
+  >();
   for (const d of eachDay(range.start, range.end))
-    cents.set(dayKey(d), { label: dayLabel(d), deposits: 0, qr: 0, card: 0 });
+    cents.set(dayKey(d), { label: dayLabel(d), deposits: 0, qr: 0, card: 0, out: 0 });
   for (const t of transactions) {
     const bucket = t.occurredAt ? cents.get(dayKey(new Date(t.occurredAt))) : undefined;
     if (!bucket) continue;
     if (t.kind === "deposito") bucket.deposits += t.amount.cents;
     else if (t.kind === "cobro_pct") bucket.qr += t.amount.cents;
     else if (t.kind === "tarjeta") bucket.card += t.amount.cents;
+    else if (isWithdrawal(t)) bucket.out += t.amount.cents;
   }
   // A pesos solo al final, para dibujar.
   const pesos = (c: number) => moneyFromCents(c).cents / 100;
@@ -75,6 +79,7 @@ export function dailySeries(transactions: DashboardTransaction[], range: DateRan
     depositos: pesos(b.deposits),
     cobrosQR: pesos(b.qr),
     linkPago: pesos(b.card),
+    retiros: pesos(b.out),
     total: pesos(b.deposits + b.qr + b.card),
   }));
 }

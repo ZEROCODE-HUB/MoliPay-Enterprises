@@ -1,6 +1,6 @@
 import { Modal } from "@/shared/ui/modal";
-import { useEffect,useState } from "react";
-import { X,Download } from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, Download } from "lucide-react";
 import { BtnOutline } from "@/shared/ui/button";
 
 export type DocPreviewData = {
@@ -30,7 +30,7 @@ export function DocPreviewModal({
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-center z-10">
           <div className="min-w-0">
-            <div className="font-semibold truncate">{doc.tipo}</div>
+            <div className="font-medium truncate">{doc.tipo}</div>
             <div className="text-xs text-muted-foreground truncate">{doc.label}</div>
           </div>
           <div className="flex gap-1 items-center shrink-0">
@@ -73,7 +73,7 @@ export function DocPreviewModal({
                 src={doc.signedUrl}
                 title={doc.label}
                 onLoad={() => setLoaded(true)}
-                className={`w-full h-full border-0 bg-white transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
+                className={`w-full h-full border-0 bg-card transition-opacity duration-200 ${loaded ? "opacity-100" : "opacity-0"}`}
               />
             </>
           ) : (

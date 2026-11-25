@@ -1,10 +1,10 @@
-import { useEffect,useMemo,useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useSubaccounts } from "@/features/accounts/accounts.hooks";
 import { useCurrentCustomer } from "@/features/session/session.hooks";
-import { sumMoney,formatMoneyAmount,toDecimalString } from "@/shared/lib/money";
+import { sumMoney, formatMoneyAmount, toDecimalString } from "@/shared/lib/money";
 import { useDashboardTransactions } from "../dashboard.hooks";
-import { dailySeries,summarize } from "../dashboard.rules";
+import { dailySeries, summarize } from "../dashboard.rules";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { downloadXlsx } from "@/shared/lib/download";
@@ -117,8 +117,6 @@ export function useDashboardPage() {
           { Resumen: "Depósitos", Valor: formatMoneyAmount(kpis.depositos) },
           { Resumen: "Retiros", Valor: formatMoneyAmount(kpis.retiros) },
           { Resumen: "Cobros Link de Pago", Valor: formatMoneyAmount(kpis.cobrosLink) },
-          { Resumen: "Cobros QR", Valor: formatMoneyAmount(kpis.cobrosQR) },
-          { Resumen: "Pagos QR", Valor: formatMoneyAmount(kpis.pagosQR) },
           { Resumen: "Cuentas", Valor: String(kpis.cuentas) },
           {},
           ...rows,
@@ -146,8 +144,6 @@ export function useDashboardPage() {
           ["Depósitos", formatMoneyAmount(kpis.depositos)],
           ["Retiros", formatMoneyAmount(kpis.retiros)],
           ["Cobros Link de Pago", formatMoneyAmount(kpis.cobrosLink)],
-          ["Cobros QR", formatMoneyAmount(kpis.cobrosQR)],
-          ["Pagos QR", formatMoneyAmount(kpis.pagosQR)],
           ["Cuentas", String(kpis.cuentas)],
         ],
       });

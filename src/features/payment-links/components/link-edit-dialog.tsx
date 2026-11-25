@@ -1,7 +1,7 @@
-import { paymentMethods,type PaymentLink } from "@/features/payment-links/payment-links.data";
-import { useEffect,useState } from "react";
+import { paymentMethods, type PaymentLink } from "@/features/payment-links/payment-links.data";
+import { useEffect, useState } from "react";
 import { FormDialog } from "@/shared/ui/form-dialog";
-import { Input,Label,Select } from "@/shared/ui/form-controls";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
 
 export function LinkEditDialog({
   link,
@@ -49,7 +49,7 @@ export function LinkEditDialog({
       open={link !== null}
       onClose={onClose}
       title="Editar link de pago"
-      description="Modifica la configuracion del enlace de cobro."
+      description="Modifica la configuracion del enlace de cobro"
       submitLabel="Guardar cambios"
       onSubmit={() => {
         if (!link) return;
@@ -87,7 +87,7 @@ export function LinkEditDialog({
         />
       </div>
       <label className="flex items-center justify-between text-sm cursor-pointer">
-        <span className="font-semibold">Permitir pagos parciales</span>
+        <span className="font-medium">Permitir pagos parciales</span>
         <input
           type="checkbox"
           checked={partial}
@@ -96,10 +96,10 @@ export function LinkEditDialog({
         />
       </label>
       <div>
-        <Label>Metodos de pago permitidos</Label>
+        <Label>Métodos de pago permitidos</Label>
         {(["credit", "debit"] as const).map((cat) => (
           <div key={cat} className="mb-3">
-            <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
+            <div className="text-xs font-medium text-muted-foreground mb-1.5">
               {cat === "credit" ? "Tarjetas de Credito" : "Tarjetas de Debito"}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">

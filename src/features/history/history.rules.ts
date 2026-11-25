@@ -1,18 +1,18 @@
 import { getRouteApi } from "@tanstack/react-router";
 import type { DataReceipt } from "@/shared/lib/receipt/receipt";
 import {
-addMoney,
-formatMoneyAmount,
-moneyFromCents,
-sumMoney,
-toDecimalString,
-type Money,
+  addMoney,
+  formatMoneyAmount,
+  moneyFromCents,
+  sumMoney,
+  toDecimalString,
+  type Money,
 } from "@/shared/lib/money";
 import type {
-LineKind,
-TransactionDetail,
-TransactionLine,
-TransactionStatus,
+  LineKind,
+  TransactionDetail,
+  TransactionLine,
+  TransactionStatus,
 } from "./history.types";
 
 export const STATUS_LABEL: Record<TransactionStatus, string> = {

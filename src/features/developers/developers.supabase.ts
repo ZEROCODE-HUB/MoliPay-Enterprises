@@ -2,14 +2,14 @@ import { postToBackend } from "@/infrastructure/http/backend-client";
 import { callRpc } from "@/infrastructure/supabase/rpc";
 import { parseEnumMap } from "@/shared/lib/enum";
 import type {
-ApiEnvironment,
-DeliveryStatus,
-DeveloperPortal,
-GeneratedKeys,
-IntegrationStatus,
-UsageStats,
-WebhookInput,
-WebhookTestResult,
+  ApiEnvironment,
+  DeliveryStatus,
+  DeveloperPortal,
+  GeneratedKeys,
+  IntegrationStatus,
+  UsageStats,
+  WebhookInput,
+  WebhookTestResult,
 } from "./developers.types";
 
 /*

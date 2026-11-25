@@ -1,7 +1,7 @@
 import { Modal } from "@/shared/ui/modal";
-import { useEffect,useRef,useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Input } from "@/shared/ui/form-controls";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 
 export function BarcodeScanModal({
   open,
@@ -74,7 +74,7 @@ export function BarcodeScanModal({
   return (
     <Modal open onClose={onClose} size="custom" className="max-w-md">
       <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
-        <div className="font-semibold">Escanear codigo de barra</div>
+        <div className="font-medium">Escanear código de barra</div>
         <video
           ref={videoRef}
           className="w-full rounded-md bg-black aspect-video"
@@ -82,7 +82,7 @@ export function BarcodeScanModal({
           playsInline
         />
         <p className="text-xs text-muted-foreground">
-          Apunta la camara al codigo. Si no se detecta, ingresa el numero manualmente.
+          Apunta la camara al código. Si no se detecta, ingresa el número manualmente.
         </p>
         <Input
           value={manual}
@@ -102,7 +102,7 @@ export function BarcodeScanModal({
               }
             }}
           >
-            Usar numero
+            Usar número
           </BtnPrimary>
         </div>
       </div>

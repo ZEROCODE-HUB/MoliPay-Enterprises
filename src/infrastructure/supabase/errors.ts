@@ -1,4 +1,4 @@
-import { AppError,type AppErrorContext,type AppErrorKind } from "@/shared/lib/errors";
+import { AppError, type AppErrorContext, type AppErrorKind } from "@/shared/lib/errors";
 
 const PERMISSION_PATTERNS: RegExp[] = [
   /permission denied/i,

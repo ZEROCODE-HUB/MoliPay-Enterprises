@@ -1,26 +1,26 @@
 import {
-countLinkView,
-getPublicLink,
-listActiveBrands,
+  countLinkView,
+  getPublicLink,
+  listActiveBrands,
 } from "@/features/payment-links/payment-links.supabase";
-import { useEffect,useMemo,useRef,useState } from "react";
-import { moneyFromDecimal,moneyInputToNumber } from "@/shared/lib/money";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { moneyFromDecimal, moneyInputToNumber } from "@/shared/lib/money";
 import { paymentMethods } from "@/features/payment-links/payment-links.data";
 import {
-PAYWAY_TEST_CARD,
-isDevWithTestCard,
-testCardFitsMethod,
+  PAYWAY_TEST_CARD,
+  isDevWithTestCard,
+  testCardFitsMethod,
 } from "@/features/payment-links/payway-test-card";
 import { toast } from "sonner";
 import { paymentProcessor } from "@/features/payment-links/payment-processor";
 import {
-BATCH_CATEGORY_TO_METHODS,
-EXTRA_METHODS,
-expandMethods,
-getMethodIdFromBrand,
-isCardMethod,
-route,
-variantsDeBrand,
+  BATCH_CATEGORY_TO_METHODS,
+  EXTRA_METHODS,
+  expandMethods,
+  getMethodIdFromBrand,
+  isCardMethod,
+  route,
+  variantsDeBrand,
 } from "@/features/payment-links/checkout.rules";
 import { type LinkData } from "@/features/payment-links/checkout.types";
 
@@ -328,7 +328,7 @@ export function useCheckoutPage() {
         const label =
           methodsAvailables.find((m) => m.id === method)?.label ?? "el medio de pago elegido";
         toast.error("La tarjeta no coincide con el medio de pago", {
-          description: `Elegiste ${label}, pero el número ingresado es de otra tarjeta. Revisá el número o elegí el medio de pago que corresponde a tu tarjeta. No se realizó ningún cargo.`,
+          description: `Elegiste ${label}, pero el numero ingresado es de otra tarjeta. Revisá el numero o elegí el medio de pago que corresponde a tu tarjeta. No se realizó ningún cargo.`,
           duration: 8000,
         });
         return;

@@ -102,16 +102,16 @@ export function TransferOtpDialog({
                 if (e.key === "Backspace" && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus();
               }}
               onFocus={(e) => e.target.select()}
-              className="w-11 h-12 text-center text-lg font-bold rounded-md border bg-card outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
+              className="w-11 h-12 text-center text-lg font-medium rounded-md border bg-card outline-none focus:ring-2 focus:ring-ring/40 focus:border-ring"
               autoComplete="one-time-code"
             />
           ))}
         </div>
         <div className="flex justify-between text-xs text-muted-foreground pt-1">
-          <span>¿No recibiste el codigo?</span>
+          <span>¿No recibiste el código?</span>
           <button
             type="button"
-            className="text-primary font-semibold hover:underline disabled:opacity-50"
+            className="text-primary font-medium hover:underline disabled:opacity-50"
             disabled={otpSending}
             onClick={async () => {
               resetOtp();

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCurrentCustomer,useSessionUser } from "@/features/session/session.hooks";
+import { useCurrentCustomer, useSessionUser } from "@/features/session/session.hooks";
 import { dashboardQueries } from "./dashboard.queries";
 import type { DateRange } from "./dashboard.types";
 

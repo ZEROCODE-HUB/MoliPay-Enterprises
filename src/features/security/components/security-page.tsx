@@ -18,13 +18,13 @@ export function SecurityPage() {
             : "Contraseña, 2FA, sesiones activas y auditoría."
         }
       />
-      <div className="mb-6 grid gap-6 lg:grid-cols-2">
+      <div className="mb-4 grid gap-4 lg:grid-cols-2">
         <PasswordChangeCard />
         <div className="space-y-6">
           <TwoFactorCard />
         </div>
       </div>
-      <div className="mb-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
+      <div className="mb-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
         <SessionsCard />
         {isCompany && <TeamCard />}
       </div>

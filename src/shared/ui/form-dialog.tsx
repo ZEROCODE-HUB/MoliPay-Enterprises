@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 import {
-Modal,
-ModalBody,
-ModalFooter,
-ModalHeader,
-useModalTitleId,
-type ModalSize,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  useModalTitleId,
+  type ModalSize,
 } from "@/shared/ui/modal";
 
 /** Modal con formulario: titulo, campos y botones Cancelar / Enviar. */

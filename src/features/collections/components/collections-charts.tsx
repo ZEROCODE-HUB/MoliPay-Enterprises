@@ -1,7 +1,7 @@
-import { PieChart,Pie,Cell,Tooltip,ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Card } from "@/shared/ui/card";
-import { formatARS,methodPaymentLabels } from "@/features/collections/collections.data";
-import { METHOD_COLORS,VENC_COLORS } from "@/features/collections/collections.rules";
+import { formatARS, methodPaymentLabels } from "@/features/collections/collections.data";
+import { METHOD_COLORS, VENC_COLORS } from "@/features/collections/collections.rules";
 import type { CollectionsPageVm } from "./use-collections-page";
 
 export function CollectionsCharts({
@@ -10,10 +10,10 @@ export function CollectionsCharts({
   noCobradas,
 }: Pick<CollectionsPageVm, "byMethod" | "byDue" | "noCobradas">) {
   return (
-    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
+    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mb-4">
       {/* Cobros por medio de pago */}
       <Card>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+        <h4 className="font-display text-sm font-medium text-foreground mb-3">
           Cobros por medio de pago
         </h4>
         <ResponsiveContainer width="100%" height={240}>
@@ -40,7 +40,7 @@ export function CollectionsCharts({
 
       {/* Cobros por vencimiento */}
       <Card>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+        <h4 className="font-display text-sm font-medium text-foreground mb-3">
           Cobros por vencimiento
         </h4>
         <ResponsiveContainer width="100%" height={240}>
@@ -67,13 +67,13 @@ export function CollectionsCharts({
 
       {/* Operaciones no cobradas */}
       <Card>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+        <h4 className="font-display text-sm font-medium text-foreground mb-3">
           Operaciones no cobradas
         </h4>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">No cobrado</span>
-            <span className="text-lg font-bold text-red-600">
+            <span className="text-lg font-medium text-red-600">
               {noCobradas.porcentajeNoCobrado}%
             </span>
           </div>
@@ -85,22 +85,22 @@ export function CollectionsCharts({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-center pt-2">
             <div>
-              <div className="font-display tabular-nums text-lg font-semibold">
+              <div className="font-display tabular-nums text-lg font-medium">
                 {noCobradas.totalOperaciones}
               </div>
-              <div className="text-[10px] text-muted-foreground">Total ops</div>
+              <div className="text-[11px] text-muted-foreground">Total ops</div>
             </div>
             <div>
-              <div className="font-display tabular-nums text-lg font-semibold text-red-600">
+              <div className="font-display tabular-nums text-lg font-medium text-red-600">
                 {noCobradas.vencidas}
               </div>
-              <div className="text-[10px] text-muted-foreground">Vencidas</div>
+              <div className="text-[11px] text-muted-foreground">Vencidas</div>
             </div>
             <div>
-              <div className="font-display tabular-nums text-lg font-semibold text-amber-600">
+              <div className="font-display tabular-nums text-lg font-medium text-amber-600">
                 {noCobradas.vigentes}
               </div>
-              <div className="text-[10px] text-muted-foreground">Vigentes</div>
+              <div className="text-[11px] text-muted-foreground">Vigentes</div>
             </div>
           </div>
           <div className="text-xs text-muted-foreground text-center pt-1">

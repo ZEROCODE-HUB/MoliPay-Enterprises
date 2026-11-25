@@ -9,7 +9,7 @@ const BOXES: ErdBox[] = [
     x: 40,
     y: 60,
     w: 260,
-    lines: ["PK id", "UQ tax_id", "UQ país + tipo + número"],
+    lines: ["PK id", "UQ tax_id", "UQ país + tipo + numero"],
   },
   {
     name: "clientes (existente)",
@@ -117,7 +117,7 @@ const SUPPORT: ErdBox[] = [
     x: 380,
     y: 768,
     w: 300,
-    lines: ["UQ reporte + período + versión"],
+    lines: ["UQ reporte + periodo + version"],
   },
 ];
 

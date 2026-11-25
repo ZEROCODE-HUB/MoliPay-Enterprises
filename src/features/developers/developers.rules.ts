@@ -1,4 +1,4 @@
-import type { ApiEnvironment,DeliveryStatus,IntegrationStatus } from "./developers.types";
+import type { ApiEnvironment, DeliveryStatus, IntegrationStatus } from "./developers.types";
 
 type Tone = "neutral" | "success" | "warn" | "danger";
 

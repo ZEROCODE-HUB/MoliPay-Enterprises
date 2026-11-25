@@ -1,5 +1,5 @@
-import { describe,expect,it } from "vitest";
-import { toSubaccount,toSubaccountMovement } from "./accounts.supabase";
+import { describe, expect, it } from "vitest";
+import { toSubaccount, toSubaccountMovement } from "./accounts.supabase";
 
 const row = {
   id: "s1",

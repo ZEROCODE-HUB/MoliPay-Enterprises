@@ -1,9 +1,9 @@
 import { NEXT_ONBOARDING_STEP } from "@/features/onboarding/onboarding.rules";
-import { FileText,User } from "lucide-react";
+import { FileText, User } from "lucide-react";
 import { Card } from "@/shared/ui/card";
-import { Input,Label,Select } from "@/shared/ui/form-controls";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
 import { Badge } from "@/shared/ui/badge";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 
 import type { AccountPageVm } from "./use-account-page";
 
@@ -43,7 +43,7 @@ export function UserInfoCard({
 >) {
   return (
     <Card>
-      <h3 className="font-semibold mb-4 flex items-center gap-2">
+      <h3 className="font-medium mb-4 flex items-center gap-2">
         <User size={16} /> Informacion del Usuario
       </h3>
       <div className="grid sm:grid-cols-2 gap-4">
@@ -78,14 +78,14 @@ export function UserInfoCard({
             >
               {statusLabel}
             </Badge>
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-[11px] text-muted-foreground">
               {NEXT_ONBOARDING_STEP[statusNorm]}
             </span>
           </div>
         </div>
       </div>
       <hr className="my-4 border-border" />
-      <h4 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+      <h4 className="font-medium mb-3 flex items-center gap-2 text-sm">
         <FileText size={14} /> Datos personales
       </h4>
       <div className="grid sm:grid-cols-2 gap-4">

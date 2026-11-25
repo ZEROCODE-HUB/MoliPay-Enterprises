@@ -1,8 +1,7 @@
-import { formatARS,paymentMethods } from "@/features/payment-links/payment-links.data";
-import { toast } from "sonner";
-import { Plus,Search } from "lucide-react";
-import { Input,Label,Select } from "@/shared/ui/form-controls";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { formatARS, paymentMethods } from "@/features/payment-links/payment-links.data";
+import { Plus, Search } from "lucide-react";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { FormDialog } from "@/shared/ui/form-dialog";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
@@ -42,6 +41,10 @@ export function ProductsTab({
   linkStatus,
   linkRef,
   linkNotes,
+  linkConcept,
+  setLinkConcept,
+  linkFreeAmount,
+  setLinkFreeAmount,
   confirmRemoveId,
   deleteProduct,
 }: Pick<
@@ -77,6 +80,10 @@ export function ProductsTab({
   | "linkStatus"
   | "linkRef"
   | "linkNotes"
+  | "linkConcept"
+  | "setLinkConcept"
+  | "linkFreeAmount"
+  | "setLinkFreeAmount"
   | "confirmRemoveId"
   | "deleteProduct"
 >) {
@@ -84,13 +91,13 @@ export function ProductsTab({
     <>
       {tab === "productos" && (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3">
             <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
               <Search
                 size={14}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
-              <Input placeholder="Buscar producto..." className="pl-9" />
+              <Input placeholder="Buscar producto" className="pl-9" />
             </div>
             <div className="flex gap-2">
               <BtnOutline
@@ -104,17 +111,20 @@ export function ProductsTab({
               </BtnOutline>
               <BtnPrimary
                 className="h-10"
+                title={
+                  selected.length === 0
+                    ? "Sin productos seleccionados: el link se crea con un concepto y un monto"
+                    : undefined
+                }
                 onClick={() => {
-                  if (selected.length === 0) {
-                    toast.error("Selecciona productos primero");
-                    return;
-                  }
                   setLinkPartial(false);
                   setLinkMethods(paymentMethods.filter((m) => m.enabled).map((m) => m.id));
                   setLinkExpires("");
                   setLinkStatus("Activo");
                   setLinkRef("");
                   setLinkNotes("");
+                  setLinkConcept("");
+                  setLinkFreeAmount("");
                   setShowLinkForm(true);
                 }}
               >
@@ -127,7 +137,7 @@ export function ProductsTab({
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
+                  <tr className="text-[11px] border-b bg-muted/30">
                     <th className="w-10 px-3 py-2.5">
                       <input
                         type="checkbox"
@@ -140,7 +150,7 @@ export function ProductsTab({
                     <th className="text-left px-3 py-2.5">Producto</th>
                     <th className="text-right px-3 py-2.5">Cantidad</th>
                     <th className="text-right px-3 py-2.5">Precio</th>
-                    <th className="text-left px-3 py-2.5 hidden md:table-cell">Descripcion</th>
+                    <th className="text-left px-3 py-2.5 hidden md:table-cell">Descripción</th>
                     <th className="text-right px-3 py-2.5"></th>
                   </tr>
                 </thead>
@@ -160,9 +170,9 @@ export function ProductsTab({
                           }
                         />
                       </td>
-                      <td className="px-3 py-3 font-semibold">{p.name}</td>
+                      <td className="px-3 py-3 font-medium">{p.name}</td>
                       <td className="px-3 py-3 font-mono tabular-nums text-right">{p.qty}</td>
-                      <td className="px-3 py-3 font-mono tabular-nums text-right font-semibold">
+                      <td className="px-3 py-3 font-mono tabular-nums text-right font-medium">
                         {formatARS(p.price)}
                       </td>
                       <td className="px-3 py-3 text-xs text-muted-foreground hidden md:table-cell">
@@ -213,7 +223,7 @@ export function ProductsTab({
               setMerchantBrands([]);
             }}
             title="Generar link de pago"
-            description="Configura los metodos de pago y opciones del enlace."
+            description="Configura los metodos de pago y opciones del enlace"
             submitLabel="Generar link"
             size="lg"
             onSubmit={generateLink}
@@ -233,21 +243,48 @@ export function ProductsTab({
               </Select>
             </div>
 
-            <div className="p-3 rounded-md bg-muted text-xs">
-              <span className="text-muted-foreground">Productos seleccionados: </span>
-              <span className="font-semibold">{selected.length}</span>
-              {" - "}
-              <span className="font-semibold">
-                {formatARS(
-                  products
-                    .filter((p) => selected.includes(p.id))
-                    .reduce((s, p) => s + p.price * p.qty, 0),
-                )}
-              </span>
-            </div>
+            {selected.length > 0 ? (
+              <div className="p-3 rounded-md bg-muted text-xs">
+                <span className="text-muted-foreground">Productos seleccionados: </span>
+                <span className="font-medium">{selected.length}</span>
+                {" - "}
+                <span className="font-medium">
+                  {formatARS(
+                    products
+                      .filter((p) => selected.includes(p.id))
+                      .reduce((s, p) => s + p.price * p.qty, 0),
+                  )}
+                </span>
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-[1fr_180px]">
+                <div>
+                  <Label>Concepto</Label>
+                  <Input
+                    placeholder="Ej.: Cuota de noviembre"
+                    value={linkConcept}
+                    onChange={(e) => setLinkConcept(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>Monto</Label>
+                  <Input
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    className="text-right font-mono tabular-nums"
+                    value={linkFreeAmount}
+                    onChange={(e) => setLinkFreeAmount(e.target.value)}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground sm:col-span-2">
+                  Sin productos: el cliente paga este monto. Para cobrar productos, seleccionalos en
+                  la tabla antes de generar el link.
+                </p>
+              </div>
+            )}
 
             <label className="flex items-center justify-between text-sm">
-              <span className="font-semibold">Permitir pagos parciales</span>
+              <span className="font-medium">Permitir pagos parciales</span>
               <input
                 type="checkbox"
                 checked={linkPartial}
@@ -258,15 +295,15 @@ export function ProductsTab({
 
             {!selectedMerchantId ? (
               <div className="p-4 rounded-md bg-muted/50 text-center text-sm text-muted-foreground">
-                Selecciona un comercio para ver los metodos de pago disponibles
+                Selecciona un comercio para ver los métodos de pago disponibles
               </div>
             ) : merchantBrands.length === 0 ? (
               <div className="p-4 rounded-md bg-muted/50 text-center text-sm text-muted-foreground">
-                Este comercio no tiene metodos de pago configurados
+                Este comercio no tiene métodos de pago configurados
               </div>
             ) : (
               <div>
-                <Label>Metodos de pago permitidos</Label>
+                <Label>Métodos de pago permitidos</Label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                   {merchantBrands.map((b) => {
                     const isSelected = linkMethods.includes(b.methodId);

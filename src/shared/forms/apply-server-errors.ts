@@ -1,5 +1,5 @@
-import type { FieldValues,Path,UseFormReturn } from "react-hook-form";
-import { isAppError,userMessage } from "@/shared/lib/errors";
+import type { FieldValues, Path, UseFormReturn } from "react-hook-form";
+import { isAppError, userMessage } from "@/shared/lib/errors";
 
 /** Clave del error general del formulario (no asociado a un campo). */
 export const SERVER_ERROR = "root.server" as const;

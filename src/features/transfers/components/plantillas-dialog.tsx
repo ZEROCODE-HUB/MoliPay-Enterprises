@@ -3,9 +3,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { moneyInputToNumber } from "@/shared/lib/money";
 import { FormDialog } from "@/shared/ui/form-dialog";
-import { Edit3,Star,Trash2 } from "lucide-react";
+import { Edit3, Star, Trash2 } from "lucide-react";
 import { formatMoney } from "@/shared/lib/format";
-import { Input,Label,Select } from "@/shared/ui/form-controls";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
 import { type Subaccount } from "@/features/transfers/transfers.types";
 
 /* ===== Transferencia unica ===== */
@@ -97,7 +97,7 @@ export function PlantillasDialog({
         onClose();
       }}
       title="Plantillas de transferencia"
-      description="Selecciona una plantilla para precargar el formulario."
+      description="Selecciona una plantilla para precargar el formulario"
       submitLabel={creando ? "Guardando..." : editing ? "Guardar cambios" : "Crear plantilla"}
       size="lg"
       onSubmit={() => {
@@ -131,7 +131,7 @@ export function PlantillasDialog({
                     <Star size={14} className="text-[color:var(--brand-dark)]" />
                   </div>
                   <div className="min-w-0">
-                    <div className="font-semibold text-sm truncate">{p.nombre}</div>
+                    <div className="font-medium text-sm truncate">{p.nombre}</div>
                     <div className="text-xs text-muted-foreground truncate">
                       {p.destinatario
                         ? `${p.destinatario.nombre}${p.destinatario.alias ? ` · @${p.destinatario.alias}` : ""}`
@@ -144,7 +144,7 @@ export function PlantillasDialog({
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-sm font-semibold">
+                  <span className="text-sm font-medium">
                     {p.monto != null ? formatMoney(p.monto) : "—"}
                   </span>
                   <button

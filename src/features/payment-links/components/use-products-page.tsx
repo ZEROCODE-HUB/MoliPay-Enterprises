@@ -1,31 +1,31 @@
 import {
-createLinkRow,
-deleteLinkRow,
-deleteProductRow,
-generateLinkCode,
-linkAmount,
-listActiveBrands,
-listLinkRows,
-listProductRows,
-listUserMerchants,
-saveProductRow,
-updateLinkRow,
+  createLinkRow,
+  deleteLinkRow,
+  deleteProductRow,
+  generateLinkCode,
+  linkAmount,
+  listActiveBrands,
+  listLinkRows,
+  listProductRows,
+  listUserMerchants,
+  saveProductRow,
+  updateLinkRow,
 } from "@/features/payment-links/payment-links.supabase";
 import { userMessage } from "@/shared/lib/errors";
-import { useCurrentCustomer,useSessionUser } from "@/features/session/session.hooks";
-import { useEffect,useState } from "react";
+import { useCurrentCustomer, useSessionUser } from "@/features/session/session.hooks";
+import { useEffect, useState } from "react";
 import {
-paymentMethods,
-type PaymentLink,
-type Product,
+  paymentMethods,
+  type PaymentLink,
+  type Product,
 } from "@/features/payment-links/payment-links.data";
-import { buildResolvableUrl,toResolvableLinkPaymentUrl } from "@/shared/lib/pay-url";
+import { buildResolvableUrl, toResolvableLinkPaymentUrl } from "@/shared/lib/pay-url";
 import { toast } from "sonner";
 import {
-type DbLink,
-type DbLinkDetail,
-type DbProducto,
-type MerchantBrand,
+  type DbLink,
+  type DbLinkDetail,
+  type DbProducto,
+  type MerchantBrand,
 } from "@/features/payment-links/products.types";
 import { methodIdFromBrand } from "@/features/payment-links/products.rules";
 
@@ -57,6 +57,9 @@ export function useProductsPage() {
   const [linkStatus, setLinkStatus] = useState<string>("Activo");
   const [linkRef, setLinkRef] = useState("");
   const [linkNotes, setLinkNotes] = useState("");
+  // Link sin productos: concepto y monto libres.
+  const [linkConcept, setLinkConcept] = useState("");
+  const [linkFreeAmount, setLinkFreeAmount] = useState("");
   const [userMerchants, setUserMerchants] = useState<{ id: string; nombre_comercio: string }[]>([]);
   const [selectedMerchantId, setSelectedMerchantId] = useState<string>("");
   const [merchantBrands, setMerchantBrands] = useState<MerchantBrand[]>([]);
@@ -127,7 +130,6 @@ export function useProductsPage() {
       .then(setUserMerchants)
       .catch((e) => toast.error(userMessage(e, "No se pudieron cargar los comercios.")));
     // Las cargas dependen solo del cliente activo.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customer.data?.legajo, sessionEmail]);
 
   useEffect(() => {
@@ -169,10 +171,22 @@ export function useProductsPage() {
   };
 
   const generateLink = async () => {
-    const selProducts = products.filter((p) => selected.includes(p.id));
+    let selProducts = products.filter((p) => selected.includes(p.id));
     if (selProducts.length === 0) {
-      toast.error("Selecciona al menos un producto");
-      return;
+      // Sin productos: un solo concepto con el monto ingresado.
+      const concept = linkConcept.trim();
+      const raw = linkFreeAmount.trim();
+      // "1.500,50" o "1500,50" (formato AR) y "1500.50" valen lo mismo.
+      const free = Number(raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw);
+      if (!concept) {
+        toast.error("Indicá el concepto del cobro");
+        return;
+      }
+      if (!Number.isFinite(free) || free <= 0) {
+        toast.error("Indicá un monto mayor a cero");
+        return;
+      }
+      selProducts = [{ id: "", name: concept, qty: 1, price: Math.round(free * 100) / 100 }];
     }
     if (!legajo) {
       toast.error("Sesion no disponible");
@@ -205,7 +219,7 @@ export function useProductsPage() {
       inserted = await createLinkRow(insertLink, (linkId) =>
         selProducts.map((p) => ({
           link_id: linkId,
-          producto_id: p.id,
+          producto_id: p.id || null,
           producto_nombre: p.name,
           cantidad: p.qty,
           precio_unitario: p.price,
@@ -238,6 +252,8 @@ export function useProductsPage() {
     setSelected([]);
     setLinkRef("");
     setLinkNotes("");
+    setLinkConcept("");
+    setLinkFreeAmount("");
     setLinkExpires("");
     setLinkPartial(false);
     setLinkMethods([]);
@@ -357,6 +373,10 @@ export function useProductsPage() {
     setLinkRef,
     linkNotes,
     setLinkNotes,
+    linkConcept,
+    setLinkConcept,
+    linkFreeAmount,
+    setLinkFreeAmount,
     userMerchants,
     selectedMerchantId,
     setSelectedMerchantId,

@@ -1,14 +1,14 @@
-import { describe,expect,it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { moneyFromDecimal } from "@/shared/lib/money";
 import {
-debitedTotal,
-formatSignedMoney,
-lineTotals,
-singleAccountCbu,
-toReceipt,
-toTransactionStatus,
+  debitedTotal,
+  formatSignedMoney,
+  lineTotals,
+  singleAccountCbu,
+  toReceipt,
+  toTransactionStatus,
 } from "./history.rules";
-import { toTransactionDetail,toTransactionLine } from "./history.supabase";
+import { toTransactionDetail, toTransactionLine } from "./history.supabase";
 import type { TransactionLine } from "./history.types";
 
 const line = (amount: string, status: TransactionLine["status"], txid: string): TransactionLine =>

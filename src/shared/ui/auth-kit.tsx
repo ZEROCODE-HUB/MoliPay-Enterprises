@@ -1,23 +1,23 @@
 import {
-useEffect,
-useRef,
-useState,
-type ReactNode,
-type InputHTMLAttributes,
-type Ref,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type InputHTMLAttributes,
+  type Ref,
 } from "react";
 import { PASSWORD_RULES } from "@/shared/validation/password";
 import { Link } from "@tanstack/react-router";
 import {
-Check,
-Eye,
-EyeOff,
-UploadCloud,
-Camera,
-FileText,
-X,
-ShieldCheck,
-Loader2,
+  Check,
+  Eye,
+  EyeOff,
+  UploadCloud,
+  Camera,
+  FileText,
+  X,
+  ShieldCheck,
+  Loader2,
 } from "lucide-react";
 import { MollyLogo } from "@/shared/ui/molly-logo";
 import loginBg from "@/assets/login-hero.jpg";
@@ -48,16 +48,14 @@ export function AuthShell({
 
         <div className="relative z-10">
           <Link to="/" className="inline-flex">
-            <span className="bg-white rounded-sm px-3.5 py-2 shadow-sm">
+            <span className="bg-card rounded-md px-3.5 py-2 shadow-sm">
               <MollyLogo size={30} />
             </span>
           </Link>
           <div className="mt-12">
             <div className="flex items-center gap-2 mb-6">
               <span className="w-6 h-px bg-red-400/60" />
-              <span className="font-sans text-[0.65rem] tracking-[0.25em] uppercase text-red-400/80">
-                {leftEyebrow}
-              </span>
+              <span className="font-sans text-xs font-medium text-red-400/80">{leftEyebrow}</span>
             </div>
             <h2 className="text-[clamp(1.5rem,2vw,2rem)] font-light leading-[1.12] tracking-tight max-w-[22ch] text-white">
               {leftTitle}
@@ -69,17 +67,11 @@ export function AuthShell({
         </div>
 
         <div className="relative z-10 space-y-5">
-          <div className="inline-flex items-center gap-2.5 px-3 py-2 border border-red-400/30 rounded-sm bg-red-500/5 backdrop-blur">
+          <div className="inline-flex items-center gap-2.5 px-3 py-2 border border-red-400/30 rounded-md bg-red-500/5 backdrop-blur">
             <ShieldCheck size={13} strokeWidth={1.5} className="text-red-400" />
-            <span className="font-sans text-[0.65rem] tracking-[0.1em] uppercase text-red-400">
-              Registrado ante BCRA
-            </span>
+            <span className="font-sans text-xs font-medium text-red-400">Registrado ante BCRA</span>
           </div>
-          {step && (
-            <p className="text-white/45 font-sans text-[0.65rem] tracking-[0.15em] uppercase">
-              {step}
-            </p>
-          )}
+          {step && <p className="text-white/45 font-sans text-xs font-medium">{step}</p>}
           <p className="text-white/35 text-[11px]">© {new Date().getFullYear()} MoliPay</p>
         </div>
       </aside>
@@ -87,7 +79,7 @@ export function AuthShell({
       <main className="flex flex-col">
         <div className="lg:hidden px-6 py-4 flex items-center justify-between bg-black text-white">
           <Link to="/" className="inline-flex items-center gap-2">
-            <span className="bg-white rounded-sm px-2.5 py-1.5">
+            <span className="bg-card rounded-md px-2.5 py-1.5">
               <MollyLogo size={24} />
             </span>
           </Link>
@@ -97,7 +89,7 @@ export function AuthShell({
           <div className="w-full max-w-[480px]">{children}</div>
         </div>
 
-        <footer className="px-6 py-4 text-center text-xs text-black-400">
+        <footer className="px-6 py-4 text-center text-xs text-muted-foreground">
           ¿Necesitás ayuda?{" "}
           <a
             href="mailto:soporte@molipay.com.ar"
@@ -122,18 +114,18 @@ export function Stepper({ steps, current }: { steps: string[]; current: number }
         return (
           <li key={label} className="flex items-center gap-2 shrink-0">
             <span
-              className={`inline-flex items-center justify-center w-7 h-7 text-xs font-semibold rounded-full ${
+              className={`inline-flex items-center justify-center w-7 h-7 text-xs font-medium rounded-full ${
                 done
                   ? "bg-success text-white"
                   : active
                     ? "bg-red-500 text-white"
-                    : "bg-transparent text-black-600 border border-black-200"
+                    : "bg-transparent text-muted-foreground border border-border"
               }`}
             >
               {done ? <Check size={14} /> : i + 1}
             </span>
             <span
-              className={`text-xs ${active ? "font-semibold text-black-800" : "text-black-400"}`}
+              className={`text-xs ${active ? "font-medium text-foreground" : "text-muted-foreground"}`}
             >
               {label}
             </span>
@@ -158,15 +150,11 @@ export function FormTitle({
 }) {
   return (
     <div className="mb-7">
-      {eyebrow && (
-        <p className="mb-2 font-sans text-[0.7rem] tracking-[0.2em] uppercase text-red-500">
-          {eyebrow}
-        </p>
-      )}
-      <h1 className="text-[clamp(1.5rem,2.4vw,1.9rem)] font-semibold leading-[1.15] text-black-800">
+      {eyebrow && <p className="mb-2 font-sans text-xs font-medium text-red-500">{eyebrow}</p>}
+      <h1 className="text-[clamp(1.5rem,2.4vw,1.9rem)] font-medium leading-[1.15] text-foreground">
         {title}
       </h1>
-      {subtitle && <p className="mt-3 text-sm text-black-400 leading-relaxed">{subtitle}</p>}
+      {subtitle && <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{subtitle}</p>}
     </div>
   );
 }
@@ -184,17 +172,17 @@ type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
 export function Field({ label, error, hint, className = "", ...rest }: FieldProps) {
   return (
     <label className="block">
-      <span className="block mb-1.5 text-xs font-semibold text-black-700">{label}</span>
+      <span className="block mb-1.5 text-xs font-medium text-foreground">{label}</span>
       <input
         {...rest}
-        className={`w-full h-11 px-3 bg-white text-sm text-black-700 outline-none transition-colors rounded-sm ${
-          error ? "border-red-500" : "border-black-100"
-        } border focus:border-navy-500 focus:ring-2 focus:ring-navy-100 placeholder:text-black-300 ${className}`}
+        className={`w-full h-11 px-3 bg-card text-sm text-foreground outline-none transition-colors rounded-md ${
+          error ? "border-red-500" : "border-border"
+        } border focus:border-navy-500 focus:ring-2 focus:ring-navy-100 placeholder:text-muted-foreground ${className}`}
       />
       {error ? (
         <span className="mt-1 block text-xs text-red-500">{error}</span>
       ) : hint ? (
-        <span className="mt-1 block text-xs text-black-400">{hint}</span>
+        <span className="mt-1 block text-xs text-muted-foreground">{hint}</span>
       ) : null}
     </label>
   );
@@ -217,14 +205,14 @@ export function SelectField({
 }) {
   return (
     <label className="block">
-      <span className="block mb-1.5 text-xs font-semibold text-black-700">{label}</span>
+      <span className="block mb-1.5 text-xs font-medium text-foreground">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`w-full h-11 px-3 bg-white text-sm outline-none rounded-sm ${
-          error ? "border-red-500" : "border-black-100"
+        className={`w-full h-11 px-3 bg-card text-sm outline-none rounded-md ${
+          error ? "border-red-500" : "border-border"
         } border focus:border-navy-500 focus:ring-2 focus:ring-navy-100 ${
-          value ? "text-black-800 font-medium" : "text-black-500"
+          value ? "text-foreground font-medium" : "text-muted-foreground"
         }`}
       >
         <option value="">{placeholder}</option>
@@ -258,22 +246,22 @@ export function PasswordField({
   return (
     <div>
       <label className="block">
-        <span className="block mb-1.5 text-xs font-semibold text-black-700">{label}</span>
+        <span className="block mb-1.5 text-xs font-medium text-foreground">{label}</span>
         <div
-          className={`flex items-center bg-white rounded-sm border ${
-            error ? "border-red-500" : "border-black-100"
+          className={`flex items-center bg-card rounded-md border ${
+            error ? "border-red-500" : "border-border"
           } focus-within:border-navy-500 focus-within:ring-2 focus-within:ring-navy-100`}
         >
           <input
             type={show ? "text" : "password"}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="flex-1 h-11 px-3 bg-transparent text-sm outline-none text-black-700 placeholder:text-black-300"
+            className="flex-1 h-11 px-3 bg-transparent text-sm outline-none text-foreground placeholder:text-muted-foreground"
           />
           <button
             type="button"
             onClick={() => setShow((s) => !s)}
-            className="px-3 text-black-400 hover:text-black-700"
+            className="px-3 text-muted-foreground hover:text-foreground"
             aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"}
           >
             {show ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -288,7 +276,7 @@ export function PasswordField({
             return (
               <li
                 key={r.id}
-                className={`flex items-center gap-1.5 text-[11px] ${ok ? "text-success" : "text-black-400"}`}
+                className={`flex items-center gap-1.5 text-[11px] ${ok ? "text-success" : "text-muted-foreground"}`}
               >
                 <Check size={12} />
                 {r.label}
@@ -321,7 +309,7 @@ export function PrimaryButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`w-full h-11 rounded-sm text-white text-sm font-semibold tracking-wide transition-all duration-150 ${
+      className={`w-full h-11 rounded-md text-white text-sm font-medium tracking-wide transition-colors duration-150 ${
         disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-red-400 active:bg-red-700"
       } bg-red-500 ${className}`}
     >
@@ -343,7 +331,7 @@ export function SecondaryButton({
     <button
       type={type}
       onClick={onClick}
-      className="h-11 px-5 rounded-sm text-sm font-semibold transition-colors border border-black-200 text-black-700 hover:bg-black-50"
+      className="h-11 px-5 rounded-md text-sm font-medium transition-colors border border-border text-foreground hover:bg-muted"
     >
       {children}
     </button>
@@ -419,38 +407,38 @@ export function FileUpload({
   if (value) {
     return (
       <div>
-        <span className="block mb-1.5 text-xs font-semibold text-black-700">{label}</span>
-        <div className="flex items-center gap-3 bg-white px-3 py-3 rounded-sm border border-black-100">
+        <span className="block mb-1.5 text-xs font-medium text-foreground">{label}</span>
+        <div className="flex items-center gap-3 bg-card px-3 py-3 rounded-md border border-border">
           {isImage ? (
             <img
               src={value.url}
               alt={value.name}
-              className="w-12 h-12 rounded-sm object-cover shrink-0 bg-black-50 ring-1 ring-black-100"
+              className="w-12 h-12 rounded-md object-cover shrink-0 bg-black-50 ring-1 ring-black-100"
             />
           ) : (
-            <FileText size={18} className="text-black-400 shrink-0" />
+            <FileText size={18} className="text-muted-foreground shrink-0" />
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-sm truncate text-black-700">
+            <p className="text-sm truncate text-foreground">
               {isImage ? "Imagen cargada" : "Documento cargado"}{" "}
-              {isExisting && <span className="text-[10px] text-black-400">(existente)</span>}
+              {isExisting && <span className="text-[10px] text-muted-foreground">(existente)</span>}
             </p>
-            <p className="text-[11px] text-black-400">
+            <p className="text-[11px] text-muted-foreground">
               {isExisting ? "Se mantendrá si no la reemplazás" : "Listo para enviar"}
             </p>
-            <p className="text-[11px] text-black-400 truncate">{value.name}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{value.name}</p>
           </div>
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
-            className="text-xs font-semibold text-black-700 hover:text-red-500 transition-colors"
+            className="text-xs font-medium text-foreground hover:text-red-500 transition-colors"
           >
             Reemplazar
           </button>
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="text-black-400 hover:text-red-500"
+            className="text-muted-foreground hover:text-red-500"
             aria-label="Quitar"
           >
             <X size={16} />
@@ -469,7 +457,7 @@ export function FileUpload({
 
   return (
     <div>
-      <span className="block mb-1.5 text-xs font-semibold text-black-700">{label}</span>
+      <span className="block mb-1.5 text-xs font-medium text-foreground">{label}</span>
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
@@ -483,21 +471,19 @@ export function FileUpload({
           setDrag(false);
           handle(e.dataTransfer.files?.[0] ?? null);
         }}
-        className={`w-full flex flex-col items-center justify-center gap-2 py-8 px-4 text-center transition-colors rounded-sm ${
-          drag ? "border-red-500 bg-red-50/20" : "border-black-200 bg-white"
+        className={`w-full flex flex-col items-center justify-center gap-2 py-8 px-4 text-center transition-colors rounded-md ${
+          drag ? "border-red-500 bg-red-50/20" : "border-border bg-card"
         } border-dashed border`}
       >
         <div className="w-10 h-10 flex items-center justify-center bg-black text-red-400 rounded-full">
           <Camera size={18} />
         </div>
-        <span className="text-sm font-semibold text-black-700">
+        <span className="text-sm font-medium text-foreground">
           <UploadCloud size={14} className="inline mr-1" />
           Arrastrá o hacé clic para subir
         </span>
-        {hint && <span className="text-xs text-black-400">{hint}</span>}
-        <span className="text-[10px] text-black-300 uppercase tracking-wider">
-          JPG · PNG · PDF · máx 8MB
-        </span>
+        {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+        <span className="text-[11px] text-muted-foreground">JPG · PNG · PDF · máx 8MB</span>
       </button>
       <input
         ref={inputRef}
@@ -521,7 +507,10 @@ export function EmptyRow({
 }) {
   return (
     <tr>
-      <td colSpan={colSpan} className="px-4 py-12 text-center text-sm text-black-500 bg-white">
+      <td
+        colSpan={colSpan}
+        className="px-4 py-12 text-center text-sm text-muted-foreground bg-card"
+      >
         {message}
       </td>
     </tr>
@@ -544,7 +533,7 @@ export function SuccessCard({
   const color = variant === "success" ? "#1E8E3E" : variant === "error" ? "#DC2626" : "#324595";
   const Icon = variant === "error" ? X : variant === "loading" ? Loader2 : Check;
   return (
-    <div className="bg-white p-8 sm:p-10 text-center rounded-md border border-black-100">
+    <div className="bg-card p-8 sm:p-10 text-center rounded-md border border-border">
       <div
         className="mx-auto mb-6 inline-flex items-center justify-center w-16 h-16 rounded-full"
         style={{ background: `${color}14`, color }}
@@ -555,8 +544,8 @@ export function SuccessCard({
           className={variant === "loading" ? "animate-spin" : undefined}
         />
       </div>
-      <h1 className="text-[1.75rem] font-semibold text-black-800 leading-tight">{title}</h1>
-      {body && <div className="mt-4 text-sm text-black-400 leading-relaxed">{body}</div>}
+      <h1 className="text-[1.75rem] font-medium text-foreground leading-tight">{title}</h1>
+      {body && <div className="mt-4 text-sm text-muted-foreground leading-relaxed">{body}</div>}
       {children && <div className="mt-8 space-y-3">{children}</div>}
     </div>
   );

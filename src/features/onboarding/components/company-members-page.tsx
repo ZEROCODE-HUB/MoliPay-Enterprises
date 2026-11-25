@@ -60,9 +60,9 @@ function Notice({ tone, children }: { tone: "error" | "info"; children: ReactNod
   const styles =
     tone === "error"
       ? "border-red-200 bg-red-50 text-red-700"
-      : "border-black-100 bg-black-50 text-black-500";
+      : "border-border bg-black-50 text-muted-foreground";
   return (
-    <div className={`rounded-sm border p-3 text-xs leading-relaxed ${styles}`}>{children}</div>
+    <div className={`rounded-md border p-3 text-xs leading-relaxed ${styles}`}>{children}</div>
   );
 }
 
@@ -77,15 +77,15 @@ function SectionHeader({
 }) {
   return (
     <div>
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-black-800">
+      <h2 className="flex items-center gap-2 text-sm font-medium text-foreground">
         {title}
         {optional && (
-          <span className="rounded-full bg-black-50 px-2 py-0.5 text-[0.65rem] font-medium text-black-500">
+          <span className="rounded-full bg-black-50 px-2 py-0.5 text-[0.65rem] font-medium text-muted-foreground">
             Opcional
           </span>
         )}
       </h2>
-      <p className="mt-1 text-xs leading-relaxed text-black-400">{text}</p>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{text}</p>
     </div>
   );
 }
@@ -104,19 +104,19 @@ function PersonCard({
   children?: ReactNode;
 }) {
   return (
-    <div className="rounded-sm border border-black-100 p-4 text-sm">
+    <div className="rounded-md border border-border p-4 text-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <UserRound size={18} className="mt-0.5 shrink-0 text-black-400" aria-hidden />
+          <UserRound size={18} className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden />
           <div>
-            <p className="font-semibold text-black-800">{name}</p>
-            <p className="text-xs text-black-400">{detail}</p>
+            <p className="font-medium text-foreground">{name}</p>
+            <p className="text-xs text-muted-foreground">{detail}</p>
           </div>
         </div>
         {onRemove && (
           <button
             type="button"
-            className="text-xs font-semibold text-red-500 hover:underline disabled:opacity-50"
+            className="text-xs font-medium text-red-500 hover:underline disabled:opacity-50"
             disabled={disabled}
             onClick={onRemove}
           >
@@ -139,11 +139,15 @@ function CheckRow({ done, label, detail }: { done: boolean; label: string; detai
           aria-label="Completo"
         />
       ) : (
-        <Circle size={18} className="mt-0.5 shrink-0 text-black-300" aria-label="Sin cargar" />
+        <Circle
+          size={18}
+          className="mt-0.5 shrink-0 text-muted-foreground"
+          aria-label="Sin cargar"
+        />
       )}
       <span>
-        <span className="font-medium text-black-800">{label}</span>
-        {detail && <span className="block text-xs text-black-400">{detail}</span>}
+        <span className="font-medium text-foreground">{label}</span>
+        {detail && <span className="block text-xs text-muted-foreground">{detail}</span>}
       </span>
     </li>
   );
@@ -283,7 +287,7 @@ export function CompanyMembersPage() {
               text="Es obligatorio. Son los datos que cargaste en los pasos anteriores, no hace falta repetirlos."
             />
             {members.isPending ? (
-              <p className="text-xs text-black-400">Cargando…</p>
+              <p className="text-xs text-muted-foreground">Cargando…</p>
             ) : representative ? (
               <PersonCard
                 name={representative.name}
@@ -293,7 +297,7 @@ export function CompanyMembersPage() {
               />
             ) : (
               <Notice tone="error">
-                <p className="flex items-center gap-1.5 font-semibold">
+                <p className="flex items-center gap-1.5 font-medium">
                   <AlertCircle size={14} aria-hidden /> Todavía no guardamos tus datos
                 </p>
                 <p className="mt-1">
@@ -301,7 +305,7 @@ export function CompanyMembersPage() {
                 </p>
                 <button
                   type="button"
-                  className="mt-2 font-semibold underline underline-offset-2"
+                  className="mt-2 font-medium underline underline-offset-2"
                   onClick={() => void navigate({ to: "/onboarding/kyc" })}
                 >
                   Ir a verificación de identidad
@@ -475,7 +479,7 @@ export function CompanyMembersPage() {
           </ul>
           {missing.length > 0 ? (
             <Notice tone="error">
-              <p className="mb-1 font-semibold">Para enviar, falta:</p>
+              <p className="mb-1 font-medium">Para enviar, falta:</p>
               <ul className="list-disc space-y-0.5 pl-4">
                 {missing.map((m) => (
                   <li key={m}>{m}</li>

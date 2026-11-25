@@ -1,6 +1,6 @@
-import { Building2,Copy } from "lucide-react";
+import { Building2, Copy } from "lucide-react";
 import { formatMoneyAmount } from "@/shared/lib/money";
-import { copiarCvu,fmtLimit } from "./subaccount-view";
+import { copiarCvu, fmtLimit } from "./subaccount-view";
 
 import type { SubaccountDetailModalVm } from "./use-subaccount-detail-modal";
 
@@ -13,7 +13,7 @@ export function SubaccountFundsActions({
   return (
     <section>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold">Informacion financiera</h3>
+        <h3 className="text-sm font-medium">Información financiera</h3>
         <button
           onClick={onFondear}
           className="h-7 w-7 inline-flex items-center justify-center rounded-md border bg-card hover:bg-muted transition text-muted-foreground hover:text-foreground"
@@ -24,46 +24,36 @@ export function SubaccountFundsActions({
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-muted/30 rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Balance actual
-          </div>
-          <div className="font-display tabular-nums text-base font-semibold mt-1">
+          <div className="text-[11px] text-muted-foreground">Balance actual</div>
+          <div className="font-display tabular-nums text-base font-medium mt-1">
             {formatMoneyAmount(sub.disp)}
           </div>
         </div>
         <div className="bg-muted/30 rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Total depositos
-          </div>
-          <div className="font-display tabular-nums text-base font-semibold mt-1 text-emerald-700">
+          <div className="text-[11px] text-muted-foreground">Total depositos</div>
+          <div className="font-display tabular-nums text-base font-medium mt-1 text-emerald-700">
             {formatMoneyAmount(totalDepositos)}
           </div>
         </div>
         <div className="bg-muted/30 rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Total retiros
-          </div>
-          <div className="font-display tabular-nums text-base font-semibold mt-1 text-red-700">
+          <div className="text-[11px] text-muted-foreground">Total retiros</div>
+          <div className="font-display tabular-nums text-base font-medium mt-1 text-red-700">
             {formatMoneyAmount(totalRetiros)}
           </div>
         </div>
         <div className="bg-muted/30 rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-            Limite diario
-          </div>
+          <div className="text-[11px] text-muted-foreground">Limite diario</div>
           <div
-            className={`font-display tabular-nums text-base font-semibold mt-1 ${sub.lim ? "" : "text-muted-foreground"}`}
+            className={`font-display tabular-nums text-base font-medium mt-1 ${sub.lim ? "" : "text-muted-foreground"}`}
           >
             {fmtLimit(sub.lim)}
           </div>
         </div>
         <div className="bg-muted/30 rounded-lg p-3 sm:col-span-4">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">CVU</span>
+            <span className="text-[11px] text-muted-foreground">CVU</span>
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-mono text-xs font-semibold truncate">
-                {sub.cbu || "Sin CVU"}
-              </span>
+              <span className="font-mono text-xs font-medium truncate">{sub.cbu || "Sin CVU"}</span>
               {sub.cbu && (
                 <button
                   onClick={() => copiarCvu(sub.cbu)}

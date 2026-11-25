@@ -1,5 +1,5 @@
 import { PieChart } from "lucide-react";
-import { addMoney,formatMoneyAmount } from "@/shared/lib/money";
+import { addMoney, formatMoneyAmount } from "@/shared/lib/money";
 
 import type { SubaccountsPageVm } from "./use-subaccounts-page";
 
@@ -12,33 +12,31 @@ export function SubaccountsSummary({
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
       <div className="bg-card border rounded-lg p-3">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-          Saldo total
-        </div>
-        <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+        <div className="text-[11px] text-muted-foreground">Saldo total</div>
+        <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
           {formatMoneyAmount(total)}
         </div>
-        <div className="text-[10px] text-muted-foreground mt-0.5">{subs.length} subcuentas</div>
+        <div className="text-[11px] text-muted-foreground mt-0.5">{subs.length} subcuentas</div>
       </div>
       <div className="bg-card border rounded-lg p-3">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Disponible</div>
-        <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+        <div className="text-[11px] text-muted-foreground">Disponible</div>
+        <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
           {formatMoneyAmount(totalDisp)}
         </div>
-        <div className="text-[10px] text-muted-foreground mt-0.5">Listo para operar</div>
+        <div className="text-[11px] text-muted-foreground mt-0.5">Listo para operar</div>
       </div>
       <div className="bg-card border rounded-lg p-3">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Retenido</div>
-        <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+        <div className="text-[11px] text-muted-foreground">Retenido</div>
+        <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
           {formatMoneyAmount(totalRet)}
         </div>
-        <div className="text-[10px] text-muted-foreground mt-0.5">Pendiente de liberar</div>
+        <div className="text-[11px] text-muted-foreground mt-0.5">Pendiente de liberar</div>
       </div>
       <div className="bg-card border rounded-lg p-3">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+        <div className="text-[11px] text-muted-foreground flex items-center gap-1">
           <PieChart size={11} /> Distribucion del saldo
         </div>
-        <div className="text-[10px] mt-1.5 space-y-1.5">
+        <div className="text-[11px] mt-1.5 space-y-1.5">
           {subs.slice(0, 3).map((s) => {
             const pct =
               total.cents > 0
@@ -46,9 +44,9 @@ export function SubaccountsSummary({
                 : "0.0";
             return (
               <div key={s.id ?? s.n}>
-                <div className="flex justify-between text-[10px] leading-tight">
+                <div className="flex justify-between text-[11px] leading-tight">
                   <span className="truncate mr-1">{s.n}</span>
-                  <span className="font-semibold shrink-0">
+                  <span className="font-medium shrink-0">
                     {formatMoneyAmount(addMoney(s.disp, s.ret))} ({pct}%)
                   </span>
                 </div>
@@ -62,10 +60,10 @@ export function SubaccountsSummary({
             );
           })}
           {subs.length > 3 && (
-            <div className="text-[10px] text-muted-foreground pt-0.5">+{subs.length - 3} mas</div>
+            <div className="text-[11px] text-muted-foreground pt-0.5">+{subs.length - 3} mas</div>
           )}
           {subs.length === 0 && (
-            <div className="text-[10px] text-muted-foreground pt-0.5">Sin subcuentas</div>
+            <div className="text-[11px] text-muted-foreground pt-0.5">Sin subcuentas</div>
           )}
         </div>
       </div>

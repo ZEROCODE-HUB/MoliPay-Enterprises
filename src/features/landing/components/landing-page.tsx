@@ -1,7 +1,7 @@
 import { SiteHeader } from "./site-header";
 import { Hero } from "./landing-hero";
-import { LedgerStrip,Services } from "./landing-services";
-import { ByQueElegirnos,ContamosWith,MisionVision,RegulatoryStrip } from "./landing-trust";
+import { LedgerStrip, Services } from "./landing-services";
+import { ByQueElegirnos, ContamosWith, MisionVision, RegulatoryStrip } from "./landing-trust";
 import { SiteFooter } from "./site-footer";
 
 export function LandingPage() {

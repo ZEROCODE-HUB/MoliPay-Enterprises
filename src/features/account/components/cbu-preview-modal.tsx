@@ -2,7 +2,7 @@ import { Modal } from "@/shared/ui/modal";
 import { toast } from "sonner";
 import { Download } from "lucide-react";
 import { Card } from "@/shared/ui/card";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 import { MollyLogo } from "@/shared/ui/molly-logo";
 
 import type { AccountPageVm } from "./use-account-page";
@@ -33,7 +33,7 @@ export function CbuPreviewModal({
         <Modal open onClose={() => setCbuPreview(false)} size="custom" className="max-w-lg">
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="sticky top-0 bg-card border-b px-6 py-4 flex justify-between items-center z-10">
-              <div className="font-semibold">Vista previa &mdash; Constancia de CBU</div>
+              <div className="font-medium">Vista previa &mdash; Constancia de CBU</div>
               <BtnOutline className="h-8 px-3 text-xs" onClick={() => setCbuPreview(false)}>
                 Cerrar
               </BtnOutline>
@@ -42,11 +42,11 @@ export function CbuPreviewModal({
               <div className="flex items-center justify-between border-b pb-4">
                 <MollyLogo />
                 <div className="text-right text-xs text-muted-foreground">
-                  <div className="font-mono font-semibold text-foreground">CBU-EMP-2026-000042</div>
+                  <div className="font-mono font-medium text-foreground">CBU-EMP-2026-000042</div>
                   <div>Generado: {new Date().toLocaleString("es-AR")}</div>
                 </div>
               </div>
-              <h2 className="text-xl font-semibold">Constancia de CBU</h2>
+              <h2 className="text-xl font-medium">Constancia de CBU</h2>
               <p className="text-xs text-muted-foreground">
                 Molly Money Life SA certifica que la siguiente cuenta esta activa:
               </p>
@@ -56,21 +56,21 @@ export function CbuPreviewModal({
                     <span className="text-muted-foreground">
                       {isPJ ? "Razon social" : "Titular"}
                     </span>
-                    <span className="font-semibold text-right">
+                    <span className="font-medium text-right">
                       {isPJ ? companyInfo.nombreLegal : `${userName} ${userApellido}`}
                     </span>
                   </div>
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">{isPJ ? "CUIT" : "CUIL"}</span>
-                    <span className="font-mono font-semibold">{dp.cuitCuil}</span>
+                    <span className="font-mono font-medium">{dp.cuitCuil}</span>
                   </div>
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">CVU</span>
-                    <span className="font-mono font-semibold text-right break-all">{cbu.cbu}</span>
+                    <span className="font-mono font-medium text-right break-all">{cbu.cbu}</span>
                   </div>
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Alias</span>
-                    <span className="font-mono font-semibold">{cbu.alias}</span>
+                    <span className="font-mono font-medium">{cbu.alias}</span>
                   </div>
                 </div>
               </Card>

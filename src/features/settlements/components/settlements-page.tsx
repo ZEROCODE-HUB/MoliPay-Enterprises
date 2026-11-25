@@ -8,8 +8,8 @@ import { AdvanceDetailModal } from "./advance-detail-modal";
 import { useSettlementsPage } from "./use-settlements-page";
 import { formatARS } from "@/features/collections/collections.data";
 import { PageHeader } from "@/shared/ui/page-header";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
-import { CalendarDays,CheckCircle2,Download,FileSpreadsheet,Percent,Plus } from "lucide-react";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
+import { CalendarDays, CheckCircle2, Download, FileSpreadsheet, Percent, Plus } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import "jspdf-autotable";
@@ -46,7 +46,7 @@ export function SettlementsPage() {
     <>
       <PageHeader
         title="Liquidaciones"
-        description="Cuánta plata te falta cobrar, cuánto tenés por acreditar y calendario de acreditaciones. Solicitá el adelanto ahí mismo."
+        description="Lo que te falta cobrar, lo que tenés por acreditar y el calendario de acreditaciones"
         action={
           <div className="flex gap-2">
             <BtnOutline onClick={exportExcel}>
@@ -67,7 +67,7 @@ export function SettlementsPage() {
           Tenés una deuda de <b className="font-mono">{formatARS(res.deuda_contracargos)}</b> por
           contracargos o liquidaciones negativas. Se descuenta automáticamente de tus próximas
           acreditaciones y, mientras exista, los retiros pueden estar bloqueados.{" "}
-          <button className="underline font-semibold" onClick={() => setActiveTab("contracargos")}>
+          <button className="underline font-medium" onClick={() => setActiveTab("contracargos")}>
             Ver contracargos
           </button>
         </ErrorNotice>
@@ -79,7 +79,7 @@ export function SettlementsPage() {
       {/* Últimas 5 acreditaciones y próximas 5 programadas */}
       <div className="grid md:grid-cols-2 gap-3 mb-6">
         <Card>
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+          <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
             <CheckCircle2 size={12} /> Últimas acreditaciones
           </div>
           {(res?.ultimas_acreditaciones ?? []).length === 0 ? (
@@ -91,7 +91,7 @@ export function SettlementsPage() {
                   <span className="text-xs">
                     {fmtDateFull(a.fecha_acreditacion)} · <Badge tone="neutral">{a.bandera}</Badge>
                   </span>
-                  <span className="font-mono font-semibold text-emerald-700">
+                  <span className="font-mono font-medium text-emerald-700">
                     {formatARS(a.neto)}
                   </span>
                 </div>
@@ -100,7 +100,7 @@ export function SettlementsPage() {
           )}
         </Card>
         <Card>
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+          <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
             <CalendarDays size={12} /> Próximas acreditaciones
           </div>
           {(res?.proximas_acreditaciones ?? []).length === 0 ? (
@@ -112,7 +112,7 @@ export function SettlementsPage() {
                   <span className="text-xs">
                     {fmtDateFull(a.fecha)} · <Badge tone="neutral">{a.bandera}</Badge>
                   </span>
-                  <span className="font-mono font-semibold">{formatARS(a.neto)}</span>
+                  <span className="font-mono font-medium">{formatARS(a.neto)}</span>
                 </div>
               ))}
             </div>
@@ -121,7 +121,7 @@ export function SettlementsPage() {
       </div>
 
       {/* Sección combinada: Calendario + Tickets */}
-      <Card className="mb-6 p-0">
+      <Card className="mb-4 p-0">
         {/* Tabs header */}
         <SettlementsTabs {...vm} />
 
@@ -160,10 +160,10 @@ export function SettlementsPage() {
 
       {/* Sección: Impuestos aplicables (solo Externo) */}
       {taxes.length > 0 && (
-        <Card className="mb-6">
+        <Card className="mb-4">
           <div className="flex items-center gap-2 mb-3">
             <Percent size={16} className="text-muted-foreground" />
-            <h3 className="font-semibold text-sm">Impuestos aplicables a tu comercio</h3>
+            <h3 className="font-medium text-sm">Impuestos aplicables a tu comercio</h3>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
             Solo se muestran impuestos de ámbito Externo. Los impuestos internos de MoliPay no se
@@ -172,7 +172,7 @@ export function SettlementsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
+                <tr className="border-b bg-muted/50">
                   <th className="text-left px-4 py-2">Código</th>
                   <th className="text-left px-4 py-2">Descripción</th>
                   <th className="text-right px-4 py-2">Tipo</th>
@@ -210,7 +210,7 @@ export function SettlementsPage() {
           </div>
           {excepciones.length > 0 && (
             <div className="mt-3 border-t pt-3">
-              <div className="text-xs font-semibold text-muted-foreground mb-1">
+              <div className="text-xs font-medium text-muted-foreground mb-1">
                 Excepciones activas
               </div>
               {excepciones.map((exc, idx) => (

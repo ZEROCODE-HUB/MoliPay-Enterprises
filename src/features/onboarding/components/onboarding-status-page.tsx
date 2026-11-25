@@ -67,7 +67,7 @@ export function OnboardingStatusPage() {
         body={
           <>
             <p>{customerMessage ?? (status ? STATUS_MESSAGE[status] : SUBMITTED_MESSAGE)}</p>
-            <p className="mt-3 text-xs text-black-400">
+            <p className="mt-3 text-xs text-muted-foreground">
               Si tenés algún problema,{" "}
               <a
                 href="mailto:soporte@molipay.com.ar"

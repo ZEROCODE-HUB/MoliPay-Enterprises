@@ -1,4 +1,4 @@
-import { Input,Label,Select } from "@/shared/ui/form-controls";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
 import { toast } from "sonner";
 import { FormDialog } from "@/shared/ui/form-dialog";
 import { toDataError } from "@/infrastructure/supabase/errors";
@@ -39,7 +39,7 @@ export function NewRecipientDialog({
       open={newOpen}
       onClose={() => setNewOpen(false)}
       title="Nuevo destinatario"
-      description="Agregalo a tu agenda para reutilizarlo en transferencias (CBU/CVU/Alias validado vía capa desacoplada)."
+      description="Agregalo a tu agenda para reutilizarlo en transferencias (CBU/CVU/Alias validado vía capa desacoplada)"
       submitLabel="Agregar destinatario"
       onSubmit={async () => {
         const identifier = (newCbu || newAlias).trim();
@@ -74,7 +74,7 @@ export function NewRecipientDialog({
       }}
     >
       <div>
-        <Label>Nombre o razon social</Label>
+        <Label>Nombre o razón social</Label>
         <Input
           placeholder="Ej. Proveedor SA"
           value={newName}
@@ -91,7 +91,7 @@ export function NewRecipientDialog({
           />
         </div>
         <div>
-          <Label>Categoria</Label>
+          <Label>Categoría</Label>
           <Select>
             <option>Proveedor</option>
             <option>Empleado</option>

@@ -1,19 +1,19 @@
 import type { ReactNode } from "react";
-import { ArrowDownLeft,ArrowUpRight,Download,Share2 } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Download, Share2 } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
-import { Modal,ModalBody,ModalFooter,ModalHeader,useModalTitleId } from "@/shared/ui/modal";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
+import { Modal, ModalBody, ModalFooter, ModalHeader, useModalTitleId } from "@/shared/ui/modal";
 import { formatMoneyAmount } from "@/shared/lib/money";
 import {
-STATUS_LABEL,
-STATUS_TONE,
-chargesFees,
-debitedTotal,
-operationLabel,
-type ReceiptOwner,
+  STATUS_LABEL,
+  STATUS_TONE,
+  chargesFees,
+  debitedTotal,
+  operationLabel,
+  type ReceiptOwner,
 } from "../history.rules";
-import type { Party,TransactionDetail } from "../history.types";
-import { downloadReceipt,shareReceipt } from "./receipt-actions";
+import type { Party, TransactionDetail } from "../history.types";
+import { downloadReceipt, shareReceipt } from "./receipt-actions";
 import { CreditBreakdown } from "@/features/settlements/components/batch-breakdown-modal";
 import { SaleBreakdown } from "@/features/settlements/components/sale-breakdown";
 
@@ -61,9 +61,7 @@ function PartyBlock({
     <div className="border-b pb-5">
       <div className="mb-3 flex items-center gap-2">
         <div className={`h-2 w-2 rounded-full ${dot}`} />
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {title}
-        </span>
+        <span className="text-xs font-medium text-muted-foreground">{title}</span>
       </div>
       <div
         className={`grid grid-cols-1 gap-4 text-sm ${showBank ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
@@ -109,7 +107,7 @@ export function TransactionDetailModal({
             {income ? <ArrowDownLeft size={26} /> : <ArrowUpRight size={26} />}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-xl font-bold">
+            <div className="text-xl font-medium">
               {income ? "Recibiste dinero" : "Enviaste dinero"}
             </div>
             <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
@@ -124,7 +122,7 @@ export function TransactionDetailModal({
           <div>
             <div className="mb-1 text-xs text-muted-foreground">Monto</div>
             <div
-              className={`font-display text-2xl font-bold tabular-nums ${income ? "text-emerald-700" : ""}`}
+              className={`font-display text-2xl font-medium tabular-nums ${income ? "text-emerald-700" : ""}`}
             >
               {income ? "+ " : "- "}
               {formatMoneyAmount(income ? detail.amount : debitedTotal(detail))}

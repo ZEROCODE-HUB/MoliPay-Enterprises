@@ -1,13 +1,14 @@
 import { useBatchesByRange } from "../settlements.hooks";
 import { useState } from "react";
-import { Input,Label,Select } from "@/shared/ui/form-controls";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
 import { formatARS } from "@/features/collections/collections.data";
 import { Badge } from "@/shared/ui/badge";
 import { BtnOutline } from "@/shared/ui/button";
 import { Eye } from "lucide-react";
-import { fmtDateFull,rangeDefault,statusCompany } from "@/features/settlements/settlements.rules";
+import { fmtDateFull, rangeDefault, statusCompany } from "@/features/settlements/settlements.rules";
 import { Pagination } from "@/shared/ui/pagination";
 import { BreakdownBatchModal } from "./batch-breakdown-modal";
+import { SkeletonRows } from "@/shared/ui/table-skeleton";
 
 /** 9.4 Lotes de acreditacion: una fila por bandera y fecha, con su liquidacion. */
 export function BatchesCreditCompanyTab() {
@@ -88,33 +89,29 @@ export function BatchesCreditCompanyTab() {
         </div>
         <div className="text-xs text-muted-foreground text-right">
           Acreditado en el período:{" "}
-          <span className="font-mono font-semibold text-emerald-700">{formatARS(credited)}</span>
+          <span className="font-mono font-medium text-emerald-700">{formatARS(credited)}</span>
           <br />
           Descuentos totales:{" "}
-          <span className="font-mono font-semibold text-red-600">- {formatARS(descuentos)}</span>
+          <span className="font-mono font-medium text-red-600">- {formatARS(descuentos)}</span>
         </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-              <th className="text-left px-5 py-3">Fecha de acreditación</th>
-              <th className="text-left px-5 py-3">Bandera</th>
-              <th className="text-right px-5 py-3">Bruto</th>
-              <th className="text-right px-5 py-3">Descuentos</th>
-              <th className="text-right px-5 py-3">Compensaciones</th>
-              <th className="text-right px-5 py-3">Neto acreditado</th>
-              <th className="text-center px-5 py-3">Estado</th>
-              <th className="text-center px-5 py-3">Acción</th>
+            <tr className="border-b bg-muted/50">
+              <th className="text-left px-4 py-2.5">Fecha de acreditación</th>
+              <th className="text-left px-4 py-2.5">Bandera</th>
+              <th className="text-right px-4 py-2.5">Bruto</th>
+              <th className="text-right px-4 py-2.5">Descuentos</th>
+              <th className="text-right px-4 py-2.5">Compensaciones</th>
+              <th className="text-right px-4 py-2.5">Neto acreditado</th>
+              <th className="text-center px-4 py-2.5">Estado</th>
+              <th className="text-center px-4 py-2.5">Acción</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {q.isLoading ? (
-              <tr>
-                <td colSpan={8} className="px-5 py-10 text-center text-sm text-muted-foreground">
-                  Cargando…
-                </td>
-              </tr>
+              <SkeletonRows columns={8} rows={6} />
             ) : q.isError ? (
               <tr>
                 <td colSpan={8} className="px-5 py-10 text-center text-sm text-red-700">
@@ -133,7 +130,7 @@ export function BatchesCreditCompanyTab() {
                   <td className="px-5 py-3 text-xs">
                     <div className="font-mono">{fmtDateFull(l.fecha_acreditacion ?? l.fecha)}</div>
                     {!l.fecha_acreditacion && (
-                      <div className="text-[10px] text-muted-foreground">estimada</div>
+                      <div className="text-[11px] text-muted-foreground">estimada</div>
                     )}
                   </td>
                   <td className="px-5 py-3">
@@ -149,7 +146,7 @@ export function BatchesCreditCompanyTab() {
                     {Number(l.compensaciones) > 0 ? `- ${formatARS(l.compensaciones)}` : "—"}
                   </td>
                   <td
-                    className={`px-5 py-3 text-right font-mono tabular-nums font-semibold ${Number(l.neto) < 0 ? "text-red-600" : "text-emerald-700"}`}
+                    className={`px-5 py-3 text-right font-mono tabular-nums font-medium ${Number(l.neto) < 0 ? "text-red-600" : "text-emerald-700"}`}
                   >
                     {formatARS(l.neto)}
                   </td>

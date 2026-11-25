@@ -3,10 +3,10 @@
  * el correo reciban una imagen simple, legible y con formato bancario.
  */
 import {
-formatAmount,
-formatDateReceipt,
-nameFileReceipt,
-type DataReceipt,
+  formatAmount,
+  formatDateReceipt,
+  nameFileReceipt,
+  type DataReceipt,
 } from "@/shared/lib/receipt/receipt";
 import { onlyDigits } from "@/shared/lib/text";
 import { downloadBlob } from "@/shared/lib/download";

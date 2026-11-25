@@ -18,48 +18,24 @@ export function CollectionBatchesTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Nombre
-              </th>
-              <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Fecha creacion
-              </th>
-              <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Finalizacion
-              </th>
-              <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Estado
-              </th>
-              <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Progreso
-              </th>
-              <th className="text-right px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Pagos
-              </th>
-              <th className="text-right px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Parciales
-              </th>
-              <th className="text-right px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Pend.
-              </th>
-              <th className="text-right px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Monto total
-              </th>
-              <th className="text-right px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Cobrado
-              </th>
-              <th className="text-right px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Por cobrar
-              </th>
-              <th className="text-center px-5 py-3 font-semibold text-xs uppercase tracking-wider text-muted-foreground">
-                Accion
-              </th>
+              <th className="text-left px-4 py-2.5">Nombre</th>
+              <th className="text-left px-4 py-2.5">Fecha creacion</th>
+              <th className="text-left px-4 py-2.5">Finalizacion</th>
+              <th className="text-left px-4 py-2.5">Estado</th>
+              <th className="text-left px-4 py-2.5">Progreso</th>
+              <th className="text-right px-4 py-2.5">Pagos</th>
+              <th className="text-right px-4 py-2.5">Parciales</th>
+              <th className="text-right px-4 py-2.5">Pend.</th>
+              <th className="text-right px-4 py-2.5">Monto total</th>
+              <th className="text-right px-4 py-2.5">Cobrado</th>
+              <th className="text-right px-4 py-2.5">Por cobrar</th>
+              <th className="text-center px-4 py-2.5">Acción</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {paginated.map((l) => (
               <tr key={l.id} className="hover:bg-muted/30 transition-colors">
-                <td className="px-5 py-3 font-semibold">{l.nombre}</td>
+                <td className="px-5 py-3 font-medium">{l.nombre}</td>
                 <td className="px-5 py-3 text-xs text-muted-foreground">
                   {l.createdAt.slice(0, 10)}
                 </td>
@@ -68,7 +44,7 @@ export function CollectionBatchesTable({
                 </td>
                 <td className="px-5 py-3">
                   <span
-                    className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                    className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${
                       STATUS_BADGE[l.estado]
                     }`}
                   >
@@ -83,7 +59,7 @@ export function CollectionBatchesTable({
                         style={{ width: `${l.progreso}%` }}
                       />
                     </div>
-                    <span className="text-xs font-semibold">{l.progreso}%</span>
+                    <span className="text-xs font-medium">{l.progreso}%</span>
                   </div>
                 </td>
                 <td className="px-5 py-3 font-mono tabular-nums text-right">{l.cantidadPagos}</td>
@@ -93,13 +69,13 @@ export function CollectionBatchesTable({
                 <td className="px-5 py-3 font-mono tabular-nums text-right text-muted-foreground">
                   {l.cantidadPendientes}
                 </td>
-                <td className="px-5 py-3 font-mono tabular-nums text-right font-semibold">
+                <td className="px-5 py-3 font-mono tabular-nums text-right font-medium">
                   {formatARS(l.montoTotal)}
                 </td>
-                <td className="px-5 py-3 font-mono tabular-nums text-right text-emerald-600 font-semibold">
+                <td className="px-5 py-3 font-mono tabular-nums text-right text-emerald-600 font-medium">
                   {formatARS(l.montoCobrado)}
                 </td>
-                <td className="px-5 py-3 font-mono tabular-nums text-right text-amber-600 font-semibold">
+                <td className="px-5 py-3 font-mono tabular-nums text-right text-amber-600 font-medium">
                   {formatARS(l.montoPorCobrar)}
                 </td>
                 <td className="px-5 py-3 text-center">

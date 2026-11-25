@@ -1,8 +1,8 @@
 import { Pagination } from "@/shared/ui/pagination";
 import { toast } from "sonner";
-import { ArrowLeft,ArrowRight,Download,FileSpreadsheet,Upload,X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Download, FileSpreadsheet, Upload, X } from "lucide-react";
 import { Card } from "@/shared/ui/card";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 
 import type { NewCollectionPageVm } from "./use-new-collection-page";
 
@@ -41,7 +41,7 @@ export function BatchFileStep({
       {step === 1 && (
         <div className="space-y-6">
           <Card>
-            <h3 className="font-semibold mb-3">Carga de archivo</h3>
+            <h3 className="font-medium mb-3">Carga de archivo</h3>
             <div className="text-sm text-muted-foreground mb-4 space-y-1">
               <p>
                 Campos obligatorios:{" "}
@@ -54,7 +54,7 @@ export function BatchFileStep({
                 fecha_vencimiento_1/2/3, tasa_interes, medios_de_pago, pagos_parciales_habilitado
               </p>
               <p>
-                Si no se completan los campos opcionales, heredan la configuracion general del lote.
+                Si no se completan los campos opcionales, heredan la configuración general del lote.
               </p>
             </div>
 
@@ -90,7 +90,7 @@ export function BatchFileStep({
                   <Upload size={24} className="text-[color:var(--brand-dark)]" />
                 </div>
                 <div className="text-center">
-                  <div className="font-semibold">Subi un archivo CSV</div>
+                  <div className="font-medium">Subi un archivo CSV</div>
                   <div className="text-xs text-muted-foreground">
                     Arrastra el archivo o hace clic para seleccionar
                   </div>
@@ -101,7 +101,7 @@ export function BatchFileStep({
                 <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
                   <FileSpreadsheet size={20} className="text-emerald-600" />
                   <div className="flex-1">
-                    <div className="font-semibold text-sm">{csvFileName}</div>
+                    <div className="font-medium text-sm">{csvFileName}</div>
                     <div className="text-xs text-muted-foreground">
                       {csvData.length} registros parseados correctamente
                     </div>
@@ -121,12 +121,12 @@ export function BatchFileStep({
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="bg-muted/50">
-                        <th className="text-left px-3 py-2 font-semibold">Entidad</th>
-                        <th className="text-left px-3 py-2 font-semibold">Usuario</th>
-                        <th className="text-right px-3 py-2 font-semibold">Monto</th>
-                        <th className="text-left px-3 py-2 font-semibold">Descripcion</th>
-                        <th className="text-left px-3 py-2 font-semibold">Email</th>
-                        <th className="text-left px-3 py-2 font-semibold">Venc. 1</th>
+                        <th className="text-left px-3 py-2">Entidad</th>
+                        <th className="text-left px-3 py-2">Usuario</th>
+                        <th className="text-right px-3 py-2">Monto</th>
+                        <th className="text-left px-3 py-2">Descripción</th>
+                        <th className="text-left px-3 py-2">Email</th>
+                        <th className="text-left px-3 py-2">Venc. 1</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">

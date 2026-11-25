@@ -80,6 +80,81 @@ const phoneField = requiredText("Requerido").refine(
 const issue = (ctx: z.RefinementCtx, path: string, message: string) =>
   ctx.addIssue({ code: z.ZodIssueCode.custom, path: [path], message });
 
+export type CrossIssue = { path: string; message: string };
+
+/**
+ * Reglas que cruzan campos de la empresa (las mismas que _company_profile_check).
+ * Se evaluan aunque falten campos de otros pasos: zod solo corre superRefine cuando todo
+ * el objeto es valido, y asi estas reglas recien saltaban al enviar (y las rechazaba la base).
+ */
+export function companyDataIssues(v: Partial<Record<string, string>>): CrossIssue[] {
+  const out: CrossIssue[] = [];
+  if (isFutureDate(v.constitutionDate ?? ""))
+    out.push({ path: "constitutionDate", message: "No puede ser futura" });
+  if (isFutureDate(v.registrationDate ?? ""))
+    out.push({ path: "registrationDate", message: "No puede ser futura" });
+  if (v.constitutionDate && v.registrationDate && v.constitutionDate > v.registrationDate)
+    out.push({
+      path: "registrationDate",
+      message: "No puede ser anterior a la fecha de constitución",
+    });
+  if (v.cuit && onlyDigits(v.cuit).length === 11 && !isCompanyCuit(v.cuit))
+    out.push({ path: "cuit", message: "El CUIT de una empresa empieza con 30, 33 o 34" });
+  if (
+    v.legalCountry === "Argentina" &&
+    v.legalPostalCode &&
+    v.legalProvince &&
+    !postalCodeMatches(v.legalPostalCode, v.legalProvince)
+  )
+    out.push({
+      path: "legalPostalCode",
+      message: "Código postal inválido para la provincia (ej. 1427 o C1427ABC)",
+    });
+  return out;
+}
+
+/** Reglas que cruzan campos del representante o apoderado (las de _company_person_check). */
+export function companyMemberIssues(v: Partial<Record<string, string>>): CrossIssue[] {
+  const out: CrossIssue[] = [];
+  if (
+    v.documentType === "DNI" &&
+    v.taxId &&
+    v.documentNumber &&
+    onlyDigits(v.taxId).length === 11 &&
+    !cuitMatchesDocument(v.taxId, v.documentNumber)
+  )
+    out.push({ path: "documentNumber", message: "No coincide con el CUIT/CUIL" });
+  if (v.birthDate && !isAdult(v.birthDate))
+    out.push({ path: "birthDate", message: "Tiene que ser mayor de edad" });
+  if (
+    v.residenceCountry === "Argentina" &&
+    v.postalCode &&
+    v.province &&
+    !postalCodeMatches(v.postalCode, v.province)
+  )
+    out.push({ path: "postalCode", message: "Código postal inválido para la provincia" });
+  if (needsSpouse(v.maritalStatus)) {
+    if (!v.spouseName) out.push({ path: "spouseName", message: "Requerido" });
+    if (!v.spouseNationality) out.push({ path: "spouseNationality", message: "Requerido" });
+    if (!v.spouseGender) out.push({ path: "spouseGender", message: "Requerido" });
+    if (!isValidCuit(v.spouseTaxId ?? ""))
+      out.push({ path: "spouseTaxId", message: "CUIT/CUIL inválido" });
+  }
+  if (v.isPep === PEP_YES) {
+    if (!v.pepPosition) out.push({ path: "pepPosition", message: "Requerido" });
+    if (!v.pepJurisdiction) out.push({ path: "pepJurisdiction", message: "Requerido" });
+    if (!v.pepFrom) out.push({ path: "pepFrom", message: "Requerido" });
+    if (!v.pepTo) out.push({ path: "pepTo", message: "Requerido" });
+    else if (v.pepFrom && v.pepTo !== PEP_CURRENT && v.pepTo < v.pepFrom)
+      out.push({ path: "pepTo", message: "No puede ser anterior al año de inicio" });
+  }
+  return out;
+}
+
+/** Campos de los pasos 0..step (las reglas cruzadas se muestran apenas se completan). */
+export const fieldsUpTo = <K extends string>(steps: K[][], step: number): K[] =>
+  steps.slice(0, step + 1).flat();
+
 /** Datos Generales de la empresa (F.0186). Mismas reglas que _company_profile_check. */
 export const companyDataSchema = z
   .object({
@@ -110,22 +185,7 @@ export const companyDataSchema = z
     iibbNumber: requiredText("Requerido"),
   })
   .superRefine((v, ctx) => {
-    if (isFutureDate(v.constitutionDate)) issue(ctx, "constitutionDate", "No puede ser futura");
-    if (isFutureDate(v.registrationDate)) issue(ctx, "registrationDate", "No puede ser futura");
-    if (v.constitutionDate && v.registrationDate && v.constitutionDate > v.registrationDate)
-      issue(ctx, "registrationDate", "No puede ser anterior a la fecha de constitución");
-    if (v.cuit && !isCompanyCuit(v.cuit))
-      issue(ctx, "cuit", "El CUIT de una empresa empieza con 30, 33 o 34");
-    if (
-      v.legalCountry === "Argentina" &&
-      v.legalPostalCode &&
-      !postalCodeMatches(v.legalPostalCode, v.legalProvince)
-    )
-      issue(
-        ctx,
-        "legalPostalCode",
-        "Código postal inválido para la provincia (ej. 1427 o C1427ABC)",
-      );
+    for (const i of companyDataIssues(v)) issue(ctx, i.path, i.message);
   });
 export type CompanyDataValues = z.output<typeof companyDataSchema>;
 
@@ -188,30 +248,7 @@ export const companyMemberSchema = z
     pepTo: optionalText,
   })
   .superRefine((v, ctx) => {
-    if (v.documentType === "DNI" && !cuitMatchesDocument(v.taxId, v.documentNumber))
-      issue(ctx, "documentNumber", "No coincide con el CUIT/CUIL");
-    if (v.birthDate && !isAdult(v.birthDate))
-      issue(ctx, "birthDate", "Tiene que ser mayor de edad");
-    if (
-      v.residenceCountry === "Argentina" &&
-      v.postalCode &&
-      !postalCodeMatches(v.postalCode, v.province)
-    )
-      issue(ctx, "postalCode", "Código postal inválido para la provincia");
-    if (needsSpouse(v.maritalStatus)) {
-      if (!v.spouseName) issue(ctx, "spouseName", "Requerido");
-      if (!v.spouseNationality) issue(ctx, "spouseNationality", "Requerido");
-      if (!v.spouseGender) issue(ctx, "spouseGender", "Requerido");
-      if (!isValidCuit(v.spouseTaxId)) issue(ctx, "spouseTaxId", "CUIT/CUIL inválido");
-    }
-    if (v.isPep === PEP_YES) {
-      if (!v.pepPosition) issue(ctx, "pepPosition", "Requerido");
-      if (!v.pepJurisdiction) issue(ctx, "pepJurisdiction", "Requerido");
-      if (!v.pepFrom) issue(ctx, "pepFrom", "Requerido");
-      if (!v.pepTo) issue(ctx, "pepTo", "Requerido");
-      else if (v.pepFrom && v.pepTo !== PEP_CURRENT && v.pepTo < v.pepFrom)
-        issue(ctx, "pepTo", "No puede ser anterior al año de inicio");
-    }
+    for (const i of companyMemberIssues(v)) issue(ctx, i.path, i.message);
   });
 export type CompanyMemberValues = z.output<typeof companyMemberSchema>;
 

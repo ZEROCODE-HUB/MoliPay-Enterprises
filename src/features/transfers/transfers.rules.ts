@@ -1,6 +1,6 @@
 import { type RecipientHolder } from "@/features/transfers/recipient-validation";
 import { type DataReceipt } from "@/shared/lib/receipt/receipt";
-import { type CoelsaResult,type TransferSuccess } from "./transfers.types";
+import { type CoelsaResult, type TransferSuccess } from "./transfers.types";
 
 /**
  * Datos del comprobante a partir del resultado del envío y del destinatario

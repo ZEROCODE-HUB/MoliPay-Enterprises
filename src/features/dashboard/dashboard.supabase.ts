@@ -1,7 +1,7 @@
 import { requireSupabase } from "@/infrastructure/supabase/client";
 import { toAppError } from "@/infrastructure/supabase/errors";
 import { moneyFromDecimal } from "@/shared/lib/money";
-import type { DashboardTransaction,DateRange } from "./dashboard.types";
+import type { DashboardTransaction, DateRange } from "./dashboard.types";
 
 /* Feature sin contrato: lo usa solo dashboard.queries.ts. */
 

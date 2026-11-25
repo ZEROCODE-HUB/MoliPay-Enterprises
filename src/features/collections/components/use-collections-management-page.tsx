@@ -1,15 +1,15 @@
 import jsPDF from "jspdf";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect,useMemo,useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-formatARS,
-getBatchByIdDB,
-getBatchesGestionDB,
-getRecordsByBatchIdDB,
-removeBatchDB,
-type Batch,
-type BatchStatus,
-type RecordDeBatch,
+  formatARS,
+  getBatchByIdDB,
+  getBatchesGestionDB,
+  getRecordsByBatchIdDB,
+  removeBatchDB,
+  type Batch,
+  type BatchStatus,
+  type RecordDeBatch,
 } from "@/features/collections/collections.data";
 import { toast } from "sonner";
 import { downloadXlsx } from "@/shared/lib/download";

@@ -2,7 +2,7 @@ import { type Product } from "@/features/payment-links/payment-links.data";
 import { useState } from "react";
 import { FormDialog } from "@/shared/ui/form-dialog";
 import { toast } from "sonner";
-import { Input,Label } from "@/shared/ui/form-controls";
+import { Input, Label } from "@/shared/ui/form-controls";
 
 export function ProductFormDialog({
   open,
@@ -25,7 +25,7 @@ export function ProductFormDialog({
       open={open}
       onClose={onClose}
       title={product ? "Editar producto" : "Nuevo producto"}
-      description="Registra un producto para asociarlo a un link de pago."
+      description="Registra un producto para asociarlo a un link de pago"
       submitLabel={product ? "Guardar cambios" : "Crear producto"}
       onSubmit={() => {
         if (!name || !price) {
@@ -60,7 +60,7 @@ export function ProductFormDialog({
         </div>
       </div>
       <div>
-        <Label>Descripcion (opcional)</Label>
+        <Label>Descripción (opcional)</Label>
         <Input
           value={desc}
           onChange={(e) => setDesc(e.target.value)}

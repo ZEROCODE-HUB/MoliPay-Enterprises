@@ -8,11 +8,11 @@ import { Stat } from "@/shared/ui/card";
 import { PageHeader } from "@/shared/ui/page-header";
 import { useDeveloperPortal } from "../developers.hooks";
 import {
-ENVIRONMENT_LABEL,
-STATUS_LABEL,
-WEBHOOK_EVENT_LABEL,
-environmentAccess,
-statusTone,
+  ENVIRONMENT_LABEL,
+  STATUS_LABEL,
+  WEBHOOK_EVENT_LABEL,
+  environmentAccess,
+  statusTone,
 } from "../developers.rules";
 import type { ApiEnvironment } from "../developers.types";
 import { CredentialsCard } from "./credentials-card";
@@ -20,7 +20,7 @@ import { EndpointsCard } from "./endpoints-card";
 import { IntegrationStatusCard } from "./integration-status-card";
 import { ProductionRequestDialog } from "./production-request-dialog";
 import { RequestLogsCard } from "./request-logs-card";
-import { SecretRevealModal,type RevealedSecret } from "./secret-reveal-modal";
+import { SecretRevealModal, type RevealedSecret } from "./secret-reveal-modal";
 import { WebhookCard } from "./webhook-card";
 
 const ENVIRONMENT_TABS: [ApiEnvironment, string][] = [
@@ -50,7 +50,7 @@ export function DevelopersPage() {
     <>
       <PageHeader
         title="API e integraciones"
-        description="Credenciales, webhooks, sandbox y documentación técnica."
+        description="Credenciales, webhooks, sandbox y documentación técnica"
         action={
           <a href="#como-firmar">
             <BtnPrimary>
@@ -66,7 +66,7 @@ export function DevelopersPage() {
             key={env}
             type="button"
             onClick={() => setEnvironment(env)}
-            className={`h-9 rounded-md border px-4 text-sm font-semibold ${
+            className={`h-9 rounded-md border px-4 text-sm font-medium ${
               environment === env
                 ? "border-primary bg-primary text-primary-foreground"
                 : "bg-card hover:bg-muted"
@@ -124,7 +124,7 @@ export function DevelopersPage() {
         />
       </div>
 
-      <div className="mb-6 grid gap-6 lg:grid-cols-[1fr_1fr]">
+      <div className="mb-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
         <CredentialsCard
           environment={environment}
           status={status}
@@ -140,7 +140,7 @@ export function DevelopersPage() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
         <EndpointsCard endpoints={portal?.endpoints ?? []} environment={environment} />
         <div className="space-y-6">
           <WebhookCard

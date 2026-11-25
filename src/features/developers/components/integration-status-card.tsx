@@ -1,8 +1,8 @@
-import { Activity,Circle } from "lucide-react";
+import { Activity, Circle } from "lucide-react";
 import { paymentsApiUrl } from "@/infrastructure/http/backend-url";
 import { Card } from "@/shared/ui/card";
-import { formatShortDateTime,integrationChecklist } from "../developers.rules";
-import type { ApiEnvironment,DeveloperIntegration } from "../developers.types";
+import { formatShortDateTime, integrationChecklist } from "../developers.rules";
+import type { ApiEnvironment, DeveloperIntegration } from "../developers.types";
 import { AllowedIpsEditor } from "./allowed-ips-editor";
 
 export function IntegrationStatusCard({
@@ -22,7 +22,7 @@ export function IntegrationStatusCard({
 
   return (
     <Card>
-      <h3 className="mb-4 flex items-center gap-2 font-semibold">
+      <h3 className="mb-4 flex items-center gap-2 font-medium">
         <Activity size={16} /> Estado de la integración
       </h3>
       <div className="space-y-2.5">

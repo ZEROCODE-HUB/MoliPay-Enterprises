@@ -1,5 +1,5 @@
-import { Link,useNavigate } from "@tanstack/react-router";
-import { BookOpen,ExternalLink } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { BookOpen, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/shared/ui/badge";
 import { BtnPrimary } from "@/shared/ui/button";
@@ -7,10 +7,10 @@ import { Card } from "@/shared/ui/card";
 import { useConfirm } from "@/shared/ui/confirm-provider";
 import { useDeveloperPortal } from "../developers.hooks";
 import {
-STATUS_DESCRIPTION,
-STATUS_LABEL,
-isApiModuleEnabled,
-statusTone,
+  STATUS_DESCRIPTION,
+  STATUS_LABEL,
+  isApiModuleEnabled,
+  statusTone,
 } from "../developers.rules";
 
 /** Entrada al modulo de APIs externas: estado y acceso a "API e integraciones". */
@@ -42,11 +42,11 @@ export function ApiSetupPage() {
           Inicio
         </Link>
         <span>/</span>
-        <span className="font-semibold text-foreground">Configuración de APIs Externas</span>
+        <span className="font-medium text-foreground">Configuración de APIs Externas</span>
       </nav>
 
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Configuración de APIs Externas</h1>
+        <h1 className="text-xl font-medium">Configuración de APIs Externas</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Gestione el acceso a las APIs externas de la plataforma: credenciales de Sandbox y
           Producción, webhooks y permisos.
@@ -56,7 +56,7 @@ export function ApiSetupPage() {
       <Card className="max-w-xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
           <div className="flex-1">
-            <h2 className="flex items-center gap-2 text-sm font-semibold">
+            <h2 className="flex items-center gap-2 text-sm font-medium">
               Módulo de APIs Externas
               {status && <Badge tone={statusTone(status)}>{STATUS_LABEL[status]}</Badge>}
             </h2>
@@ -72,7 +72,7 @@ export function ApiSetupPage() {
             <Link
               to="/app/api"
               hash="como-firmar"
-              className="inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-md border bg-card px-4 text-sm font-semibold transition hover:bg-muted"
+              className="inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-md border bg-card px-4 text-sm font-medium transition hover:bg-muted"
             >
               <BookOpen size={14} /> Ver documentación
             </Link>

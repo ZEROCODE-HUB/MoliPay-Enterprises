@@ -29,6 +29,8 @@ export type DailyPoint = {
   depositos: number;
   cobrosQR: number;
   linkPago: number;
+  /** Salidas del dia (retiros y transferencias enviadas). */
+  retiros: number;
   total: number;
 };
 

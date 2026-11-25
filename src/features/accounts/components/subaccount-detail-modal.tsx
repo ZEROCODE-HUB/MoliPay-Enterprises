@@ -4,7 +4,7 @@ import { SubaccountMovementsSection } from "./subaccount-movements-section";
 import { useSubaccountDetailModal } from "./use-subaccount-detail-modal";
 import "jspdf-autotable";
 import { type Sub } from "./subaccount-view";
-import { Modal,ModalBody,ModalHeader } from "@/shared/ui/modal";
+import { Modal, ModalBody, ModalHeader } from "@/shared/ui/modal";
 
 export function SubDetailModal(props: {
   sub: Sub;

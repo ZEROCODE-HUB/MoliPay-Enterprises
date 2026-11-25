@@ -1,4 +1,4 @@
-import { type Ticket,type TicketStatus } from "./settlements.types";
+import { type Ticket, type TicketStatus } from "./settlements.types";
 
 export const STATUS_TICKET_LABEL: Record<TicketStatus, string> = {
   pendiente: "Solicitado",

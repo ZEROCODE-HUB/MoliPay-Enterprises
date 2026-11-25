@@ -1,7 +1,7 @@
-import { ShoppingCart,Power,FileText,ArrowRight,Copy,Search } from "lucide-react";
+import { ShoppingCart, Power, FileText, ArrowRight, Copy, Search } from "lucide-react";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Card } from "@/shared/ui/card";
-import { Input,Label } from "@/shared/ui/form-controls";
+import { Input, Label } from "@/shared/ui/form-controls";
 import { BtnOutline } from "@/shared/ui/button";
 import { Badge } from "@/shared/ui/badge";
 import { toast } from "sonner";
@@ -28,53 +28,45 @@ export function EcommercePage() {
     <>
       <PageHeader
         title="E-commerce"
-        description="Pasarela de pagos digitales para tu tienda online."
+        description="Pasarela de pagos digitales para tu tienda online"
       />
 
       {/* Stats compactas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="bg-card border rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Estado pasarela
-          </div>
-          <div className="flex items-center gap-1.5 mt-0.5 text-sm font-semibold">
+          <div className="text-[11px] text-muted-foreground">Estado pasarela</div>
+          <div className="flex items-center gap-1.5 mt-0.5 text-sm font-medium">
             <span className="w-2 h-2 rounded-full bg-green-500 inline-block" /> Activa
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">API v2 · Conectada</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">API v2 · Conectada</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Transacciones (mes)
-          </div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+          <div className="text-[11px] text-muted-foreground">Transacciones (mes)</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
             1.842
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">+12% vs mes anterior</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">+12% vs mes anterior</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Volumen (mes)
-          </div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+          <div className="text-[11px] text-muted-foreground">Volumen (mes)</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
             $ 8.4M
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">Ticket promedio $ 4.560</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">Ticket promedio $ 4.560</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Aprobacion
-          </div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+          <div className="text-[11px] text-muted-foreground">Aprobacion</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
             96.2%
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">Tasa de conversion</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">Tasa de conversion</div>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[1.2fr_1fr] gap-6 mb-6">
+      <div className="grid lg:grid-cols-[1.2fr_1fr] gap-4 mb-4">
         <Card>
           <div className="flex justify-between items-center mb-3">
-            <h3 className="font-semibold flex items-center gap-2">
+            <h3 className="font-medium flex items-center gap-2">
               <ShoppingCart size={16} /> Pasarela de pagos Molly
             </h3>
             <Badge tone="success">
@@ -107,7 +99,7 @@ export function EcommercePage() {
         </Card>
 
         <Card>
-          <h3 className="font-semibold mb-3">Credenciales</h3>
+          <h3 className="font-medium mb-3">Credenciales</h3>
           <div className="space-y-3">
             <div>
               <Label>API key (produccion)</Label>
@@ -153,7 +145,7 @@ export function EcommercePage() {
 
       <Card className="p-0 overflow-hidden">
         <div className="px-5 py-4 border-b flex flex-wrap gap-3 items-center justify-between">
-          <h3 className="font-semibold">Transacciones procesadas</h3>
+          <h3 className="font-medium">Transacciones procesadas</h3>
           <div className="flex gap-2">
             <select className="h-8 px-2 rounded border bg-card text-xs">
               {months.map((m) => (
@@ -165,14 +157,14 @@ export function EcommercePage() {
                 size={12}
                 className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
               />
-              <Input placeholder="Buscar ID..." className="h-8 pl-7 text-xs max-w-[180px]" />
+              <Input placeholder="Buscar ID" className="h-8 pl-7 text-xs max-w-[180px]" />
             </div>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
+              <tr className="text-[11px] border-b bg-muted/30">
                 <th className="text-left px-5 py-2.5">Fecha</th>
                 <th className="text-left px-5 py-2.5">ID</th>
                 <th className="text-right px-5 py-2.5">Monto</th>
@@ -184,9 +176,7 @@ export function EcommercePage() {
                 <tr key={t.id} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="px-5 py-3 text-xs text-muted-foreground">{t.f}</td>
                   <td className="px-5 py-3 font-mono text-xs">{t.id}</td>
-                  <td className="px-5 py-3 font-mono tabular-nums text-right font-semibold">
-                    {t.m}
-                  </td>
+                  <td className="px-5 py-3 font-mono tabular-nums text-right font-medium">{t.m}</td>
                   <td className="px-5 py-3 text-right">
                     <Badge tone={t.e === "Aprobado" ? "success" : "danger"}>{t.e}</Badge>
                   </td>

@@ -1,7 +1,7 @@
 import { requireSupabase } from "@/infrastructure/supabase/client";
 import {
-buildResolvableUrl,
-toResolvableLinkPaymentUrl as toResolvableLinkPagoUrlShared,
+  buildResolvableUrl,
+  toResolvableLinkPaymentUrl as toResolvableLinkPagoUrlShared,
 } from "@/shared/lib/pay-url";
 
 // Re-export para mantener compatibilidad con imports existentes desde este módulo.

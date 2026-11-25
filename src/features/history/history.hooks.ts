@@ -1,8 +1,8 @@
 import { useCallback } from "react";
-import { useQuery,useQueryClient } from "@tanstack/react-query";
-import { useCurrentCustomer,useSessionUser } from "@/features/session/session.hooks";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCurrentCustomer, useSessionUser } from "@/features/session/session.hooks";
 import { historyQueries } from "./history.queries";
-import type { HistoryFilters,TransactionDetail } from "./history.types";
+import type { HistoryFilters, TransactionDetail } from "./history.types";
 
 function useHistoryIdentity() {
   const { user } = useSessionUser();

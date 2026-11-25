@@ -1,5 +1,5 @@
-import { describe,expect,it } from "vitest";
-import { AppError,isRetryable,userMessage } from "./errors";
+import { describe, expect, it } from "vitest";
+import { AppError, isRetryable, userMessage } from "./errors";
 
 describe("AppError", () => {
   it("solo las fallas transitorias se reintentan", () => {

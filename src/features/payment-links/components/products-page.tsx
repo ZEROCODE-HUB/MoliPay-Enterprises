@@ -23,10 +23,10 @@ export function ProductsPage() {
     <>
       <PageHeader
         title="Productos"
-        description="Crea productos y genera links de cobro para compartir con tus clientes."
+        description="Crea productos y genera links de cobro para compartir con tus clientes"
       />
 
-      <div className="flex gap-6 border-b border-black-100 mb-6">
+      <div className="flex gap-6 border-b border-border mb-6">
         {(
           [
             ["productos", "Productos"],
@@ -36,9 +36,9 @@ export function ProductsPage() {
           <button
             key={k}
             onClick={() => setTab(k)}
-            className={`w-auto pb-3 text-sm font-semibold transition-colors ${
+            className={`w-auto pb-3 text-sm font-medium transition-colors ${
               tab === k
-                ? "border-b-2 border-red-500 text-black-800"
+                ? "border-b-2 border-primary text-foreground"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >

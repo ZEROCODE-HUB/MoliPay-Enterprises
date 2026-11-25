@@ -13,10 +13,10 @@ import { RegisterForm } from "./register-form";
 const route = getRouteApi("/login");
 
 const tabClass = (active: boolean) =>
-  `pb-3 text-sm font-semibold transition-colors ${active ? "border-b-2 border-red-500 text-black-800" : "text-black-400"}`;
+  `pb-3 text-sm font-medium transition-colors ${active ? "border-b-2 border-red-500 text-black-800" : "text-black-400"}`;
 
 const accountTypeClass = (active: boolean) =>
-  `flex-1 h-11 text-xs font-semibold tracking-wide transition-all rounded-sm ${
+  `flex-1 h-11 text-xs font-medium tracking-wide transition-colors rounded-md ${
     active ? "bg-black text-white" : "bg-white text-black-400 border border-black-100"
   }`;
 
@@ -95,7 +95,7 @@ export function LoginPage() {
       )}
 
       <div className="relative overflow-hidden">
-        <div className="transition-all duration-300 ease-in-out">
+        <div className="transition-colors duration-300 ease-in-out">
           {tab === "login" ? (
             <LoginForm onSuccess={handleLogin} />
           ) : (

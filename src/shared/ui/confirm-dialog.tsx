@@ -1,7 +1,7 @@
-import { useState,type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
-import { Modal,ModalBody,ModalFooter,ModalHeader,useModalTitleId } from "@/shared/ui/modal";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
+import { Modal, ModalBody, ModalFooter, ModalHeader, useModalTitleId } from "@/shared/ui/modal";
 
 export type ConfirmOptions = {
   title: string;

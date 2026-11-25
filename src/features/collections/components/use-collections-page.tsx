@@ -1,22 +1,22 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
-periodFilter,
-computeDashboardKPI,
-computeByMethod,
-computeByDue,
-computeNoCobradas,
-computeTrend,
-computeBatchesRecents,
-formatARS,
-methodPaymentLabels,
-type PeriodFilter,
-type DashboardKPI,
-type MethodPaymentData,
-type DueData,
-type NoCobradasData,
-type TrendData,
-type BatchSummary,
+  periodFilter,
+  computeDashboardKPI,
+  computeByMethod,
+  computeByDue,
+  computeNoCobradas,
+  computeTrend,
+  computeBatchesRecents,
+  formatARS,
+  methodPaymentLabels,
+  type PeriodFilter,
+  type DashboardKPI,
+  type MethodPaymentData,
+  type DueData,
+  type NoCobradasData,
+  type TrendData,
+  type BatchSummary,
 } from "@/features/collections/collections.data";
 import jsPDF from "jspdf";
 import "jspdf-autotable";

@@ -2,16 +2,16 @@ import { ScheduleTransferFields } from "./schedule-transfer-fields";
 import { ScheduleFrequentRecipients } from "./schedule-frequent-recipients";
 import { useScheduleTransferForm } from "./use-schedule-transfer-form";
 import {
-createScheduledTransfer,
-type FrequentRecipient,
-type Scheduled,
-type Template,
-updateScheduledTransfer,
+  createScheduledTransfer,
+  type FrequentRecipient,
+  type Scheduled,
+  type Template,
+  updateScheduledTransfer,
 } from "@/features/transfers/transfer-store";
 import { toast } from "sonner";
 import { formatMoney } from "@/shared/lib/format";
 import { moneyInputToNumber } from "@/shared/lib/money";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 import { toDataError } from "@/infrastructure/supabase/errors";
 import { type Subaccount } from "@/features/transfers/transfers.types";
 
@@ -64,7 +64,7 @@ export function ScheduleTransferForm(props: {
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between py-2.5 px-3 text-sm">
               <span className="text-muted-foreground">{k}</span>
-              <span className="font-mono tabular-nums font-semibold">{v}</span>
+              <span className="font-mono tabular-nums font-medium">{v}</span>
             </div>
           ))}
         </div>

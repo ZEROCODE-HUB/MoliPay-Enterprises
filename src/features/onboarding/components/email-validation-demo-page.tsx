@@ -20,18 +20,16 @@ export function EmailValidationDemoPage() {
       leftTitle="Este es el email que recibirías en tu bandeja."
       step="Email de validación"
     >
-      <div className="bg-white overflow-hidden rounded-sm border border-black-100">
+      <div className="bg-card overflow-hidden rounded-md border border-border">
         <div className="px-6 py-4 flex items-center justify-between bg-black">
           <MollyLogo />
-          <span className="text-white/60 font-sans text-[0.65rem] tracking-[0.15em] uppercase">
-            altas@molipay.com.ar
-          </span>
+          <span className="text-white/60 font-sans text-xs font-medium">altas@molipay.com.ar</span>
         </div>
         <div className="p-6 sm:p-8">
-          <p className="text-xs text-black-400">Asunto</p>
-          <p className="mt-1 mb-6 text-sm font-semibold text-black-800">Validá tu cuenta MoliPay</p>
+          <p className="text-xs text-muted-foreground">Asunto</p>
+          <p className="mt-1 mb-6 text-sm font-medium text-foreground">Validá tu cuenta MoliPay</p>
 
-          <div className="text-sm text-black-600 space-y-4 leading-relaxed">
+          <div className="text-sm text-muted-foreground space-y-4 leading-relaxed">
             <p>Hola {name || "usuario"},</p>
             <p>
               Muchas gracias por registrarte en MoliPay. Para poder ingresar a la plataforma primero
@@ -43,7 +41,7 @@ export function EmailValidationDemoPage() {
             <PrimaryButton onClick={validate}>Validar desde acá</PrimaryButton>
           </div>
 
-          <p className="mt-6 text-xs text-black-400 leading-relaxed">
+          <p className="mt-6 text-xs text-muted-foreground leading-relaxed">
             Si tenés una duda o inconveniente podés contactarnos en{" "}
             <a
               href="mailto:soporte@molipay.com.ar"
@@ -54,9 +52,9 @@ export function EmailValidationDemoPage() {
             .
           </p>
 
-          <p className="mt-4 text-sm font-semibold text-black-800">¡Muchas gracias!</p>
+          <p className="mt-4 text-sm font-medium text-foreground">¡Muchas gracias!</p>
 
-          <div className="mt-8 pt-4 border-t border-black-100 text-[10px] text-black-300 leading-relaxed space-y-1">
+          <div className="mt-8 pt-4 border-t border-border text-[11px] text-muted-foreground leading-relaxed space-y-1">
             <p>Enviado por MoliPay — Argentina</p>
             <div className="flex gap-3">
               <a href="/" className="underline underline-offset-2 hover:text-red-500">

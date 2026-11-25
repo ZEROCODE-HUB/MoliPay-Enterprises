@@ -3,8 +3,8 @@ import { CollectionFilters } from "./collection-filters";
 import { CollectionBatchesTable } from "./collection-batches-table";
 import { CollectionBatchDetailModal } from "./collection-batch-detail-modal";
 import { useCollectionsManagementPage } from "./use-collections-management-page";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
-import { Download,FileSpreadsheet,Plus } from "lucide-react";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
+import { Download, FileSpreadsheet, Plus } from "lucide-react";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import "jspdf-autotable";
 

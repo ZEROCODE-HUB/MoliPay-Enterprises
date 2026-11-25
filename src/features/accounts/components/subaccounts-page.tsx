@@ -3,11 +3,11 @@ import { SubaccountsList } from "./subaccounts-list";
 import { SubaccountFormFields } from "./subaccount-form-fields";
 import { InternalTransferFields } from "./internal-transfer-fields";
 import { useSubaccountsPage } from "./use-subaccounts-page";
-import { Plus,Search,ArrowLeftRight } from "lucide-react";
+import { Plus, Search, ArrowLeftRight } from "lucide-react";
 import { PageHeader } from "@/shared/ui/page-header";
 import { Card } from "@/shared/ui/card";
-import { BtnPrimary,BtnOutline } from "@/shared/ui/button";
-import { Input,Select } from "@/shared/ui/form-controls";
+import { BtnPrimary, BtnOutline } from "@/shared/ui/button";
+import { Input, Select } from "@/shared/ui/form-controls";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { SubDetailModal } from "./subaccount-detail-modal";
 
@@ -51,34 +51,32 @@ export function SubaccountsPage() {
 
       <SubaccountsSummary {...vm} />
 
-      <Card className="mb-4 p-3">
-        <div className="flex flex-wrap gap-2">
-          <div className="relative w-full sm:flex-1 sm:min-w-[220px]">
-            <Search
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar por nombre o CVU..."
-              className="pl-9"
-            />
-          </div>
-          <Select value={kind} onChange={(e) => setKind(e.target.value)}>
-            <option>Todos</option>
-            <option>Operativa</option>
-            <option>Recaudacion</option>
-            <option>Garantias</option>
-            <option>Sueldos</option>
-          </Select>
-          <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option>Todos</option>
-            <option>Activa</option>
-            <option>Pausada</option>
-          </Select>
+      <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3">
+        <div className="relative w-full sm:flex-1 sm:min-w-[220px]">
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por nombre o CVU"
+            className="pl-9"
+          />
         </div>
-      </Card>
+        <Select value={kind} onChange={(e) => setKind(e.target.value)}>
+          <option>Todos</option>
+          <option>Operativa</option>
+          <option>Recaudacion</option>
+          <option>Garantias</option>
+          <option>Sueldos</option>
+        </Select>
+        <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option>Todos</option>
+          <option>Activa</option>
+          <option>Pausada</option>
+        </Select>
+      </div>
 
       <SubaccountsList {...vm} />
 

@@ -30,7 +30,7 @@ export function AllowedIpsEditor({ ips }: { ips: string[] }) {
     <div className="mt-4 border-t pt-3">
       <button
         type="button"
-        className="text-xs font-semibold text-primary"
+        className="text-xs font-medium text-primary"
         onClick={() => setText(open ? null : ips.join("\n"))}
       >
         IPs autorizadas: {ips.length ? ips.join(", ") : "cualquier IP"} ·{" "}

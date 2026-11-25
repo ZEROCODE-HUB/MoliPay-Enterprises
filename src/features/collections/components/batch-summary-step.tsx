@@ -1,7 +1,7 @@
 import { methodPaymentLabels } from "@/features/collections/collections.data";
-import { ArrowLeft,Check } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { Card } from "@/shared/ui/card";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 
 import type { NewCollectionPageVm } from "./use-new-collection-page";
 
@@ -44,51 +44,51 @@ export function BatchSummaryStep({
       {step === 2 && (
         <div className="space-y-6">
           <Card>
-            <h3 className="font-semibold mb-4">Resumen del lote</h3>
+            <h3 className="font-medium mb-4">Resumen del lote</h3>
             <div className="grid md:grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-muted-foreground">Nombre:</span>
-                <div className="font-semibold">{name}</div>
+                <div className="font-medium">{name}</div>
               </div>
               <div>
-                <span className="text-muted-foreground">Periodo:</span>
-                <div className="font-semibold">{period}</div>
+                <span className="text-muted-foreground">Período:</span>
+                <div className="font-medium">{period}</div>
               </div>
               <div>
                 <span className="text-muted-foreground">Dia de pago:</span>
-                <div className="font-semibold">Cada mes, dia {dayProcesamiento}</div>
+                <div className="font-medium">Cada mes, dia {dayProcesamiento}</div>
               </div>
               <div>
                 <span className="text-muted-foreground">Tasa de interes:</span>
-                <div className="font-semibold">{rateInteres}% (desde 2º vencimiento)</div>
+                <div className="font-medium">{rateInteres}% (desde 2º vencimiento)</div>
               </div>
               <div>
                 <span className="text-muted-foreground">1er vencimiento:</span>
-                <div className="font-semibold">{dateVenc1}</div>
+                <div className="font-medium">{dateVenc1}</div>
               </div>
               <div>
                 <span className="text-muted-foreground">2do vencimiento:</span>
-                <div className="font-semibold">{dateVenc2 || "No configurado"}</div>
+                <div className="font-medium">{dateVenc2 || "No configurado"}</div>
               </div>
               <div>
                 <span className="text-muted-foreground">3er vencimiento:</span>
-                <div className="font-semibold">{dateVenc3 || "No configurado"}</div>
+                <div className="font-medium">{dateVenc3 || "No configurado"}</div>
               </div>
               <div>
                 <span className="text-muted-foreground">Pagos parciales:</span>
-                <div className="font-semibold">
+                <div className="font-medium">
                   {paymentsPartials ? "Habilitados" : "Deshabilitados"}
                 </div>
               </div>
               <div>
                 <span className="text-muted-foreground">Notificaciones:</span>
-                <div className="font-semibold">
+                <div className="font-medium">
                   {notifications ? "Habilitadas" : "Deshabilitadas"}
                 </div>
               </div>
               <div>
                 <span className="text-muted-foreground">Medios de pago:</span>
-                <div className="font-semibold">
+                <div className="font-medium">
                   {methodsPayment.map((m) => methodPaymentLabels[m]).join(", ")}
                 </div>
               </div>
@@ -96,9 +96,9 @@ export function BatchSummaryStep({
           </Card>
 
           <Card>
-            <h3 className="font-semibold mb-4">Registros cargados</h3>
+            <h3 className="font-medium mb-4">Registros cargados</h3>
             <div className="text-sm">
-              <span className="font-display tabular-nums font-semibold text-lg">
+              <span className="font-display tabular-nums font-medium text-lg">
                 {csvData.length}
               </span>{" "}
               <span className="text-muted-foreground">registros</span>

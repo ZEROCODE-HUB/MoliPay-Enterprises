@@ -17,14 +17,12 @@ export function TermsPage() {
         </div>
       </header>
       <article className="max-w-3xl mx-auto px-6 py-16 prose prose-sm">
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
-          Terminos y Condiciones
-        </h1>
-        <p className="text-sm text-muted-foreground mt-2">ultima actualizacion: 01/06/2026</p>
+        <h1 className="text-3xl md:text-4xl font-medium tracking-tight">Terminos y Condiciones</h1>
+        <p className="text-sm text-muted-foreground mt-2">última actualizacion: 01/06/2026</p>
 
         <section className="mt-8 space-y-6 text-sm leading-relaxed text-muted-foreground">
           <div>
-            <h2 className="text-lg font-semibold text-foreground mb-2">1. Objeto</h2>
+            <h2 className="text-lg font-medium text-foreground mb-2">1. Objeto</h2>
             <p>
               Molly Money Life SA (en adelante "Molly") es un Proveedor de Servicios de Pago con
               Cuentas de Pago (PSPCP) inscripto ante el Banco Central de la Republica Argentina.
@@ -32,16 +30,14 @@ export function TermsPage() {
             </p>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-foreground mb-2">
-              2. Registro y verificacion
-            </h2>
+            <h2 className="text-lg font-medium text-foreground mb-2">2. Registro y verificación</h2>
             <p>
               El titular debera completar el proceso de conocimiento del cliente (KYC/KYB) y aportar
               la documentacion societaria requerida.
             </p>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-foreground mb-2">
+            <h2 className="text-lg font-medium text-foreground mb-2">
               3. Uso de la cuenta de pago
             </h2>
             <p>
@@ -51,7 +47,7 @@ export function TermsPage() {
             </p>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-foreground mb-2">4. Comisiones</h2>
+            <h2 className="text-lg font-medium text-foreground mb-2">4. Comisiones</h2>
             <p>
               Las comisiones aplicables se detallan en la{" "}
               <Link to="/legales/comisiones" className="text-primary underline">
@@ -61,7 +57,7 @@ export function TermsPage() {
             </p>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-foreground mb-2">5. Rescision</h2>
+            <h2 className="text-lg font-medium text-foreground mb-2">5. Rescision</h2>
             <p>
               El usuario podra dar de baja la cuenta en cualquier momento a traves del{" "}
               <Link to="/legales/arrepentimiento" className="text-primary underline">
@@ -71,7 +67,7 @@ export function TermsPage() {
             </p>
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-foreground mb-2">6. Jurisdiccion</h2>
+            <h2 className="text-lg font-medium text-foreground mb-2">6. Jurisdiccion</h2>
             <p>
               Para cualquier controversia se aplicara la legislacion de la Republica Argentina y
               seran competentes los tribunales ordinarios de la Ciudad Autonoma de Buenos Aires.

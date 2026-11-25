@@ -203,7 +203,7 @@ export function PersonRoleFields({ form, companyType }: FormProps & { companyTyp
         />
       </div>
       {withSpouse && (
-        <div className="grid gap-4 rounded-sm border border-black-100 p-4 sm:grid-cols-2">
+        <div className="grid gap-4 rounded-md border border-border p-4 sm:grid-cols-2">
           <Field
             label="Apellido y nombre del cónyuge o conviviente"
             error={errors.spouseName?.message}
@@ -239,7 +239,7 @@ export function PersonPepFields({ form }: FormProps) {
 
   return (
     <FieldGroup title="Declaración jurada de persona expuesta políticamente (PEP)">
-      <p className="rounded-sm border border-black-100 bg-black-50 p-4 text-xs leading-relaxed text-black-500">
+      <p className="rounded-md border border-border bg-black-50 p-4 text-xs leading-relaxed text-muted-foreground">
         Son PEP quienes ocupan u ocuparon cargos públicos jerárquicos (nacionales, provinciales,
         municipales o extranjeros), y sus familiares y allegados, según la{" "}
         <a

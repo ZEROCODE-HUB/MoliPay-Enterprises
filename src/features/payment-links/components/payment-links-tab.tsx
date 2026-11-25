@@ -44,7 +44,7 @@ export function PaymentLinksTab({
           return (
             <Card className="p-0 overflow-hidden">
               <div className="px-5 py-4 border-b flex items-center justify-between">
-                <h3 className="font-semibold text-sm">Links de pago generados</h3>
+                <h3 className="font-medium text-sm">Links de pago generados</h3>
                 <span className="text-xs text-muted-foreground">
                   {totalLinks} link{totalLinks !== 1 ? "s" : ""}
                 </span>
@@ -52,10 +52,10 @@ export function PaymentLinksTab({
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-[11px] uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
+                    <tr className="text-[11px] border-b bg-muted/30">
                       <th className="text-left px-5 py-2.5">ID</th>
                       <th className="text-left px-5 py-2.5">Comercio</th>
-                      <th className="text-left px-5 py-2.5">Descripcion</th>
+                      <th className="text-left px-5 py-2.5">Descripción</th>
                       <th className="text-left px-5 py-2.5">Estado</th>
                       <th className="text-right px-5 py-2.5">Monto total</th>
                       <th className="text-left px-5 py-2.5">Fecha de expiracion</th>
@@ -105,7 +105,7 @@ export function PaymentLinksTab({
                                 {linkDisplayStatus(l)}
                               </Badge>
                             </td>
-                            <td className="px-5 py-3 font-mono tabular-nums text-right text-xs font-semibold">
+                            <td className="px-5 py-3 font-mono tabular-nums text-right text-xs font-medium">
                               {formatARS(amount)}
                             </td>
                             <td className="px-5 py-3 text-xs text-muted-foreground">

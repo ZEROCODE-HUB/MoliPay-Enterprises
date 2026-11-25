@@ -1,10 +1,10 @@
 import {
-ArrowUpRight,
-CalendarDays,
-CheckCircle2,
-FileSpreadsheet,
-FileText,
-Percent,
+  ArrowUpRight,
+  CalendarDays,
+  CheckCircle2,
+  FileSpreadsheet,
+  FileText,
+  Percent,
 } from "lucide-react";
 
 import type { SettlementsPageVm } from "./use-settlements-page";
@@ -20,7 +20,7 @@ export function SettlementsTabs({
         onClick={() => setActiveTab("calendario")}
         className={`flex-1 px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
           activeTab === "calendario"
-            ? "border-b-2 border-primary text-primary bg-muted/30"
+            ? "border-b-2 border-primary text-foreground"
             : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
         }`}
       >
@@ -30,13 +30,13 @@ export function SettlementsTabs({
         onClick={() => setActiveTab("tickets")}
         className={`flex-1 px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
           activeTab === "tickets"
-            ? "border-b-2 border-primary text-primary bg-muted/30"
+            ? "border-b-2 border-primary text-foreground"
             : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
         }`}
       >
         <FileText size={15} /> Adelantos
         {tickets.length > 0 && (
-          <span className="ml-1 px-1.5 py-0.5 rounded-full bg-muted text-[10px] font-semibold">
+          <span className="ml-1 px-1.5 py-0.5 rounded-full bg-muted text-[11px] font-medium">
             {tickets.length}
           </span>
         )}
@@ -45,7 +45,7 @@ export function SettlementsTabs({
         onClick={() => setActiveTab("acreditaciones")}
         className={`flex-1 px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
           activeTab === "acreditaciones"
-            ? "border-b-2 border-primary text-primary bg-muted/30"
+            ? "border-b-2 border-primary text-foreground"
             : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
         }`}
       >
@@ -55,7 +55,7 @@ export function SettlementsTabs({
         onClick={() => setActiveTab("lotes-venta")}
         className={`flex-1 px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
           activeTab === "lotes-venta"
-            ? "border-b-2 border-primary text-primary bg-muted/30"
+            ? "border-b-2 border-primary text-foreground"
             : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
         }`}
       >
@@ -65,7 +65,7 @@ export function SettlementsTabs({
         onClick={() => setActiveTab("contracargos")}
         className={`flex-1 px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
           activeTab === "contracargos"
-            ? "border-b-2 border-primary text-primary bg-muted/30"
+            ? "border-b-2 border-primary text-foreground"
             : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
         }`}
       >
@@ -75,7 +75,7 @@ export function SettlementsTabs({
         onClick={() => setActiveTab("comisiones")}
         className={`flex-1 px-5 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
           activeTab === "comisiones"
-            ? "border-b-2 border-primary text-primary bg-muted/30"
+            ? "border-b-2 border-primary text-foreground"
             : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
         }`}
       >

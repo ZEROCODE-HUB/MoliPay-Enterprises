@@ -58,8 +58,8 @@ export function CompanyMemberForm({
   });
 
   return (
-    <div className="space-y-6 rounded-sm border border-black-100 p-4">
-      <h3 className="text-sm font-semibold text-black-800">Nuevo representante o apoderado</h3>
+    <div className="space-y-6 rounded-md border border-border p-4">
+      <h3 className="text-sm font-medium text-foreground">Nuevo representante o apoderado</h3>
       <SelectField
         label="Carácter en la empresa"
         value={roleLabel}

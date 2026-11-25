@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { getBatchByIdDB,getRecordsByBatchIdDB } from "@/features/collections/collections.data";
+import { getBatchByIdDB, getRecordsByBatchIdDB } from "@/features/collections/collections.data";
 import { STATUS_STYLES } from "@/features/collections/collection-batch.rules";
 import { Modal } from "@/shared/ui/modal";
 import { createBatchActions } from "./collection-batch-actions";
@@ -52,13 +52,13 @@ export function CollectionBatchDetailModal({
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-card px-6 py-4">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-base font-semibold">{batch.nombre}</h2>
+            <h2 className="truncate text-base font-medium">{batch.nombre}</h2>
             <p className="text-xs text-muted-foreground">
               ID: {batch.id} &middot; Periodo: {batch.periodo}
             </p>
           </div>
           <span
-            className={`inline-block shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[batch.estado]}`}
+            className={`inline-block shrink-0 rounded-full px-3 py-1 text-xs font-medium ${STATUS_STYLES[batch.estado]}`}
           >
             {batch.estado}
           </span>

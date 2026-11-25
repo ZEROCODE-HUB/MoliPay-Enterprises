@@ -43,7 +43,7 @@ export function Hero() {
         <div className="grid lg:grid-cols-2 lg:gap-14 items-center">
           <div>
             <Eyebrow tone="light">MoliPay — Plataforma financiera digital</Eyebrow>
-            <h1 className="font-bold text-[clamp(2rem,4vw,3.5rem)] leading-[1.05] mt-6 max-w-[26ch] text-white">
+            <h1 className="font-semibold text-[clamp(2rem,4vw,3.5rem)] leading-[1.05] mt-6 max-w-[26ch] text-white">
               Soluciones financieras para todos
             </h1>
             <p className="mt-6 max-w-lg text-white/70 text-base leading-relaxed">

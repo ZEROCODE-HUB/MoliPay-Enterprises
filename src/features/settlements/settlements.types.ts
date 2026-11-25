@@ -286,7 +286,7 @@ export type SaleBreakdown = {
   };
   lineas?: {
     concepto: string;
-    clase: "payway" | "molipay" | "impuesto" | "iibb" | "dyc";
+    clase: "payway" | "molipay" | "iva" | "impuesto" | "iibb" | "dyc";
     monto: number;
     total_lote: number;
   }[];

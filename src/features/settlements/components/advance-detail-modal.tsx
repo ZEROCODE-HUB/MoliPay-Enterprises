@@ -2,14 +2,14 @@ import { ErrorNotice } from "@/shared/ui/error-notice";
 import { Modal } from "@/shared/ui/modal";
 import { downloadXlsx } from "@/shared/lib/download";
 import { formatARS } from "@/features/collections/collections.data";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
-import { CheckCircle2,Download,TrendingUp } from "lucide-react";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
+import { CheckCircle2, Download, TrendingUp } from "lucide-react";
 import { Badge } from "@/shared/ui/badge";
 import {
-STATUS_TICKET_LABEL,
-STATUS_TICKET_TONE,
-fmtDateFull,
-pendingCompensar,
+  STATUS_TICKET_LABEL,
+  STATUS_TICKET_TONE,
+  fmtDateFull,
+  pendingCompensar,
 } from "@/features/settlements/settlements.rules";
 
 import type { SettlementsPageVm } from "./use-settlements-page";
@@ -40,7 +40,7 @@ export function AdvanceDetailModal({
         <Modal open onClose={() => setDetail(null)} size="custom" className="max-w-md">
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="px-6 py-4 border-b flex items-center justify-between">
-              <div className="font-semibold">Adelanto {detail.id}</div>
+              <div className="font-medium">Adelanto {detail.id}</div>
               <Badge tone={STATUS_TICKET_TONE[detail.estado] ?? "neutral"}>
                 {STATUS_TICKET_LABEL[detail.estado] ?? detail.estado}
               </Badge>
@@ -48,23 +48,23 @@ export function AdvanceDetailModal({
             <div className="p-6 space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Fecha solicitud</span>
-                <span className="font-semibold">{fmtDateFull(detail.fecha)}</span>
+                <span className="font-medium">{fmtDateFull(detail.fecha)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Monto solicitado</span>
-                <span className="font-mono font-semibold">{formatARS(detail.montoSolicitado)}</span>
+                <span className="font-mono font-medium">{formatARS(detail.montoSolicitado)}</span>
               </div>
               {detail.plazoAdelantado != null && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Plazo</span>
-                  <span className="font-semibold">{detail.plazoAdelantado} días</span>
+                  <span className="font-medium">{detail.plazoAdelantado} días</span>
                 </div>
               )}
               {detail.fechaAcreditacion &&
                 (detail.estado === "acreditado" || detail.estado === "compensado") && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Acreditado</span>
-                    <span className="font-semibold">{fmtDateFull(detail.fechaAcreditacion)}</span>
+                    <span className="font-medium">{fmtDateFull(detail.fechaAcreditacion)}</span>
                   </div>
                 )}
               {detail.estado === "rechazado" && detail.rechazoMotivo && (
@@ -79,7 +79,7 @@ export function AdvanceDetailModal({
               {detail.estado === "aceptado" && (
                 <div className="bg-blue-50 border border-blue-200 rounded-md p-3 text-xs text-blue-900">
                   Aceptaste la oferta. MoliPay va a acreditar{" "}
-                  <span className="font-mono font-semibold">
+                  <span className="font-mono font-medium">
                     {formatARS(detail.netoARecibir ?? 0)}
                   </span>{" "}
                   en tu cuenta. Hasta que se acredite todavía podés cancelarla.
@@ -89,7 +89,7 @@ export function AdvanceDetailModal({
                 <div className="bg-emerald-50 border border-emerald-200 rounded-md p-3 text-xs space-y-1">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Neto acreditado</span>
-                    <span className="font-mono font-semibold">
+                    <span className="font-mono font-medium">
                       {formatARS(detail.netoARecibir ?? 0)}
                     </span>
                   </div>
@@ -100,10 +100,8 @@ export function AdvanceDetailModal({
                     <span className="font-mono">{formatARS(detail.compensado ?? 0)}</span>
                   </div>
                   <div className="flex justify-between border-t border-emerald-200 pt-1">
-                    <span className="text-muted-foreground font-semibold">
-                      Falta descontar
-                    </span>
-                    <span className="font-mono font-bold">
+                    <span className="text-muted-foreground font-medium">Falta descontar</span>
+                    <span className="font-mono font-medium">
                       {formatARS(pendingCompensar(detail))}
                     </span>
                   </div>
@@ -126,25 +124,25 @@ export function AdvanceDetailModal({
                   </p>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Monto aprobado</span>
-                    <span className="font-mono font-semibold">
+                    <span className="font-mono font-medium">
                       {formatARS(detail.montoOfertado ?? detail.montoSolicitado)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Tasa</span>
-                    <span className="font-mono font-bold text-emerald-700">
+                    <span className="font-mono font-medium text-emerald-700">
                       {detail.tasaInteres ?? 0}%
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Descuento</span>
-                    <span className="font-mono font-semibold text-red-600">
+                    <span className="font-mono font-medium text-red-600">
                       - {formatARS(detail.descuento ?? 0)}
                     </span>
                   </div>
                   <div className="flex justify-between pt-1 border-t border-emerald-200">
                     <span className="text-muted-foreground">Neto que se acredita en tu cuenta</span>
-                    <span className="font-mono font-bold text-emerald-700">
+                    <span className="font-mono font-medium text-emerald-700">
                       {formatARS(detail.netoARecibir ?? 0)}
                     </span>
                   </div>
@@ -181,7 +179,7 @@ export function AdvanceDetailModal({
                   detail.estado === "aprobado" ||
                   detail.estado === "aceptado") && (
                   <button
-                    className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-sm border border-red-200 bg-white text-red-600 text-sm font-semibold cursor-pointer hover:bg-red-50 active:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150 flex-1"
+                    className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-md border border-red-200 bg-card text-red-600 text-sm font-medium cursor-pointer hover:bg-red-50 active:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150 flex-1"
                     disabled={saving}
                     onClick={async () => {
                       if (

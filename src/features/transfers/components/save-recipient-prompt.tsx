@@ -1,7 +1,7 @@
 import { TransferReceiptModal } from "@/features/transfers/components/transfer-ui";
 import {
-createFrequentRecipient,
-listFrequentRecipients,
+  createFrequentRecipient,
+  listFrequentRecipients,
 } from "@/features/transfers/transfer-store";
 import { toDataError } from "@/infrastructure/supabase/errors";
 import { toast } from "sonner";

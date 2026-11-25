@@ -24,7 +24,7 @@ import type { AuthSession } from "../security.types";
 const TIMEOUT_OPTIONS = ["Nunca", "30 minutos", "1 hora", "6 horas", "1 dia"];
 
 const chipClass = (active: boolean) =>
-  `px-3 py-1.5 text-xs font-semibold rounded-md border transition ${
+  `px-3 py-1.5 text-xs font-medium rounded-md border transition ${
     active
       ? "border-primary bg-[color:var(--brand-soft)] text-primary"
       : "border-border hover:border-primary/50 bg-card text-muted-foreground"
@@ -117,7 +117,7 @@ function SessionRow({
       <div className="flex min-w-0 items-center gap-3">
         <Icon size={18} className="shrink-0 text-muted-foreground" aria-hidden />
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-sm font-semibold">
+          <div className="flex items-center gap-2 text-sm font-medium">
             <span className="truncate">
               {describeUserAgent(session.userAgent) ?? "Dispositivo desconocido"}
             </span>
@@ -135,7 +135,7 @@ function SessionRow({
           type="button"
           disabled={pending}
           onClick={() => onClose(session)}
-          className="flex shrink-0 items-center gap-1 text-xs font-semibold text-red-600 disabled:opacity-50"
+          className="flex shrink-0 items-center gap-1 text-xs font-medium text-red-600 disabled:opacity-50"
         >
           <Trash2 size={12} /> Cerrar
         </button>
@@ -159,16 +159,16 @@ export function SessionsCard() {
 
   const revoke = useMutation({
     mutationFn: revokeMySession,
-    onSuccess: () => toast.success("Sesión cerrada en ese dispositivo"),
-    onError: (e) => toast.error(userMessage(e, "No se pudo cerrar la sesión")),
+    onSuccess: () => toast.success("Sesion cerrada en ese dispositivo"),
+    onError: (e) => toast.error(userMessage(e, "No se pudo cerrar la sesion")),
     onSettled: refresh,
   });
 
   const closeSession = async (s: AuthSession) => {
     const ok = await confirm({
-      title: "Cerrar sesión en otro dispositivo",
+      title: "Cerrar sesion en otro dispositivo",
       message: `${describeUserAgent(s.userAgent) ?? "Ese dispositivo"} tendrá que volver a ingresar. Puede tardar unos minutos en salir.`,
-      confirmLabel: "Cerrar sesión",
+      confirmLabel: "Cerrar sesion",
       variant: "danger",
     });
     if (ok) revoke.mutate(s.id);
@@ -177,7 +177,7 @@ export function SessionsCard() {
   const closeOthers = async () => {
     const ok = await confirm({
       title: "Cerrar las demás sesiones",
-      message: "Se cerrará tu sesión en todos los otros dispositivos. Este sigue abierto.",
+      message: "Se cerrará tu sesion en todos los otros dispositivos. Este sigue abierto.",
       confirmLabel: "Cerrar las demás",
       variant: "danger",
     });
@@ -213,7 +213,7 @@ export function SessionsCard() {
   return (
     <Card>
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 font-semibold">
+        <h3 className="flex items-center gap-2 font-medium">
           <Monitor size={16} /> Sesiones activas
         </h3>
         <button

@@ -2,14 +2,14 @@ import { requireSupabase } from "@/infrastructure/supabase/client";
 import { toAppError } from "@/infrastructure/supabase/errors";
 import { callRpc } from "@/infrastructure/supabase/rpc";
 import { parseEnumMap } from "@/shared/lib/enum";
-import { moneyFromDecimal,toDecimalString } from "@/shared/lib/money";
+import { moneyFromDecimal, toDecimalString } from "@/shared/lib/money";
 import type { AccountsRepository } from "./accounts.repository";
 import type {
-Subaccount,
-SubaccountInput,
-SubaccountMovement,
-SubaccountStatus,
-SubaccountType,
+  Subaccount,
+  SubaccountInput,
+  SubaccountMovement,
+  SubaccountStatus,
+  SubaccountType,
 } from "./accounts.types";
 
 const context = { feature: "accounts" };

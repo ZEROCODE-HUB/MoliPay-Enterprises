@@ -2,8 +2,9 @@ import { CheckoutSuccess } from "./checkout-success";
 import { CheckoutForm } from "./checkout-form";
 import { useCheckoutPage } from "./use-checkout-page";
 import { MollyLogo } from "@/shared/ui/molly-logo";
-import { AlertCircle,Loader2,Lock } from "lucide-react";
+import { AlertCircle, Loader2, Lock } from "lucide-react";
 import { CenterCard } from "./checkout-parts";
+import { LoadingLines } from "@/shared/ui/table-skeleton";
 
 export function CheckoutPage() {
   const vm = useCheckoutPage();
@@ -14,7 +15,7 @@ export function CheckoutPage() {
       {/* Barra de marca */}
       <header className="flex items-center justify-between px-5 py-4 max-w-4xl mx-auto w-full">
         <MollyLogo size={30} />
-        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground">
+        <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
           <Lock size={13} /> Pago seguro
         </div>
       </header>
@@ -24,14 +25,14 @@ export function CheckoutPage() {
           {status === "loading" && (
             <CenterCard>
               <Loader2 className="animate-spin text-[color:var(--brand-dark)]" size={28} />
-              <p className="text-sm text-muted-foreground mt-3">Cargando link de pago…</p>
+              <LoadingLines label="Cargando link de pago…" />
             </CenterCard>
           )}
 
           {status === "notfound" && (
             <CenterCard>
               <AlertCircle className="text-muted-foreground" size={28} />
-              <p className="font-semibold mt-3">Link no encontrado</p>
+              <p className="font-medium mt-3">Link no encontrado</p>
               <p className="text-xs text-muted-foreground mt-1">
                 El enlace no existe o fue removido.
               </p>
@@ -41,7 +42,7 @@ export function CheckoutPage() {
           {status === "inactive" && (
             <CenterCard>
               <AlertCircle className="text-amber-500" size={28} />
-              <p className="font-semibold mt-3">Link inactivo</p>
+              <p className="font-medium mt-3">Link inactivo</p>
               <p className="text-xs text-muted-foreground mt-1">
                 Este cobro no esta disponible en este momento.
               </p>
@@ -51,7 +52,7 @@ export function CheckoutPage() {
           {status === "expired" && (
             <CenterCard>
               <AlertCircle className="text-red-500" size={28} />
-              <p className="font-semibold mt-3">Link vencido</p>
+              <p className="font-medium mt-3">Link vencido</p>
               <p className="text-xs text-muted-foreground mt-1">La fecha de pago expiró.</p>
             </CenterCard>
           )}
@@ -59,7 +60,7 @@ export function CheckoutPage() {
           {status === "error" && (
             <CenterCard>
               <AlertCircle className="text-red-500" size={28} />
-              <p className="font-semibold mt-3">No pudimos cargar el link</p>
+              <p className="font-medium mt-3">No pudimos cargar el link</p>
               <p className="text-xs text-muted-foreground mt-1">Intenta nuevamente mas tarde.</p>
             </CenterCard>
           )}

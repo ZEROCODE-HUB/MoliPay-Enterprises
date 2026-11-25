@@ -4,13 +4,13 @@ import { AppError } from "@/shared/lib/errors";
 import { parseEnum } from "@/shared/lib/enum";
 import { moneyFromDecimal } from "@/shared/lib/money";
 import { onlyDigits } from "@/shared/lib/text";
-import { operationKinds,toTransactionStatus } from "./history.rules";
+import { operationKinds, toTransactionStatus } from "./history.rules";
 import {
-LINE_KINDS,
-type HistoryFilters,
-type TransactionDetail,
-type TransactionLine,
-type TransactionLinePage,
+  LINE_KINDS,
+  type HistoryFilters,
+  type TransactionDetail,
+  type TransactionLine,
+  type TransactionLinePage,
 } from "./history.types";
 
 /* Feature sin contrato: lo usa solo history.queries.ts. */

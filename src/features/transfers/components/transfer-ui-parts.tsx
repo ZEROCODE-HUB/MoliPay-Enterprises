@@ -2,7 +2,7 @@ import { type TaxAplicado } from "@/features/transfers/transfer-store";
 import { toast } from "sonner";
 import { Copy } from "lucide-react";
 import { type ReactNode } from "react";
-import { detailTax,fmtCargo } from "@/features/transfers/transfer-ui.rules";
+import { detailTax, fmtCargo } from "@/features/transfers/transfer-ui.rules";
 
 /** Fila "Débitos y Créditos · 0,6% del monto" en el resumen de cargos. */
 export function TaxRow({ t }: { t: TaxAplicado }) {
@@ -60,9 +60,7 @@ export function Row({
 export function Section({ titulo: title, children }: { titulo: string; children: ReactNode }) {
   return (
     <section className="px-6 py-4">
-      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
-        {title}
-      </div>
+      <div className="text-[11px] font-medium text-muted-foreground mb-1.5">{title}</div>
       {children}
     </section>
   );

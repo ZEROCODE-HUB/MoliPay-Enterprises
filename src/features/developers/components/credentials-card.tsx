@@ -1,16 +1,17 @@
 import { useState } from "react";
-import { CheckCircle2,Code2,KeyRound,RefreshCw } from "lucide-react";
+import { CheckCircle2, Code2, KeyRound, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { userMessage } from "@/shared/lib/errors";
 import { Badge } from "@/shared/ui/badge";
-import { BtnOutline,BtnPrimary } from "@/shared/ui/button";
+import { BtnOutline, BtnPrimary } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { useConfirm } from "@/shared/ui/confirm-provider";
 import { useDeveloperActions } from "../developers.hooks";
-import { environmentAccess,formatShortDateTime } from "../developers.rules";
-import type { ApiEnvironment,DeveloperKey,IntegrationStatus } from "../developers.types";
+import { environmentAccess, formatShortDateTime } from "../developers.rules";
+import type { ApiEnvironment, DeveloperKey, IntegrationStatus } from "../developers.types";
 import { CopyableField } from "./copyable-field";
 import type { RevealedSecret } from "./secret-reveal-modal";
+import { LoadingLines } from "@/shared/ui/table-skeleton";
 
 export function CredentialsCard({
   environment,
@@ -63,7 +64,7 @@ export function CredentialsCard({
   return (
     <Card>
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="flex items-center gap-2 font-semibold">
+        <h3 className="flex items-center gap-2 font-medium">
           <Code2 size={16} /> Credenciales
         </h3>
         <Badge tone={isSandbox ? "warn" : access.productionEnabled ? "success" : "neutral"}>
@@ -71,7 +72,7 @@ export function CredentialsCard({
         </Badge>
       </div>
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Cargando…</p>
+        <LoadingLines label="Cargando…" />
       ) : apiKey ? (
         <div className="space-y-3">
           <CopyableField label="API Key" value={apiKey.apiKey} />

@@ -1,13 +1,14 @@
 import { Modal } from "@/shared/ui/modal";
-import { useBatchBreakdown,useBatchesByRange,useCreditCalendar } from "../settlements.hooks";
-import { useMemo,useState } from "react";
-import { ChevronLeft,ChevronRight,Loader2,Plus,X } from "lucide-react";
+import { useBatchBreakdown, useBatchesByRange, useCreditCalendar } from "../settlements.hooks";
+import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Loader2, Plus, X } from "lucide-react";
 import { formatARS } from "@/features/collections/collections.data";
 import { BtnPrimary } from "@/shared/ui/button";
-import { type BatchCompany,type Ticket } from "@/features/settlements/settlements.types";
-import { DAYS_SEMANA_CAL,MONTHS_CAL,isoLocal } from "@/features/settlements/settlements.rules";
+import { type BatchCompany, type Ticket } from "@/features/settlements/settlements.types";
+import { DAYS_SEMANA_CAL, MONTHS_CAL, isoLocal } from "@/features/settlements/settlements.rules";
 import { RowBatchCompany } from "./batch-company-row";
 import { BreakdownBatchModal } from "./batch-breakdown-modal";
+import { LoadingLines } from "@/shared/ui/table-skeleton";
 
 /**
  * Calendario de acreditaciones de la empresa (9.2): por dia habil, cuanto
@@ -73,18 +74,18 @@ export function CalendarioCreditsTab({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="h-9 w-9 inline-flex items-center justify-center rounded-md border border-black-100 bg-white text-black-600 shadow-sm hover:bg-plata-200"
+            className="h-9 w-9 inline-flex items-center justify-center rounded-md border border-border bg-card text-muted-foreground shadow-sm hover:bg-plata-200"
             onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
             aria-label="Mes anterior"
           >
             <ChevronLeft size={18} strokeWidth={2.5} />
           </button>
-          <div className="min-w-[160px] text-center font-semibold">
+          <div className="min-w-[160px] text-center font-medium">
             {MONTHS_CAL[month.getMonth()]} {month.getFullYear()}
           </div>
           <button
             type="button"
-            className="h-9 w-9 inline-flex items-center justify-center rounded-md border border-black-100 bg-white text-black-600 shadow-sm hover:bg-plata-200"
+            className="h-9 w-9 inline-flex items-center justify-center rounded-md border border-border bg-card text-muted-foreground shadow-sm hover:bg-plata-200"
             onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
             aria-label="Mes siguiente"
           >
@@ -116,7 +117,7 @@ export function CalendarioCreditsTab({
         <div>
           <div className="grid grid-cols-7 gap-1 text-[11px] text-muted-foreground mb-1">
             {DAYS_SEMANA_CAL.map((d) => (
-              <div key={d} className="px-1 font-semibold">
+              <div key={d} className="px-1 font-medium">
                 {d}
               </div>
             ))}
@@ -140,7 +141,7 @@ export function CalendarioCreditsTab({
                   className={`min-h-[78px] rounded-md border p-1.5 text-left text-[11px] transition ${noHabil ? "bg-muted/50" : "bg-card hover:bg-muted/30"}`}
                 >
                   <div
-                    className={`font-semibold ${f === todayIso ? "text-primary" : "text-muted-foreground"}`}
+                    className={`font-medium ${f === todayIso ? "text-primary" : "text-muted-foreground"}`}
                   >
                     {Number(f.slice(8))}
                   </div>
@@ -172,10 +173,8 @@ export function CalendarioCreditsTab({
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="sticky top-0 bg-card px-6 py-4 border-b flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Acreditaciones del día
-                </div>
-                <div className="font-semibold capitalize">
+                <div className="text-[11px] text-muted-foreground">Acreditaciones del día</div>
+                <div className="font-medium capitalize">
                   {new Date(`${day}T12:00:00`).toLocaleDateString("es-AR", {
                     weekday: "long",
                     day: "numeric",
@@ -205,7 +204,7 @@ export function CalendarioCreditsTab({
             </div>
             <div className="p-6 space-y-4">
               {batchesDay.isLoading ? (
-                <p className="text-sm text-muted-foreground">Cargando…</p>
+                <LoadingLines label="Cargando…" />
               ) : batches.length === 0 ? (
                 <div className="rounded-lg border border-dashed py-10 text-center text-sm text-muted-foreground">
                   Sin acreditaciones este día.
@@ -214,10 +213,10 @@ export function CalendarioCreditsTab({
                 <>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-lg border-2 border-amber-200 bg-amber-50/50 p-4">
-                      <div className="flex items-center gap-1.5 text-sm font-semibold">
+                      <div className="flex items-center gap-1.5 text-sm font-medium">
                         <span className="h-2.5 w-2.5 rounded-full bg-amber-400" /> Programado
                       </div>
-                      <div className="font-mono text-xl font-bold mt-1 text-amber-700">
+                      <div className="font-mono text-xl font-medium mt-1 text-amber-700 tabular-nums">
                         {formatARS(sum(progDay))}
                       </div>
                       <div className="text-xs text-muted-foreground">
@@ -225,10 +224,10 @@ export function CalendarioCreditsTab({
                       </div>
                     </div>
                     <div className="rounded-lg border-2 border-emerald-200 bg-emerald-50/50 p-4">
-                      <div className="flex items-center gap-1.5 text-sm font-semibold">
+                      <div className="flex items-center gap-1.5 text-sm font-medium">
                         <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Acreditado
                       </div>
-                      <div className="font-mono text-xl font-bold mt-1 text-emerald-700">
+                      <div className="font-mono text-xl font-medium mt-1 text-emerald-700 tabular-nums">
                         {formatARS(sum(acrDay))}
                       </div>
                       <div className="text-xs text-muted-foreground">
@@ -238,7 +237,7 @@ export function CalendarioCreditsTab({
                   </div>
                   <table className="w-full text-sm">
                     <thead className="text-xs text-muted-foreground">
-                      <tr className="text-left border-b">
+                      <tr className="border-b">
                         <th className="py-1.5 pr-3">Bandera</th>
                         <th className="py-1.5 pr-3 text-right">Ops</th>
                         <th className="py-1.5 pr-3 text-right">Bruto</th>

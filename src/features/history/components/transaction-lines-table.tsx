@@ -1,19 +1,20 @@
 import { Pagination } from "@/shared/ui/pagination";
-import { FileText,Eye,Share2 } from "lucide-react";
+import { FileText, Eye, Share2 } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import { userMessage } from "@/shared/lib/errors";
 import {
-LINE_KIND_STYLE,
-STATUS_LABEL,
-STATUS_TONE,
-formatSignedMoney,
-lineLabel,
-operationLabel,
+  LINE_KIND_STYLE,
+  STATUS_LABEL,
+  STATUS_TONE,
+  formatSignedMoney,
+  lineLabel,
+  operationLabel,
 } from "../history.rules";
 import { formatLineDate } from "./history-export";
 
 import type { HistoryPageVm } from "./use-history-page";
+import { SkeletonRows } from "@/shared/ui/table-skeleton";
 
 export function TransactionLinesTable({
   linesQuery,
@@ -48,19 +49,19 @@ export function TransactionLinesTable({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-xs uppercase tracking-wide text-muted-foreground border-b bg-muted/30">
-              <th className="text-left px-4 py-3 font-semibold">Legajo</th>
-              <th className="text-left px-4 py-3 font-semibold">ID transacción</th>
-              <th className="text-left px-4 py-3 font-semibold">Tipo</th>
-              <th className="text-left px-4 py-3 font-semibold">CVU</th>
-              <th className="text-left px-4 py-3 font-semibold">Email</th>
-              <th className="text-left px-4 py-3 font-semibold">Nombre</th>
-              <th className="text-left px-4 py-3 font-semibold">Nombre destino</th>
-              <th className="text-left px-4 py-3 font-semibold">CUIT</th>
-              <th className="text-right px-4 py-3 font-semibold">Monto</th>
-              <th className="text-left px-4 py-3 font-semibold">Fecha</th>
-              <th className="text-left px-4 py-3 font-semibold">Estado</th>
-              <th className="px-4 py-3 font-semibold text-right">Acciones</th>
+            <tr className="border-b bg-muted/30">
+              <th className="text-left px-4 py-2.5">Legajo</th>
+              <th className="text-left px-4 py-2.5">ID transacción</th>
+              <th className="text-left px-4 py-2.5">Tipo</th>
+              <th className="text-left px-4 py-2.5">CVU</th>
+              <th className="text-left px-4 py-2.5">Email</th>
+              <th className="text-left px-4 py-2.5">Nombre</th>
+              <th className="text-left px-4 py-2.5">Nombre destino</th>
+              <th className="text-left px-4 py-2.5">CUIT</th>
+              <th className="text-right px-4 py-2.5">Monto</th>
+              <th className="text-left px-4 py-2.5">Fecha</th>
+              <th className="text-left px-4 py-2.5">Estado</th>
+              <th className="px-4 py-2.5 text-right">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -78,13 +79,7 @@ export function TransactionLinesTable({
                 </td>
               </tr>
             )}
-            {loading && (
-              <tr>
-                <td colSpan={12} className="text-center py-12 text-sm text-muted-foreground">
-                  Cargando movimientos...
-                </td>
-              </tr>
-            )}
+            {loading && <SkeletonRows columns={12} rows={6} />}
             {!loading &&
               lines.map((l) => {
                 return (
@@ -92,10 +87,10 @@ export function TransactionLinesTable({
                     key={`${l.lineId}:${l.lineNo}`}
                     className="border-b last:border-0 hover:bg-muted/30 transition-colors"
                   >
-                    <td className="px-4 py-3 text-xs font-mono tabular-nums whitespace-nowrap">
+                    <td className="px-4 py-2.5 text-xs font-mono tabular-nums whitespace-nowrap">
                       {l.legajo}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5">
                       <button
                         type="button"
                         onClick={() => setSearchTxid(l.txid)}
@@ -105,10 +100,10 @@ export function TransactionLinesTable({
                         {l.txid}
                       </button>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${LINE_KIND_STYLE[l.lineKind]}`}
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${LINE_KIND_STYLE[l.lineKind]}`}
                         >
                           {lineLabel(l)}
                         </span>
@@ -117,31 +112,31 @@ export function TransactionLinesTable({
                         {operationLabel(l.operationKind)}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs font-mono text-muted-foreground whitespace-nowrap">
+                    <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground whitespace-nowrap">
                       {l.cvu || "-"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-[200px]">
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground truncate max-w-[200px]">
                       {l.email || "-"}
                     </td>
-                    <td className="px-4 py-3 text-sm truncate max-w-[180px]">{l.name || "-"}</td>
-                    <td className="px-4 py-3 text-sm font-medium truncate max-w-[200px]">
+                    <td className="px-4 py-2.5 text-sm truncate max-w-[180px]">{l.name || "-"}</td>
+                    <td className="px-4 py-2.5 text-sm font-medium truncate max-w-[200px]">
                       {l.recipientName || "-"}
                     </td>
-                    <td className="px-4 py-3 text-xs font-mono text-muted-foreground">
+                    <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground">
                       {l.cuit || "-"}
                     </td>
                     <td
-                      className={`px-4 py-3 font-mono tabular-nums text-right font-semibold whitespace-nowrap text-sm ${l.amount.cents >= 0 ? "text-emerald-700" : "text-red-700"}`}
+                      className={`px-4 py-3 font-mono tabular-nums text-right font-medium whitespace-nowrap text-sm ${l.amount.cents >= 0 ? "text-emerald-700" : "text-red-700"}`}
                     >
                       {formatSignedMoney(l.amount)}
                     </td>
-                    <td className="px-4 py-3 text-xs font-mono text-muted-foreground whitespace-nowrap">
+                    <td className="px-4 py-2.5 text-xs font-mono text-muted-foreground whitespace-nowrap">
                       {formatLineDate(l.occurredAt)}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-2.5">
                       <Badge tone={STATUS_TONE[l.status]}>{STATUS_LABEL[l.status]}</Badge>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-2.5 text-right">
                       <div className="flex gap-1.5 justify-end">
                         <button
                           title="Ver detalle de la operación"

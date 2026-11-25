@@ -1,8 +1,8 @@
-import { Calendar,Clock } from "lucide-react";
+import { Calendar, Clock } from "lucide-react";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
 import { BtnPrimary } from "@/shared/ui/button";
-import { PREVIEW_LIMIT,daysUntil } from "@/features/services/services.rules";
+import { PREVIEW_LIMIT, daysUntil } from "@/features/services/services.rules";
 
 import type { ServicesPageVm } from "./use-services-page";
 
@@ -16,8 +16,8 @@ export function UpcomingPaymentsSection({
   return (
     <>
       {sectionTab === "proximos" && (
-        <Card className="mb-6">
-          <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+        <Card className="mb-4">
+          <h3 className="font-medium text-sm mb-3 flex items-center gap-2">
             <Calendar size={14} className="text-muted-foreground" />
             Proximos pagos y vencimientos
           </h3>
@@ -33,7 +33,7 @@ export function UpcomingPaymentsSection({
                       <Icon size={16} className="text-[color:var(--brand-dark)]" />
                     </div>
                     <div className="min-w-0">
-                      <div className="font-semibold text-sm truncate">{s.n}</div>
+                      <div className="font-medium text-sm truncate">{s.n}</div>
                       <div className="text-xs text-muted-foreground">
                         {s.c} · {s.cat}
                       </div>
@@ -41,7 +41,7 @@ export function UpcomingPaymentsSection({
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <div className="text-right">
-                      <div className="text-sm font-semibold">{s.v}</div>
+                      <div className="text-sm font-medium">{s.v}</div>
                       <div className="text-[11px] text-muted-foreground flex items-center gap-1 justify-end">
                         <Clock size={10} />
                         {isOverdue ? `Vencido hace ${Math.abs(dd)} dias` : `Vence en ${dd} dias`}
@@ -61,7 +61,7 @@ export function UpcomingPaymentsSection({
           {prox.length > PREVIEW_LIMIT && (
             <button
               onClick={() => setProxAll(!proxAll)}
-              className="w-full text-center text-xs font-semibold text-primary pt-3 pb-1 hover:opacity-80 transition border-t border-border mt-1"
+              className="w-full text-center text-xs font-medium text-primary pt-3 pb-1 hover:opacity-80 transition border-t border-border mt-1"
             >
               {proxAll ? "Mostrar menos" : `Ver todos (${prox.length})`}
             </button>

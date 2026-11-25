@@ -8,9 +8,9 @@ import { useServicesPage } from "./use-services-page";
 import { toast } from "sonner";
 import { PageHeader } from "@/shared/ui/page-header";
 import { formatARS } from "@/features/collections/collections.data";
-import { Input,Label,Select } from "@/shared/ui/form-controls";
+import { Input, Label, Select } from "@/shared/ui/form-controls";
 import { FormDialog } from "@/shared/ui/form-dialog";
-import { type SectionTab,type Tab } from "@/features/services/services.types";
+import { type SectionTab, type Tab } from "@/features/services/services.types";
 import { cats } from "@/features/services/services.rules";
 import { BarcodeScanModal } from "./barcode-scan-modal";
 
@@ -41,38 +41,32 @@ export function ServicesPage() {
     <>
       <PageHeader
         title="Servicios y pagos"
-        description="Pago de servicios, remesas internacionales e historial de operaciones."
+        description="Pago de servicios, remesas internacionales e historial de operaciones"
       />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="bg-card border rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Servicios adheridos
-          </div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+          <div className="text-[11px] text-muted-foreground">Servicios adheridos</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
             {totalAdheridos}
           </div>
         </div>
         <div className="bg-card border rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            A pagar este mes
-          </div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+          <div className="text-[11px] text-muted-foreground">A pagar este mes</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
             {formatARS(totalPayMonth)}
           </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">{prox.length} factura(s)</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">{prox.length} factura(s)</div>
         </div>
         <div className="bg-card border rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Vencidos</div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+          <div className="text-[11px] text-muted-foreground">Vencidos</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
             {totalOverdues}
           </div>
         </div>
         <div className="bg-card border rounded-lg p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Disponibles para suscribir
-          </div>
-          <div className="font-display tabular-nums text-base md:text-lg font-semibold mt-0.5">
+          <div className="text-[11px] text-muted-foreground">Disponibles para suscribir</div>
+          <div className="font-display tabular-nums text-base md:text-lg font-medium mt-0.5">
             {availables.length}
           </div>
         </div>
@@ -88,7 +82,7 @@ export function ServicesPage() {
           <button
             key={k}
             onClick={() => setTab(k)}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 -mb-px transition ${
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
               tab === k
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -113,7 +107,7 @@ export function ServicesPage() {
               <button
                 key={k}
                 onClick={() => setSectionTab(k)}
-                className={`flex-1 px-3 py-2 text-sm font-semibold rounded-md transition ${
+                className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition ${
                   sectionTab === k
                     ? "bg-card shadow-sm text-foreground"
                     : "text-muted-foreground hover:text-foreground"
@@ -140,7 +134,7 @@ export function ServicesPage() {
         open={editService !== null}
         onClose={() => setEditService(null)}
         title={editService ? `Editar ${editService.n}` : "Editar servicio"}
-        description="Modifica la configuracion del servicio."
+        description="Modifica la configuracion del servicio"
         submitLabel="Guardar cambios"
         onSubmit={() => {
           setEditService(null);
@@ -150,11 +144,11 @@ export function ServicesPage() {
         {editService && (
           <>
             <div>
-              <Label>Numero de cuenta / referencia</Label>
+              <Label>Número de cuenta / referencia</Label>
               <Input defaultValue={editService.c} />
             </div>
             <div>
-              <Label>Categoria</Label>
+              <Label>Categoría</Label>
               <Select defaultValue={editService.cat}>
                 {cats
                   .filter((c) => c !== "Todos")
@@ -183,7 +177,7 @@ export function ServicesPage() {
       >
         <div className="p-4 rounded-md bg-muted">
           <div className="text-xs text-muted-foreground">Total a pagar</div>
-          <div className="font-display tabular-nums text-2xl font-semibold mt-0.5">{pay?.v}</div>
+          <div className="font-display tabular-nums text-2xl font-medium mt-0.5">{pay?.v}</div>
         </div>
         <div>
           <Label>Subcuenta de origen</Label>

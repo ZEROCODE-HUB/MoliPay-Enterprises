@@ -1,7 +1,7 @@
 import { paymentsApiUrl } from "@/infrastructure/http/backend-url";
 import { Card } from "@/shared/ui/card";
 import { ENVIRONMENT_LABEL } from "../developers.rules";
-import type { ApiEnvironment,AvailableEndpoint } from "../developers.types";
+import type { ApiEnvironment, AvailableEndpoint } from "../developers.types";
 
 const methodClass = (method: string) =>
   method === "GET"
@@ -15,7 +15,7 @@ function ApiQuickGuide() {
   const base = paymentsApiUrl();
   return (
     <div id="como-firmar" className="mt-5 space-y-1.5 rounded-md bg-muted p-3 text-xs">
-      <div className="font-semibold">Cómo llamar a la API</div>
+      <div className="font-medium">Cómo llamar a la API</div>
       <div>
         Mandá tu Secret Key en un solo header y el body como JSON normal. El ambiente (Sandbox o
         Producción) lo define la llave.
@@ -57,7 +57,7 @@ export function EndpointsCard({
   return (
     <Card>
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="font-semibold">Endpoints disponibles</h3>
+        <h3 className="font-medium">Endpoints disponibles</h3>
         <span className="text-xs text-muted-foreground">{ENVIRONMENT_LABEL[environment]}</span>
       </div>
       <div className="divide-y">
@@ -69,13 +69,13 @@ export function EndpointsCard({
               className={`flex items-center gap-3 py-2.5 ${allowed ? "" : "opacity-50"}`}
             >
               <span
-                className={`inline-flex w-14 justify-center rounded px-2 py-0.5 text-[10px] font-bold ${methodClass(e.method)}`}
+                className={`inline-flex w-14 justify-center rounded px-2 py-0.5 text-[11px] font-medium ${methodClass(e.method)}`}
               >
                 {e.method}
               </span>
               <span className="flex-1 font-mono text-xs">{e.path}</span>
               <span className="hidden text-xs text-muted-foreground md:block">{e.name}</span>
-              <span className="w-20 text-right text-[10px]">
+              <span className="w-20 text-right text-[11px]">
                 {allowed ? "Habilitado" : allowed === false ? "No habilitado" : "—"}
               </span>
             </div>

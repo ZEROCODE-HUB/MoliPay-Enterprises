@@ -34,7 +34,7 @@ export function RegisterForm({
   return (
     <form className="space-y-4" noValidate onSubmit={form.handleSubmit(onSubmit)}>
       {accountType === "company" && (
-        <p className="rounded-sm border border-black-100 bg-black-50 p-3 text-xs leading-relaxed text-black-500">
+        <p className="rounded-md border border-border bg-muted p-3 text-xs leading-relaxed text-muted-foreground">
           Completá tus datos como <strong>representante legal</strong>. Los datos de la empresa te
           los pedimos después de confirmar tu correo.
         </p>
@@ -84,7 +84,7 @@ export function RegisterForm({
       />
 
       <div className="pt-1">
-        <label className="flex items-start gap-2.5 text-xs text-black-500">
+        <label className="flex items-start gap-2.5 text-xs text-muted-foreground">
           <input type="checkbox" className="mt-0.5 accent-red-500" {...form.register("terms")} />
           <span>
             He leído y acepto los{" "}
@@ -104,7 +104,7 @@ export function RegisterForm({
         </PrimaryButton>
       </div>
 
-      <div className="space-y-2 pt-2 text-center text-xs text-black-400">
+      <div className="space-y-2 pt-2 text-center text-xs text-muted-foreground">
         <p>
           ¿Ya tenés una cuenta?{" "}
           <button
@@ -120,7 +120,7 @@ export function RegisterForm({
             <Link
               to="/login"
               search={{ register: "pf" }}
-              className="text-black-400 underline underline-offset-2 transition-colors hover:text-red-500"
+              className="text-muted-foreground underline underline-offset-2 transition-colors hover:text-red-500"
             >
               ¿Sos persona física? Registrate como persona física
             </Link>
@@ -128,7 +128,7 @@ export function RegisterForm({
             <Link
               to="/login"
               search={{ register: "pj" }}
-              className="text-black-400 underline underline-offset-2 transition-colors hover:text-red-500"
+              className="text-muted-foreground underline underline-offset-2 transition-colors hover:text-red-500"
             >
               ¿Querés registrar tu empresa? Registrar empresa
             </Link>

@@ -1,5 +1,5 @@
-import { describe,expect,it } from "vitest";
-import { parseEnum,parseEnumMap } from "./enum";
+import { describe, expect, it } from "vitest";
+import { parseEnum, parseEnumMap } from "./enum";
 
 describe("parseEnum", () => {
   it("acepta los valores permitidos", () => {

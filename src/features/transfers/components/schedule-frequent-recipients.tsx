@@ -24,7 +24,7 @@ export function ScheduleFrequentRecipients({
       open={frequentsOpen}
       onClose={() => setFrequentsOpen(false)}
       title="Destinatarios frecuentes"
-      description="Selecciona un destinatario de tu lista."
+      description="Selecciona un destinatario de tu lista"
       submitLabel="Cerrar"
       onSubmit={() => setFrequentsOpen(false)}
       size="md"
@@ -65,7 +65,7 @@ export function ScheduleFrequentRecipients({
               className="w-full flex items-center justify-between gap-3 p-3 text-left hover:bg-muted/50"
             >
               <div className="min-w-0">
-                <div className="text-sm font-semibold truncate">{f.nombre}</div>
+                <div className="text-sm font-medium truncate">{f.nombre}</div>
                 <div className="text-xs text-muted-foreground truncate">
                   {f.alias ? `@${f.alias} · ` : ""}
                   <span className="font-mono">{f.cbu}</span>

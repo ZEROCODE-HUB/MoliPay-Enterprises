@@ -153,12 +153,12 @@ export function LocationFields<T extends FieldValues>({
         <Field label="Localidad" value={CABA_LOCALITY} readOnly disabled />
       ) : inArgentina && localityOptions.length > 0 ? (
         <label className="block">
-          <span className="mb-1.5 block text-xs font-semibold text-black-700">Localidad</span>
+          <span className="mb-1.5 block text-xs font-medium text-foreground">Localidad</span>
           <select
             value={(form.watch(names.locality) as string) ?? ""}
             onChange={(e) => fromLocality(e.target.value)}
-            className={`h-11 w-full rounded-sm border bg-white px-3 text-sm outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100 ${
-              errorOf(names.locality) ? "border-red-500" : "border-black-100"
+            className={`h-11 w-full rounded-md border bg-card px-3 text-sm outline-none focus:border-navy-500 focus:ring-2 focus:ring-navy-100 ${
+              errorOf(names.locality) ? "border-red-500" : "border-border"
             }`}
           >
             <option value="">Seleccioná…</option>

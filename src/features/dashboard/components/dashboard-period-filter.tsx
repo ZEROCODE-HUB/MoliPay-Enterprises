@@ -1,9 +1,10 @@
-import { FileSpreadsheet,FileText } from "lucide-react";
-import { Card } from "@/shared/ui/card";
-import { BtnOutline } from "@/shared/ui/button";
 import { QUICK } from "@/features/dashboard/dashboard.rules";
 import type { DashboardPageVm } from "./use-dashboard-page";
 
+const dateCls =
+  "h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring/30 [color-scheme:light]";
+
+/** Selector de periodo: una fila con los atajos y, segun el modo, el dia o el rango. */
 export function DashboardPeriodFilter({
   setPeriod,
   period,
@@ -13,89 +14,64 @@ export function DashboardPeriodFilter({
   setFrom,
   to,
   setTo,
-  doExport,
 }: Pick<
   DashboardPageVm,
-  "setPeriod" | "period" | "day" | "setDay" | "from" | "setFrom" | "to" | "setTo" | "doExport"
+  "setPeriod" | "period" | "day" | "setDay" | "from" | "setFrom" | "to" | "setTo"
 >) {
+  const options = [
+    ...QUICK.map((p) => ({ k: p.k, l: p.l })),
+    { k: "day" as const, l: "Día" },
+    { k: "range" as const, l: "Rango" },
+  ];
   return (
-    <Card className="mb-8">
-      <div className="flex flex-wrap items-center gap-2 mb-3">
-        <span className="text-xs font-semibold text-black-400 uppercase tracking-wide shrink-0">
-          Período
-        </span>
-        {QUICK.map((p) => (
+    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3">
+      <span className="text-xs font-medium text-foreground/80">Período</span>
+      <div className="inline-flex rounded-md border border-border bg-muted/50 p-0.5" role="group">
+        {options.map((p) => (
           <button
             key={p.k}
+            type="button"
             onClick={() => setPeriod(p.k)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+            aria-pressed={period === p.k}
+            className={`h-8 rounded-[5px] px-3 text-xs font-medium transition-colors ${
               period === p.k
-                ? "bg-navy-50 text-navy-600 border-transparent"
-                : "bg-white hover:bg-black-50 border-black-100 text-black-500"
+                ? "bg-card text-foreground shadow-[0_0_0_1px_var(--color-border)]"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {p.l}
           </button>
         ))}
-        <button
-          onClick={() => setPeriod("day")}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
-            period === "day"
-              ? "bg-navy-50 text-navy-600 border-transparent"
-              : "bg-white hover:bg-black-50 border-black-100 text-black-500"
-          }`}
-        >
-          Día específico
-        </button>
-        <button
-          onClick={() => setPeriod("range")}
-          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
-            period === "range"
-              ? "bg-navy-50 text-navy-600 border-transparent"
-              : "bg-white hover:bg-black-50 border-black-100 text-black-500"
-          }`}
-        >
-          Rango
-        </button>
       </div>
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-black-400">Día</span>
+      {period === "day" && (
+        <input
+          type="date"
+          aria-label="Día"
+          value={day}
+          onChange={(e) => setDay(e.target.value)}
+          className={dateCls}
+        />
+      )}
+      {period === "range" && (
+        <div className="flex items-center gap-1.5">
           <input
             type="date"
-            value={day}
-            onChange={(e) => setDay(e.target.value)}
-            className="h-9 px-3 rounded-sm border border-black-100 bg-white text-sm text-black-700"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-black-400">Desde</span>
-          <input
-            type="date"
+            aria-label="Desde"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="h-9 px-3 rounded-sm border border-black-100 bg-white text-sm text-black-700"
+            className={dateCls}
           />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-black-400">Hasta</span>
+          <span className="text-xs text-muted-foreground">a</span>
           <input
             type="date"
+            aria-label="Hasta"
             value={to}
             onChange={(e) => setTo(e.target.value)}
             min={from || undefined}
-            className="h-9 px-3 rounded-sm border border-black-100 bg-white text-sm text-black-700"
+            className={dateCls}
           />
         </div>
-        <div className="ml-auto flex gap-2">
-          <BtnOutline onClick={() => doExport("xlsx")}>
-            <FileSpreadsheet size={14} /> Excel
-          </BtnOutline>
-          <BtnOutline onClick={() => doExport("pdf")}>
-            <FileText size={14} /> PDF
-          </BtnOutline>
-        </div>
-      </div>
-    </Card>
+      )}
+    </div>
   );
 }

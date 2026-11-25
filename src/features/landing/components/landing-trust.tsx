@@ -1,17 +1,17 @@
 import { ErrorNotice } from "@/shared/ui/error-notice";
 import {
-BarChart3,
-Briefcase,
-Cog,
-Compass,
-FileCheck2,
-HeartHandshake,
-Lock,
-Plane,
-ShieldCheck,
-Target,
+  BarChart3,
+  Briefcase,
+  Cog,
+  Compass,
+  FileCheck2,
+  HeartHandshake,
+  Lock,
+  Plane,
+  ShieldCheck,
+  Target,
 } from "lucide-react";
-import { Eyebrow,GlassCard } from "./landing-parts";
+import { Eyebrow, GlassCard } from "./landing-parts";
 
 export function ContamosWith() {
   const items = [
@@ -83,9 +83,7 @@ export function MisionVision() {
           <article className="p-8 sm:p-10 bg-white/5 backdrop-blur border border-white/10 rounded-md">
             <div className="flex items-center gap-3">
               <Target size={22} strokeWidth={1.4} className="text-red-400" />
-              <span className="font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">
-                01 — Misión
-              </span>
+              <span className="font-sans text-xs font-medium text-red-400">01 — Misión</span>
             </div>
             <h3 className="font-semibold text-[clamp(1.75rem,2.4vw,2.15rem)] leading-tight mt-5 text-white">
               Facilitar la gestión digital de cobros y pagos.
@@ -99,9 +97,7 @@ export function MisionVision() {
           <article className="p-8 sm:p-10 bg-black-800 border border-red-400/30 rounded-md">
             <div className="flex items-center gap-3">
               <Compass size={22} strokeWidth={1.4} className="text-red-400" />
-              <span className="font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">
-                02 — Visión
-              </span>
+              <span className="font-sans text-xs font-medium text-red-400">02 — Visión</span>
             </div>
             <h3 className="font-semibold text-[clamp(1.75rem,2.4vw,2.15rem)] leading-tight mt-5 text-white">
               Ser un referente Fintech en la región.
@@ -154,7 +150,7 @@ export function ByQueElegirnos() {
           {items.map(({ icon: Icon, t, d }) => (
             <article
               key={t}
-              className="group transition-all duration-300 hover:-translate-y-0.5 p-8 sm:p-9 bg-white rounded-md border border-black-100 border-t-2 border-t-red-500"
+              className="group transition-colors duration-300 p-8 sm:p-9 bg-white rounded-md border border-black-100 border-t-2 border-t-red-500"
             >
               <ErrorNotice icon={false}>
                 <Icon size={22} strokeWidth={1.5} className="text-red-500" />
@@ -177,13 +173,11 @@ export function RegulatoryStrip() {
     <section className="bg-black-800 border-t border-white/10 text-white">
       <div className="max-w-6xl mx-auto px-6 py-8 md:py-10 flex flex-col md:flex-row gap-6 md:items-center md:justify-between">
         <div className="flex items-center gap-5">
-          <div className="border border-red-400 px-3 py-1.5 font-sans text-[0.7rem] tracking-[0.14em] uppercase text-white">
+          <div className="border border-red-400 px-3 py-1.5 font-sans text-xs font-medium text-white">
             BCRA
           </div>
           <div>
-            <div className="font-sans text-[0.65rem] tracking-[0.14em] uppercase text-red-400">
-              Usuarios financieros
-            </div>
+            <div className="font-sans text-xs font-medium text-red-400">Usuarios financieros</div>
             <div className="mt-1 font-sans text-sm text-white/80">
               Banco Central de la República Argentina — protección al usuario financiero.
             </div>
