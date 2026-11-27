@@ -30,6 +30,8 @@ describe("toDeveloperPortal", () => {
         rate_limit_sandbox: 100,
         rate_limit_produccion: 1000,
         ip_whitelist: null,
+        solicitado_at: null,
+        solicitud_notas: null,
         pase_solicitado_at: null,
         pase_notas: null,
         aprobado_at: null,
@@ -80,6 +82,11 @@ describe("environmentAccess", () => {
       canGenerateKeys: true,
       canConfigureWebhooks: true,
     });
+  });
+
+  it("sin aprobación (sin solicitud o pendiente) no se generan llaves", () => {
+    expect(environmentAccess(undefined, "sandbox").canGenerateKeys).toBe(false);
+    expect(environmentAccess("pending_validation", "sandbox").canGenerateKeys).toBe(false);
   });
 
   it("suspendida: no genera llaves ni configura webhooks", () => {

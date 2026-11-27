@@ -1,39 +1,34 @@
+import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { BookOpen, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
+import { BookOpen, Clock, ExternalLink, Send } from "lucide-react";
+import { userMessage } from "@/shared/lib/errors";
 import { Badge } from "@/shared/ui/badge";
 import { BtnPrimary } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
-import { useConfirm } from "@/shared/ui/confirm-provider";
+import { ErrorNotice } from "@/shared/ui/error-notice";
 import { useDeveloperPortal } from "../developers.hooks";
 import {
   STATUS_DESCRIPTION,
   STATUS_LABEL,
+  canRequestAccess,
+  formatShortDateTime,
   isApiModuleEnabled,
   statusTone,
 } from "../developers.rules";
+import { AccessRequestDialog } from "./access-request-dialog";
 
-/** Entrada al modulo de APIs externas: estado y acceso a "API e integraciones". */
+/**
+ * Entrada al modulo de APIs externas. Flujo: la empresa solicita el acceso,
+ * MoliPay lo aprueba y recien ahi se generan las llaves en "API e integraciones".
+ */
 export function ApiSetupPage() {
   const navigate = useNavigate();
-  const confirm = useConfirm();
   const query = useDeveloperPortal();
-  const status = query.data?.integration?.status;
+  const [requestOpen, setRequestOpen] = useState(false);
+  const integration = query.data?.integration ?? null;
+  const status = integration?.status;
   const enabled = isApiModuleEnabled(status);
-
-  // Habilitar = generar las llaves de Sandbox en "API e integraciones", donde la Secret Key
-  // se muestra una sola vez. El pase a Producción se pide ahí.
-  const requestAccess = async () => {
-    const ok = await confirm({
-      title: "El módulo de APIs externas no está habilitado para su cuenta",
-      message:
-        "¿Desea habilitar el Sandbox? Se activa en el momento y no mueve dinero real. Para operar en Producción, después solicitás el pase y MoliPay lo aprueba.",
-      confirmLabel: "Habilitar Sandbox",
-    });
-    if (!ok) return;
-    toast.info("Tocá «Generar llaves de Sandbox» para obtener tu API Key y tu Secret Key.");
-    void navigate({ to: "/app/api" });
-  };
+  const pending = status === "pending_validation";
 
   return (
     <>
@@ -48,10 +43,16 @@ export function ApiSetupPage() {
       <div className="mb-6">
         <h1 className="text-xl font-medium">Configuración de APIs Externas</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Gestione el acceso a las APIs externas de la plataforma: credenciales de Sandbox y
-          Producción, webhooks y permisos.
+          Conectá tu ERP, CRM o software contable con MoliPay para automatizar cobros,
+          transferencias, dispersión de fondos y consultas de saldo.
         </p>
       </div>
+
+      {query.isError && (
+        <ErrorNotice className="mb-4 max-w-xl" icon={false}>
+          {userMessage(query.error)}
+        </ErrorNotice>
+      )}
 
       <Card className="max-w-xl">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
@@ -65,13 +66,21 @@ export function ApiSetupPage() {
                 ? "Cargando…"
                 : status
                   ? STATUS_DESCRIPTION[status]
-                  : "Este módulo le permite integrar sus sistemas (ERP, e-commerce, software contable) con las APIs de MoliPay. Actualmente no está habilitado para su cuenta."}
+                  : "Todavía no está habilitado para tu cuenta. Solicitá la habilitación: MoliPay revisa tu perfil y, con la aprobación, generás tus credenciales."}
             </p>
+            {pending && integration?.accessRequestedAt && (
+              <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-700">
+                <Clock size={12} /> Solicitado el{" "}
+                {formatShortDateTime(integration.accessRequestedAt)}
+              </p>
+            )}
+            {status === "revoked" && integration?.revocationReason && (
+              <p className="mt-2 text-xs text-red-700">{integration.revocationReason}</p>
+            )}
           </div>
           <div className="flex shrink-0 flex-col gap-2">
             <Link
-              to="/app/api"
-              hash="como-firmar"
+              to="/app/api-docs"
               className="inline-flex h-9 items-center gap-2 whitespace-nowrap rounded-md border bg-card px-4 text-sm font-medium transition hover:bg-muted"
             >
               <BookOpen size={14} /> Ver documentación
@@ -80,17 +89,24 @@ export function ApiSetupPage() {
               <BtnPrimary onClick={() => void navigate({ to: "/app/api" })}>
                 <ExternalLink size={14} /> Ir a API e integraciones
               </BtnPrimary>
+            ) : pending ? (
+              <BtnPrimary disabled>
+                <Clock size={14} /> Solicitud enviada
+              </BtnPrimary>
             ) : (
               <BtnPrimary
-                onClick={() => void requestAccess()}
-                disabled={status === "pending_validation"}
+                onClick={() => setRequestOpen(true)}
+                disabled={query.isPending || !canRequestAccess(status)}
               >
-                <ExternalLink size={14} /> Solicitar habilitación
+                <Send size={14} />{" "}
+                {status === "revoked" ? "Volver a solicitar" : "Solicitar habilitación"}
               </BtnPrimary>
             )}
           </div>
         </div>
       </Card>
+
+      <AccessRequestDialog open={requestOpen} onClose={() => setRequestOpen(false)} />
     </>
   );
 }

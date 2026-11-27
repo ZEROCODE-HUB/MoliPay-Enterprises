@@ -1,6 +1,6 @@
 /*
- * API para desarrolladores del comercio: estado de la integracion, llaves, webhooks,
- * permisos por endpoint, uso y logs (RPC api_portal_estado).
+ * API para desarrolladores de la empresa (una integracion por cliente): estado,
+ * llaves, webhooks, permisos por endpoint, uso y logs (RPC api_portal_estado).
  */
 
 export type IntegrationStatus =
@@ -19,6 +19,8 @@ export type DeveloperIntegration = {
   sandboxRateLimit: number;
   productionRateLimit: number;
   ipWhitelist: string[];
+  accessRequestedAt: string | null;
+  accessRequestNotes: string | null;
   productionRequestedAt: string | null;
   productionRequestNotes: string | null;
   approvedAt: string | null;
@@ -95,7 +97,7 @@ export type WebhookDelivery = {
 };
 
 export type DeveloperPortal = {
-  /** null = el comercio todavia no genero llaves. */
+  /** null = la empresa todavia no solicito el acceso. */
   integration: DeveloperIntegration | null;
   keys: DeveloperKey[];
   webhooks: DeveloperWebhook[];

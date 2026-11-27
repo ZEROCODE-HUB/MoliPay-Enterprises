@@ -1,6 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { EcommerceLinksPage } from "@/features/payment-links/components/ecommerce-links-page";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
+// E-commerce es un producto propio: tiene su menu en /app/ecommerce.
 export const Route = createFileRoute("/app/link-pago/e-commerce")({
-  component: EcommerceLinksPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/app/ecommerce/integraciones" });
+  },
 });

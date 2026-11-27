@@ -151,7 +151,10 @@ export async function countLinkView(linkId: string): Promise<void> {
 
 // --- Dashboard ---------------------------------------------------------------------------
 
-export async function loadLinksDashboard(legajo: string, days: number) {
+/** Canal de la venta (transactions.canal). Las ventas viejas sin canal son de link de pago. */
+export type SalesChannel = "link_pago" | "ecommerce";
+
+export async function loadLinksDashboard(legajo: string, days: number, channel: SalesChannel) {
   const sb = requireSupabase();
   const now = new Date();
   const start = new Date(now);
@@ -166,36 +169,44 @@ export async function loadLinksDashboard(legajo: string, days: number) {
       .select("monto_operacion, fecha, estado_id, id_txn")
       .eq("legajo", legajo)
       .eq("tipo", "tarjeta")
+      .or(channel === "link_pago" ? "canal.is.null,canal.eq.link_pago" : "canal.eq.ecommerce")
       .gte("fecha", start.toISOString())
       .lte("fecha", end.toISOString()),
     "dashboard_movements",
   ) ?? []) as {
     monto_operacion: number | null;
     fecha: string;
-    estado_id: string | null;
+    estado_id: number | null;
     id_txn: string | null;
   }[];
 
-  const ids = Array.from(new Set(movements.map((m) => m.estado_id).filter(Boolean))) as string[];
+  // estado_id apunta al id de estados_movimiento (antes se buscaba por codigo y todo
+  // quedaba como "Aprobado").
+  const ids = Array.from(
+    new Set(movements.map((m) => m.estado_id).filter((v): v is number => v != null)),
+  );
   const names = ids.length
     ? ((check(
-        await sb.from("estados_movimiento").select("codigo, nombre").in("codigo", ids),
+        await sb.from("estados_movimiento").select("id, nombre").in("id", ids),
         "dashboard_statuses",
-      ) ?? []) as { codigo: string; nombre: string }[])
+      ) ?? []) as { id: number; nombre: string }[])
     : [];
-  const statusName = new Map(names.map((e) => [e.codigo, e.nombre]));
-  const links = check(
-    await sb
-      .from("cliente_links_pago")
-      .select("id, monto, estado, url")
-      .eq("cliente_legajo", legajo),
-    "dashboard_links",
-  );
+  const statusName = new Map(names.map((e) => [e.id, e.nombre]));
+  const links =
+    channel === "link_pago"
+      ? check(
+          await sb
+            .from("cliente_links_pago")
+            .select("id, monto, estado, url")
+            .eq("cliente_legajo", legajo),
+          "dashboard_links",
+        )
+      : [];
   return {
     movs: movements.map((m) => ({
       monto: Math.abs(moneyFromDecimal(m.monto_operacion).cents) / 100,
       fecha: m.fecha,
-      estado: (m.estado_id && statusName.get(m.estado_id)) || "Aprobado",
+      estado: (m.estado_id != null && statusName.get(m.estado_id)) || "Aprobado",
       id: m.id_txn ?? m.fecha,
     })),
     links: links ?? [],

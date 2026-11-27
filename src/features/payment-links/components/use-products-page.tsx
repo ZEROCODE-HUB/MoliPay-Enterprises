@@ -29,8 +29,10 @@ import {
 } from "@/features/payment-links/products.types";
 import { methodIdFromBrand } from "@/features/payment-links/products.rules";
 
+export type ProductsSection = "productos" | "links";
+
 /** Estado y acciones de ProductsPage: el componente solo dibuja. */
-export function useProductsPage() {
+export function useProductsPage(section: ProductsSection) {
   const customer = useCurrentCustomer();
   const sessionEmail = useSessionUser().user?.email ?? "";
   const [legajo, setLegajo] = useState<string>("");
@@ -42,7 +44,8 @@ export function useProductsPage() {
   const [showLinkForm, setShowLinkForm] = useState(false);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
   const [confirmRemoveLinkId, setConfirmRemoveLinkId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"productos" | "links">("productos");
+  // E-commerce > Productos muestra el catálogo; Link de pago > Links, los links.
+  const tab = section;
   const [detailLink, setDetailLink] = useState<PaymentLink | null>(null);
   const [detailLinkBrands, setDetailLinkBrands] = useState<string[]>([]);
   const [editLink, setEditLink] = useState<PaymentLink | null>(null);
@@ -166,6 +169,19 @@ export function useProductsPage() {
     });
   }, [detailLink?.comercioId]);
 
+  const openLinkForm = () => {
+    setSelected([]);
+    setLinkPartial(false);
+    setLinkMethods(paymentMethods.filter((m) => m.enabled).map((m) => m.id));
+    setLinkExpires("");
+    setLinkStatus("Activo");
+    setLinkRef("");
+    setLinkNotes("");
+    setLinkConcept("");
+    setLinkFreeAmount("");
+    setShowLinkForm(true);
+  };
+
   const toggleMethod = (id: string) => {
     setLinkMethods((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
@@ -247,7 +263,6 @@ export function useProductsPage() {
     };
     setLinks((prev) => [link, ...prev]);
     setShowLinkForm(false);
-    setTab("links");
     setLinksPage(1);
     setSelected([]);
     setLinkRef("");
@@ -351,7 +366,7 @@ export function useProductsPage() {
     confirmRemoveLinkId,
     setConfirmRemoveLinkId,
     tab,
-    setTab,
+    openLinkForm,
     detailLink,
     setDetailLink,
     detailLinkBrands,

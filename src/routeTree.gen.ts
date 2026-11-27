@@ -20,6 +20,7 @@ import { Route as VerificarCorreoRouteImport } from './routes/verificar-correo'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppApiRouteImport } from './routes/app.api'
 import { Route as AppApiConfigRouteImport } from './routes/app.api-config'
+import { Route as AppApiDocsRouteImport } from './routes/app.api-docs'
 import { Route as AppCobrosRouteImport } from './routes/app.cobros'
 import { Route as AppCuentaRouteImport } from './routes/app.cuenta'
 import { Route as AppDestinatariosRouteImport } from './routes/app.destinatarios'
@@ -50,8 +51,12 @@ import { Route as RegistroValidarEmailRouteImport } from './routes/registro.vali
 import { Route as AppCobrosIndexRouteImport } from './routes/app.cobros.index'
 import { Route as AppCobrosGestionRouteImport } from './routes/app.cobros.gestion'
 import { Route as AppCobrosNuevoRouteImport } from './routes/app.cobros.nuevo'
+import { Route as AppEcommerceDashboardRouteImport } from './routes/app.ecommerce.dashboard'
+import { Route as AppEcommerceIntegracionesRouteImport } from './routes/app.ecommerce.integraciones'
+import { Route as AppEcommerceProductosRouteImport } from './routes/app.ecommerce.productos'
 import { Route as AppLinkPagoDashboardRouteImport } from './routes/app.link-pago.dashboard'
 import { Route as AppLinkPagoECommerceRouteImport } from './routes/app.link-pago.e-commerce'
+import { Route as AppLinkPagoLinksRouteImport } from './routes/app.link-pago.links'
 import { Route as AppLinkPagoProductosRouteImport } from './routes/app.link-pago.productos'
 import { Route as AppCobrosLoteIdRouteImport } from './routes/app.cobros.lote.$id'
 
@@ -108,6 +113,11 @@ const AppApiRoute = AppApiRouteImport.update({
 const AppApiConfigRoute = AppApiConfigRouteImport.update({
   id: '/api-config',
   path: '/api-config',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppApiDocsRoute = AppApiDocsRouteImport.update({
+  id: '/api-docs',
+  path: '/api-docs',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCobrosRoute = AppCobrosRouteImport.update({
@@ -262,6 +272,22 @@ const AppCobrosNuevoRoute = AppCobrosNuevoRouteImport.update({
   path: '/nuevo',
   getParentRoute: () => AppCobrosRoute,
 } as any)
+const AppEcommerceDashboardRoute = AppEcommerceDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppEcommerceRoute,
+} as any)
+const AppEcommerceIntegracionesRoute =
+  AppEcommerceIntegracionesRouteImport.update({
+    id: '/integraciones',
+    path: '/integraciones',
+    getParentRoute: () => AppEcommerceRoute,
+  } as any)
+const AppEcommerceProductosRoute = AppEcommerceProductosRouteImport.update({
+  id: '/productos',
+  path: '/productos',
+  getParentRoute: () => AppEcommerceRoute,
+} as any)
 const AppLinkPagoDashboardRoute = AppLinkPagoDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -270,6 +296,11 @@ const AppLinkPagoDashboardRoute = AppLinkPagoDashboardRouteImport.update({
 const AppLinkPagoECommerceRoute = AppLinkPagoECommerceRouteImport.update({
   id: '/e-commerce',
   path: '/e-commerce',
+  getParentRoute: () => AppLinkPagoRoute,
+} as any)
+const AppLinkPagoLinksRoute = AppLinkPagoLinksRouteImport.update({
+  id: '/links',
+  path: '/links',
   getParentRoute: () => AppLinkPagoRoute,
 } as any)
 const AppLinkPagoProductosRoute = AppLinkPagoProductosRouteImport.update({
@@ -294,10 +325,11 @@ export interface FileRoutesByFullPath {
   '/verificar-correo': typeof VerificarCorreoRoute
   '/app/api': typeof AppApiRoute
   '/app/api-config': typeof AppApiConfigRoute
+  '/app/api-docs': typeof AppApiDocsRoute
   '/app/cobros': typeof AppCobrosRouteWithChildren
   '/app/cuenta': typeof AppCuentaRoute
   '/app/destinatarios': typeof AppDestinatariosRoute
-  '/app/ecommerce': typeof AppEcommerceRoute
+  '/app/ecommerce': typeof AppEcommerceRouteWithChildren
   '/app/historial': typeof AppHistorialRoute
   '/app/link-pago': typeof AppLinkPagoRouteWithChildren
   '/app/liquidaciones': typeof AppLiquidacionesRoute
@@ -324,8 +356,12 @@ export interface FileRoutesByFullPath {
   '/app/': typeof AppIndexRoute
   '/app/cobros/gestion': typeof AppCobrosGestionRoute
   '/app/cobros/nuevo': typeof AppCobrosNuevoRoute
+  '/app/ecommerce/dashboard': typeof AppEcommerceDashboardRoute
+  '/app/ecommerce/integraciones': typeof AppEcommerceIntegracionesRoute
+  '/app/ecommerce/productos': typeof AppEcommerceProductosRoute
   '/app/link-pago/dashboard': typeof AppLinkPagoDashboardRoute
   '/app/link-pago/e-commerce': typeof AppLinkPagoECommerceRoute
+  '/app/link-pago/links': typeof AppLinkPagoLinksRoute
   '/app/link-pago/productos': typeof AppLinkPagoProductosRoute
   '/app/cobros/': typeof AppCobrosIndexRoute
   '/app/cobros/lote/$id': typeof AppCobrosLoteIdRoute
@@ -340,9 +376,10 @@ export interface FileRoutesByTo {
   '/verificar-correo': typeof VerificarCorreoRoute
   '/app/api': typeof AppApiRoute
   '/app/api-config': typeof AppApiConfigRoute
+  '/app/api-docs': typeof AppApiDocsRoute
   '/app/cuenta': typeof AppCuentaRoute
   '/app/destinatarios': typeof AppDestinatariosRoute
-  '/app/ecommerce': typeof AppEcommerceRoute
+  '/app/ecommerce': typeof AppEcommerceRouteWithChildren
   '/app/historial': typeof AppHistorialRoute
   '/app/link-pago': typeof AppLinkPagoRouteWithChildren
   '/app/liquidaciones': typeof AppLiquidacionesRoute
@@ -369,8 +406,12 @@ export interface FileRoutesByTo {
   '/app': typeof AppIndexRoute
   '/app/cobros/gestion': typeof AppCobrosGestionRoute
   '/app/cobros/nuevo': typeof AppCobrosNuevoRoute
+  '/app/ecommerce/dashboard': typeof AppEcommerceDashboardRoute
+  '/app/ecommerce/integraciones': typeof AppEcommerceIntegracionesRoute
+  '/app/ecommerce/productos': typeof AppEcommerceProductosRoute
   '/app/link-pago/dashboard': typeof AppLinkPagoDashboardRoute
   '/app/link-pago/e-commerce': typeof AppLinkPagoECommerceRoute
+  '/app/link-pago/links': typeof AppLinkPagoLinksRoute
   '/app/link-pago/productos': typeof AppLinkPagoProductosRoute
   '/app/cobros': typeof AppCobrosIndexRoute
   '/app/cobros/lote/$id': typeof AppCobrosLoteIdRoute
@@ -387,10 +428,11 @@ export interface FileRoutesById {
   '/verificar-correo': typeof VerificarCorreoRoute
   '/app/api': typeof AppApiRoute
   '/app/api-config': typeof AppApiConfigRoute
+  '/app/api-docs': typeof AppApiDocsRoute
   '/app/cobros': typeof AppCobrosRouteWithChildren
   '/app/cuenta': typeof AppCuentaRoute
   '/app/destinatarios': typeof AppDestinatariosRoute
-  '/app/ecommerce': typeof AppEcommerceRoute
+  '/app/ecommerce': typeof AppEcommerceRouteWithChildren
   '/app/historial': typeof AppHistorialRoute
   '/app/link-pago': typeof AppLinkPagoRouteWithChildren
   '/app/liquidaciones': typeof AppLiquidacionesRoute
@@ -417,8 +459,12 @@ export interface FileRoutesById {
   '/app/': typeof AppIndexRoute
   '/app/cobros/gestion': typeof AppCobrosGestionRoute
   '/app/cobros/nuevo': typeof AppCobrosNuevoRoute
+  '/app/ecommerce/dashboard': typeof AppEcommerceDashboardRoute
+  '/app/ecommerce/integraciones': typeof AppEcommerceIntegracionesRoute
+  '/app/ecommerce/productos': typeof AppEcommerceProductosRoute
   '/app/link-pago/dashboard': typeof AppLinkPagoDashboardRoute
   '/app/link-pago/e-commerce': typeof AppLinkPagoECommerceRoute
+  '/app/link-pago/links': typeof AppLinkPagoLinksRoute
   '/app/link-pago/productos': typeof AppLinkPagoProductosRoute
   '/app/cobros/': typeof AppCobrosIndexRoute
   '/app/cobros/lote/$id': typeof AppCobrosLoteIdRoute
@@ -436,6 +482,7 @@ export interface FileRouteTypes {
     | '/verificar-correo'
     | '/app/api'
     | '/app/api-config'
+    | '/app/api-docs'
     | '/app/cobros'
     | '/app/cuenta'
     | '/app/destinatarios'
@@ -466,8 +513,12 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/cobros/gestion'
     | '/app/cobros/nuevo'
+    | '/app/ecommerce/dashboard'
+    | '/app/ecommerce/integraciones'
+    | '/app/ecommerce/productos'
     | '/app/link-pago/dashboard'
     | '/app/link-pago/e-commerce'
+    | '/app/link-pago/links'
     | '/app/link-pago/productos'
     | '/app/cobros/'
     | '/app/cobros/lote/$id'
@@ -482,6 +533,7 @@ export interface FileRouteTypes {
     | '/verificar-correo'
     | '/app/api'
     | '/app/api-config'
+    | '/app/api-docs'
     | '/app/cuenta'
     | '/app/destinatarios'
     | '/app/ecommerce'
@@ -511,8 +563,12 @@ export interface FileRouteTypes {
     | '/app'
     | '/app/cobros/gestion'
     | '/app/cobros/nuevo'
+    | '/app/ecommerce/dashboard'
+    | '/app/ecommerce/integraciones'
+    | '/app/ecommerce/productos'
     | '/app/link-pago/dashboard'
     | '/app/link-pago/e-commerce'
+    | '/app/link-pago/links'
     | '/app/link-pago/productos'
     | '/app/cobros'
     | '/app/cobros/lote/$id'
@@ -528,6 +584,7 @@ export interface FileRouteTypes {
     | '/verificar-correo'
     | '/app/api'
     | '/app/api-config'
+    | '/app/api-docs'
     | '/app/cobros'
     | '/app/cuenta'
     | '/app/destinatarios'
@@ -558,8 +615,12 @@ export interface FileRouteTypes {
     | '/app/'
     | '/app/cobros/gestion'
     | '/app/cobros/nuevo'
+    | '/app/ecommerce/dashboard'
+    | '/app/ecommerce/integraciones'
+    | '/app/ecommerce/productos'
     | '/app/link-pago/dashboard'
     | '/app/link-pago/e-commerce'
+    | '/app/link-pago/links'
     | '/app/link-pago/productos'
     | '/app/cobros/'
     | '/app/cobros/lote/$id'
@@ -664,6 +725,13 @@ declare module '@tanstack/react-router' {
       path: '/api-config'
       fullPath: '/app/api-config'
       preLoaderRoute: typeof AppApiConfigRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/api-docs': {
+      id: '/app/api-docs'
+      path: '/api-docs'
+      fullPath: '/app/api-docs'
+      preLoaderRoute: typeof AppApiDocsRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/cobros': {
@@ -876,6 +944,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCobrosNuevoRouteImport
       parentRoute: typeof AppCobrosRoute
     }
+    '/app/ecommerce/dashboard': {
+      id: '/app/ecommerce/dashboard'
+      path: '/dashboard'
+      fullPath: '/app/ecommerce/dashboard'
+      preLoaderRoute: typeof AppEcommerceDashboardRouteImport
+      parentRoute: typeof AppEcommerceRoute
+    }
+    '/app/ecommerce/integraciones': {
+      id: '/app/ecommerce/integraciones'
+      path: '/integraciones'
+      fullPath: '/app/ecommerce/integraciones'
+      preLoaderRoute: typeof AppEcommerceIntegracionesRouteImport
+      parentRoute: typeof AppEcommerceRoute
+    }
+    '/app/ecommerce/productos': {
+      id: '/app/ecommerce/productos'
+      path: '/productos'
+      fullPath: '/app/ecommerce/productos'
+      preLoaderRoute: typeof AppEcommerceProductosRouteImport
+      parentRoute: typeof AppEcommerceRoute
+    }
     '/app/link-pago/dashboard': {
       id: '/app/link-pago/dashboard'
       path: '/dashboard'
@@ -888,6 +977,13 @@ declare module '@tanstack/react-router' {
       path: '/e-commerce'
       fullPath: '/app/link-pago/e-commerce'
       preLoaderRoute: typeof AppLinkPagoECommerceRouteImport
+      parentRoute: typeof AppLinkPagoRoute
+    }
+    '/app/link-pago/links': {
+      id: '/app/link-pago/links'
+      path: '/links'
+      fullPath: '/app/link-pago/links'
+      preLoaderRoute: typeof AppLinkPagoLinksRouteImport
       parentRoute: typeof AppLinkPagoRoute
     }
     '/app/link-pago/productos': {
@@ -925,15 +1021,33 @@ const AppCobrosRouteWithChildren = AppCobrosRoute._addFileChildren(
   AppCobrosRouteChildren,
 )
 
+interface AppEcommerceRouteChildren {
+  AppEcommerceDashboardRoute: typeof AppEcommerceDashboardRoute
+  AppEcommerceIntegracionesRoute: typeof AppEcommerceIntegracionesRoute
+  AppEcommerceProductosRoute: typeof AppEcommerceProductosRoute
+}
+
+const AppEcommerceRouteChildren: AppEcommerceRouteChildren = {
+  AppEcommerceDashboardRoute: AppEcommerceDashboardRoute,
+  AppEcommerceIntegracionesRoute: AppEcommerceIntegracionesRoute,
+  AppEcommerceProductosRoute: AppEcommerceProductosRoute,
+}
+
+const AppEcommerceRouteWithChildren = AppEcommerceRoute._addFileChildren(
+  AppEcommerceRouteChildren,
+)
+
 interface AppLinkPagoRouteChildren {
   AppLinkPagoDashboardRoute: typeof AppLinkPagoDashboardRoute
   AppLinkPagoECommerceRoute: typeof AppLinkPagoECommerceRoute
+  AppLinkPagoLinksRoute: typeof AppLinkPagoLinksRoute
   AppLinkPagoProductosRoute: typeof AppLinkPagoProductosRoute
 }
 
 const AppLinkPagoRouteChildren: AppLinkPagoRouteChildren = {
   AppLinkPagoDashboardRoute: AppLinkPagoDashboardRoute,
   AppLinkPagoECommerceRoute: AppLinkPagoECommerceRoute,
+  AppLinkPagoLinksRoute: AppLinkPagoLinksRoute,
   AppLinkPagoProductosRoute: AppLinkPagoProductosRoute,
 }
 
@@ -944,10 +1058,11 @@ const AppLinkPagoRouteWithChildren = AppLinkPagoRoute._addFileChildren(
 interface AppRouteChildren {
   AppApiRoute: typeof AppApiRoute
   AppApiConfigRoute: typeof AppApiConfigRoute
+  AppApiDocsRoute: typeof AppApiDocsRoute
   AppCobrosRoute: typeof AppCobrosRouteWithChildren
   AppCuentaRoute: typeof AppCuentaRoute
   AppDestinatariosRoute: typeof AppDestinatariosRoute
-  AppEcommerceRoute: typeof AppEcommerceRoute
+  AppEcommerceRoute: typeof AppEcommerceRouteWithChildren
   AppHistorialRoute: typeof AppHistorialRoute
   AppLinkPagoRoute: typeof AppLinkPagoRouteWithChildren
   AppLiquidacionesRoute: typeof AppLiquidacionesRoute
@@ -962,10 +1077,11 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppApiRoute: AppApiRoute,
   AppApiConfigRoute: AppApiConfigRoute,
+  AppApiDocsRoute: AppApiDocsRoute,
   AppCobrosRoute: AppCobrosRouteWithChildren,
   AppCuentaRoute: AppCuentaRoute,
   AppDestinatariosRoute: AppDestinatariosRoute,
-  AppEcommerceRoute: AppEcommerceRoute,
+  AppEcommerceRoute: AppEcommerceRouteWithChildren,
   AppHistorialRoute: AppHistorialRoute,
   AppLinkPagoRoute: AppLinkPagoRouteWithChildren,
   AppLiquidacionesRoute: AppLiquidacionesRoute,

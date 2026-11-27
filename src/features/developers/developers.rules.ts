@@ -3,7 +3,7 @@ import type { ApiEnvironment, DeliveryStatus, IntegrationStatus } from "./develo
 type Tone = "neutral" | "success" | "warn" | "danger";
 
 export const STATUS_LABEL: Record<IntegrationStatus, string> = {
-  pending_validation: "Pendiente de validación",
+  pending_validation: "Solicitud en revisión",
   sandbox: "Sandbox",
   pending_production: "Pase a producción en revisión",
   production: "Producción",
@@ -13,12 +13,14 @@ export const STATUS_LABEL: Record<IntegrationStatus, string> = {
 
 /** Texto de la pantalla de configuracion (api-config) para cada estado. */
 export const STATUS_DESCRIPTION: Record<IntegrationStatus, string> = {
-  pending_validation: "Tu solicitud está pendiente de validación.",
-  sandbox: "Tu Sandbox está activo: podés probar la API sin mover dinero real.",
+  pending_validation:
+    "Ya solicitaste la habilitación. MoliPay está revisando tu perfil; te avisamos cuando se apruebe y puedas generar tus llaves.",
+  sandbox:
+    "Tu acceso está aprobado y el Sandbox activo: podés probar la API sin mover dinero real.",
   pending_production: "Pediste el pase a producción y MoliPay lo está revisando.",
   production: "La API está habilitada en Producción para tu cuenta.",
   suspended: "La API está suspendida para tu cuenta. Consultá a soporte.",
-  revoked: "Tu integración fue revocada. Podés empezar de nuevo con un Sandbox.",
+  revoked: "Tu acceso fue rechazado o revocado. Podés volver a solicitar la habilitación.",
 };
 
 export function statusTone(status: IntegrationStatus | undefined): Tone {
@@ -55,7 +57,15 @@ export const WEBHOOK_EVENT_LABEL: Record<string, string> = {
 
 export const DEFAULT_WEBHOOK_EVENTS = ["cobro.aprobado"];
 
-/** Que puede hacer el comercio en cada ambiente segun el estado de la integracion. */
+/** Estados con el acceso aprobado por MoliPay (se pueden generar llaves). */
+const isAccessApproved = (status: IntegrationStatus | undefined) =>
+  status === "sandbox" || status === "pending_production" || status === "production";
+
+/** Sin solicitud, o con la anterior rechazada / revocada: se puede pedir el acceso. */
+export const canRequestAccess = (status: IntegrationStatus | undefined) =>
+  !status || status === "revoked";
+
+/** Que puede hacer la empresa en cada ambiente segun el estado de la integracion. */
 export function environmentAccess(
   status: IntegrationStatus | undefined,
   environment: ApiEnvironment,
@@ -63,11 +73,12 @@ export function environmentAccess(
   const productionEnabled = status === "production";
   const suspended = status === "suspended";
   const environmentOpen = environment === "sandbox" || productionEnabled;
+  const approved = isAccessApproved(status);
   return {
     productionEnabled,
     suspended,
-    canGenerateKeys: environmentOpen && !suspended,
-    canConfigureWebhooks: !!status && !suspended && status !== "revoked" && environmentOpen,
+    canGenerateKeys: approved && environmentOpen,
+    canConfigureWebhooks: approved && environmentOpen,
     canRequestProduction: status === "sandbox",
   };
 }
@@ -78,7 +89,7 @@ export function integrationChecklist(
   hasWebhook: boolean,
 ): [string, boolean][] {
   return [
-    ["Sandbox activo", !!status && status !== "pending_validation" && status !== "revoked"],
+    ["Acceso aprobado (Sandbox)", isAccessApproved(status) || status === "suspended"],
     ["Pase a producción solicitado", status === "pending_production" || status === "production"],
     ["Producción habilitada", status === "production"],
     ["Webhook configurado", hasWebhook],

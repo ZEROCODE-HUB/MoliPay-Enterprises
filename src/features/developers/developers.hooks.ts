@@ -28,6 +28,7 @@ export function useDeveloperActions() {
         return result;
       };
     return {
+      requestAccess: after(api.requestAccess),
       generateKeys: after(api.generateKeys),
       requestProduction: after(api.requestProduction),
       saveAllowedIps: after(api.saveAllowedIps),

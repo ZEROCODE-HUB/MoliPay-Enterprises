@@ -16,6 +16,7 @@ import {
   ShoppingCart,
   Code2,
   Landmark,
+  Plug,
 } from "lucide-react";
 import { PortalShell, type NavItem } from "@/app/portal-shell";
 import { SupportBot } from "@/app/support-bot";
@@ -43,8 +44,16 @@ const nav: NavItem[] = [
     icon: Link2,
     items: [
       { to: "/app/link-pago/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { to: "/app/link-pago/productos", label: "Productos", icon: Package },
-      { to: "/app/link-pago/e-commerce", label: "E-commerce", icon: ShoppingCart },
+      { to: "/app/link-pago/links", label: "Links", icon: Link2 },
+    ],
+  },
+  {
+    label: "E-commerce",
+    icon: ShoppingCart,
+    items: [
+      { to: "/app/ecommerce/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/app/ecommerce/productos", label: "Productos", icon: Package },
+      { to: "/app/ecommerce/integraciones", label: "Integraciones", icon: Plug },
     ],
   },
   { to: "/app/servicios", label: "Pago de servicios", icon: Receipt },

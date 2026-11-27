@@ -1,4 +1,7 @@
-import { loadLinksDashboard } from "@/features/payment-links/payment-links.supabase";
+import {
+  loadLinksDashboard,
+  type SalesChannel,
+} from "@/features/payment-links/payment-links.supabase";
 import { toast } from "sonner";
 import { userMessage } from "@/shared/lib/errors";
 import { useCurrentCustomer } from "@/features/session/session.hooks";
@@ -51,7 +54,22 @@ const METHOD_COLORS = [
   "#ca8a04",
 ];
 
-export function PaymentLinksDashboardPage() {
+const CHANNEL_COPY: Record<SalesChannel, { title: string; description: string; file: string }> = {
+  link_pago: {
+    title: "Link de pago",
+    description: "Cobros hechos con tus links de pago",
+    file: "links-pago",
+  },
+  ecommerce: {
+    title: "E-commerce",
+    description: "Ventas de tu tienda online integrada con MoliPay",
+    file: "ecommerce",
+  },
+};
+
+/** Dashboard de un producto: solo cuenta las ventas de su canal. */
+export function PaymentLinksDashboardPage({ channel }: { channel: SalesChannel }) {
+  const copy = CHANNEL_COPY[channel];
   const customer = useCurrentCustomer();
   const [days, setDays] = useState(30);
   const [movs, setMovs] = useState<any[]>([]);
@@ -61,17 +79,17 @@ export function PaymentLinksDashboardPage() {
     const lg = customer.data?.legajo;
     if (!lg) return;
     let cancelled = false;
-    void loadLinksDashboard(lg, days)
+    void loadLinksDashboard(lg, days, channel)
       .then((r) => {
         if (cancelled) return;
         setMovs(r.movs);
         setLinks(r.links);
       })
-      .catch((e) => toast.error(userMessage(e, "No se pudo cargar el resumen de links.")));
+      .catch((e) => toast.error(userMessage(e, "No se pudo cargar el resumen.")));
     return () => {
       cancelled = true;
     };
-  }, [days, customer.data?.legajo]);
+  }, [days, customer.data?.legajo, channel]);
 
   const metrics = useMemo(() => {
     const total = movs.length;
@@ -103,6 +121,18 @@ export function PaymentLinksDashboardPage() {
     amount: Number(l.monto ?? 0),
   }));
   const volData = linkData.map((d) => ({ ...d, vol: +(d.amount / 1_000_000).toFixed(1) }));
+  // Volumen aprobado por dia (lo usa E-commerce, que no tiene links).
+  const dailyData = useMemo(() => {
+    const byDay = new Map<string, number>();
+    for (const m of movs) {
+      if (m.estado !== "Aprobado") continue;
+      const d = String(m.fecha).slice(0, 10);
+      byDay.set(d, (byDay.get(d) ?? 0) + m.monto);
+    }
+    return [...byDay.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([d, amount]) => ({ name: d.slice(8, 10) + "/" + d.slice(5, 7), amount }));
+  }, [movs]);
 
   const kpis = [
     { label: "Total aprobado", value: formatARS(metrics.totalApproved) },
@@ -118,7 +148,7 @@ export function PaymentLinksDashboardPage() {
 
   const exportExcel = () => {
     downloadXlsx(
-      "links-pago-dashboard-" + label + ".xlsx",
+      copy.file + "-dashboard-" + label + ".xlsx",
       [
         { Metrica: "Total aprobado", Valor: formatARS(metrics.totalApproved) },
         { Metrica: "Transacciones totales", Valor: metrics.totalTx },
@@ -129,25 +159,22 @@ export function PaymentLinksDashboardPage() {
         { Metrica: "Ticket promedio", Valor: formatARS(metrics.avgTicket) },
         ...linkData.map((d) => ({ Metrica: "Monto " + d.name, Valor: formatARS(d.amount) })),
       ],
-      { sheetName: "PaymentLinksDashboardPage" },
+      { sheetName: copy.title },
     );
   };
 
   const exportPDF = () => {
     const doc = new jsPDF();
-    doc.text("PaymentLinksDashboardPage - Links de Pago", 14, 20);
+    doc.text("Dashboard " + copy.title, 14, 20);
     doc.text("Periodo: " + label, 14, 30);
     const body = kpis.map((k) => [k.label, k.value]);
     (doc as any).autoTable({ startY: 38, head: [["Metrica", "Valor"]], body });
-    doc.save("links-pago-dashboard-" + label + ".pdf");
+    doc.save(copy.file + "-dashboard-" + label + ".pdf");
   };
 
   return (
     <div>
-      <PageHeader
-        title="Links de Pago"
-        description="Genera y administra links de cobro, productos e integraciones con tu tienda"
-      />
+      <PageHeader title={`Dashboard · ${copy.title}`} description={copy.description} />
       <div className="flex flex-wrap gap-2 mb-6">
         {presets.map((p) => (
           <button
@@ -208,48 +235,73 @@ export function PaymentLinksDashboardPage() {
           </ResponsiveContainer>
         </Card>
 
-        <Card>
-          <h4 className="font-display text-sm font-medium text-foreground mb-3">
-            Montos por link de pago
-          </h4>
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie
-                data={linkData}
-                dataKey="amount"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                label={({ name }: any) => name}
-              >
-                {linkData.map((_, i) => (
-                  <Cell key={i} fill={METHOD_COLORS[i % METHOD_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v: number) => formatARS(v)} />
-            </PieChart>
-          </ResponsiveContainer>
-        </Card>
+        {channel === "ecommerce" ? (
+          <Card className="md:col-span-1 xl:col-span-2">
+            <h4 className="font-display text-sm font-medium text-foreground mb-3">
+              Ventas aprobadas por día
+            </h4>
+            {dailyData.length === 0 ? (
+              <div className="flex h-[240px] items-center justify-center text-center text-sm text-muted-foreground">
+                Todavía no hay ventas de tu tienda online en este período.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={dailyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <Tooltip formatter={(v: number) => formatARS(v)} />
+                  <Bar dataKey="amount" radius={[4, 4, 0, 0]} fill={METHOD_COLORS[0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
+        ) : (
+          <>
+            <Card>
+              <h4 className="font-display text-sm font-medium text-foreground mb-3">
+                Montos por link de pago
+              </h4>
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie
+                    data={linkData}
+                    dataKey="amount"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    label={({ name }: any) => name}
+                  >
+                    {linkData.map((_, i) => (
+                      <Cell key={i} fill={METHOD_COLORS[i % METHOD_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v: number) => formatARS(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </Card>
 
-        <Card className="md:col-span-2 xl:col-span-1">
-          <h4 className="font-display text-sm font-medium text-foreground mb-3">
-            Volumen por link (millones ARS)
-          </h4>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={volData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} />
-              <Tooltip formatter={(v: number) => v + "M"} />
-              <Bar dataKey="vol" radius={[4, 4, 0, 0]}>
-                {volData.map((_, i) => (
-                  <Cell key={i} fill={METHOD_COLORS[i % METHOD_COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
+            <Card className="md:col-span-2 xl:col-span-1">
+              <h4 className="font-display text-sm font-medium text-foreground mb-3">
+                Volumen por link (millones ARS)
+              </h4>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={volData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <Tooltip formatter={(v: number) => v + "M"} />
+                  <Bar dataKey="vol" radius={[4, 4, 0, 0]}>
+                    {volData.map((_, i) => (
+                      <Cell key={i} fill={METHOD_COLORS[i % METHOD_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </>
+        )}
       </div>
     </div>
   );

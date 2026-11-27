@@ -15,7 +15,7 @@ import type {
 /*
  * Sin contrato: lo usan developers.queries.ts y developers.hooks.ts.
  * - Lecturas y acciones sin secretos: RPCs api_portal_* con la sesion (la base resuelve
- *   el comercio por el usuario logueado).
+ *   el cliente por el usuario logueado, titular o equipo).
  * - Generar llaves y configurar webhooks: molipay-back (/api/developers/*), que cifra
  *   los secretos. Los secretos vuelven una sola vez y no se guardan en el navegador.
  */
@@ -74,6 +74,8 @@ type PortalRow = {
     rate_limit_sandbox: number;
     rate_limit_produccion: number;
     ip_whitelist: string[] | null;
+    solicitado_at: string | null;
+    solicitud_notas: string | null;
     pase_solicitado_at: string | null;
     pase_notas: string | null;
     aprobado_at: string | null;
@@ -170,6 +172,8 @@ export function toDeveloperPortal(r: PortalRow): DeveloperPortal {
       sandboxRateLimit: i.rate_limit_sandbox,
       productionRateLimit: i.rate_limit_produccion,
       ipWhitelist: i.ip_whitelist ?? [],
+      accessRequestedAt: i.solicitado_at,
+      accessRequestNotes: i.solicitud_notas,
       productionRequestedAt: i.pase_solicitado_at,
       productionRequestNotes: i.pase_notas,
       approvedAt: i.aprobado_at,
@@ -247,6 +251,15 @@ export async function getDeveloperPortal({
     { signal, context: context("portal") },
   );
   return toDeveloperPortal(row);
+}
+
+/** Pide la habilitacion del modulo; MoliPay la aprueba antes de poder generar llaves. */
+export async function requestAccess(notes: string): Promise<void> {
+  await callRpc(
+    "api_portal_solicitar_acceso",
+    { p_notas: notes },
+    { context: context("request_access") },
+  );
 }
 
 export async function requestProduction(notes: string): Promise<void> {

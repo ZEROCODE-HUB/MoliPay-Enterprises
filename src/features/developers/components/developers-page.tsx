@@ -1,15 +1,18 @@
+import { Link } from "@tanstack/react-router";
 import { ErrorNotice } from "@/shared/ui/error-notice";
 import { useState } from "react";
 import { BookOpen } from "lucide-react";
 import { userMessage } from "@/shared/lib/errors";
 import { Badge } from "@/shared/ui/badge";
 import { BtnPrimary } from "@/shared/ui/button";
-import { Stat } from "@/shared/ui/card";
+import { Card, Stat } from "@/shared/ui/card";
 import { PageHeader } from "@/shared/ui/page-header";
 import { useDeveloperPortal } from "../developers.hooks";
 import {
   ENVIRONMENT_LABEL,
+  STATUS_DESCRIPTION,
   STATUS_LABEL,
+  isApiModuleEnabled,
   WEBHOOK_EVENT_LABEL,
   environmentAccess,
   statusTone,
@@ -46,17 +49,40 @@ export function DevelopersPage() {
     .filter((d) => d.environment === environment)
     .slice(0, 6);
 
+  // Sin acceso aprobado no hay nada que operar aca: el flujo arranca en Configuración.
+  if (query.isSuccess && !isApiModuleEnabled(status)) {
+    return (
+      <>
+        <PageHeader title="API e integraciones" description="Credenciales, webhooks y sandbox" />
+        <Card className="max-w-xl">
+          <h2 className="text-sm font-medium">El módulo de APIs no está habilitado</h2>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            {status ? STATUS_DESCRIPTION[status] : "Primero solicitá la habilitación."} Cuando
+            MoliPay apruebe tu acceso vas a poder generar tus llaves desde acá.
+          </p>
+          <Link
+            to="/app/api-config"
+            className="mt-4 inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90"
+          >
+            Ir a Configuración de APIs
+          </Link>
+        </Card>
+      </>
+    );
+  }
+
   return (
     <>
       <PageHeader
         title="API e integraciones"
         description="Credenciales, webhooks, sandbox y documentación técnica"
         action={
-          <a href="#como-firmar">
-            <BtnPrimary>
-              <BookOpen size={14} /> Ver documentación
-            </BtnPrimary>
-          </a>
+          <Link
+            to="/app/api-docs"
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90"
+          >
+            <BookOpen size={14} /> Ver documentación
+          </Link>
         }
       />
 
@@ -94,8 +120,8 @@ export function DevelopersPage() {
       {status === "revoked" && (
         <ErrorNotice className="mb-4" icon={false}>
           Tu integración fue revocada
-          {integration?.revocationReason ? `: ${integration.revocationReason}` : ""}. Podés empezar
-          de nuevo generando llaves de Sandbox.
+          {integration?.revocationReason ? `: ${integration.revocationReason}` : ""}. Podés volver a
+          solicitar el acceso desde Configuración de APIs.
         </ErrorNotice>
       )}
 

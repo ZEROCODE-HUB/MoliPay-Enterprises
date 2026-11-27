@@ -89,7 +89,9 @@ export function CredentialsCard({
       ) : (
         <p className="text-sm text-muted-foreground">
           {isSandbox
-            ? "Generá tus llaves de Sandbox para empezar a probar. Se crean en el momento y no mueven dinero real."
+            ? access.canGenerateKeys
+              ? "Tu acceso está aprobado. Generá tus llaves de Sandbox para empezar a probar: no mueven dinero real."
+              : "Las llaves se habilitan cuando MoliPay aprueba tu solicitud de acceso."
             : access.productionEnabled
               ? "Producción está habilitada. Generá tus llaves mp_live_ para operar con dinero real."
               : "Las llaves de Producción se habilitan cuando MoliPay aprueba tu pase. Primero probá en Sandbox."}
